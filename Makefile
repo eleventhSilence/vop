@@ -4,9 +4,11 @@
 VENV = venv
 PYTHON = $(VENV)/bin/python
 MANAGE = $(PYTHON) src/backend/manage.py
+OS_PYTHON = python3
 
 # Для Windows автоматически
 ifeq ($(OS),Windows_NT)
+	OS_PYTHON = python
     PYTHON = $(VENV)/Scripts/python.exe
     MANAGE = $(PYTHON) src/backend/manage.py
 endif
@@ -23,6 +25,7 @@ help:
 	@echo "  test           - run tests"
 
 install:
+	python -m venv $(VENV)
 	$(PYTHON) -m pip install -r requirements.txt
 
 makemigrations:
