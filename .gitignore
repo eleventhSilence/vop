@@ -1,0 +1,41 @@
+*.sqlite3
+__pycache__
+/yc-functions/env
+/.idea
+/.ruff_cache
+/.venv
+/venv
+/backup
+env
+env.prod
+src/backend/static/
+*src/backend/media/knowledgebase_documents/
+*src/backend/media/product_cards/
+# Nuxt dev/build outputs
+src/frontend/.output
+src/frontend/.data
+src/frontend/.nuxt
+src/frontend/.nitro
+src/frontend/.cache
+src/frontend/dist
+
+src/backend/media/*
+
+# Node dependencies
+src/frontend/node_modules/
+
+# Logs
+logs
+*.log
+
+*.sql
+
+# Misc
+.DS_Store
+.fleet
+.idea
+
+# Local env files
+.env
+.env.*
+!.env.example
