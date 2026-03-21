@@ -17,7 +17,7 @@ class CourseListView(generics.ListAPIView):
 class CourseDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = CourseDetailSerializer
-    queryset = Course.objects.all()
+    queryset = Course.objects.filter(status=CourseStatus.AVAILABLE)
 
 
 class CourseEnrollView(generics.CreateAPIView):
@@ -25,7 +25,7 @@ class CourseEnrollView(generics.CreateAPIView):
     serializer_class = CourseEnrollmentSerializer
 
     def create(self, request, *args, **kwargs):
-        course = get_object_or_404(Course, id=self.kwargs["pk"])
+        course = get_object_or_404(Course, id=self.kwargs["pk"], status=CourseStatus.AVAILABLE)
 
         if CourseEnrollment.objects.filter(user=request.user, course=course).exists():
             return Response({"detail": "User already enrolled"}, status=status.HTTP_400_BAD_REQUEST)
