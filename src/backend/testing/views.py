@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
-from courses.models import Course
+from courses.models import Course, CourseEnrollment
 from testing.models import CourseTest, TestAttempt
 from testing.serializers import (
     CourseTestInfoSerializer,
@@ -46,6 +46,16 @@ class TestSubmitView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         test = get_object_or_404(CourseTest, id=self.kwargs["test_id"], is_active=True)
+        enrollment = CourseEnrollment.objects.filter(user=request.user, course=test.course).first()
+
+        if enrollment is None:
+            return Response({"detail": "User is not enrolled in this course."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not enrollment.is_theory_completed:
+            return Response(
+                {"detail": "Theory must be completed before testing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         result = create_attempt_with_answers(
             user=request.user,

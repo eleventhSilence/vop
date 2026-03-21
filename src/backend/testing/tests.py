@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import Account
-from courses.models import Course, CourseStatus
+from courses.models import Course, CourseEnrollment, CourseStatus
 from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion
 
 
@@ -26,6 +26,11 @@ class TestingApiTests(APITestCase):
             short_description="desc",
             content="# content",
             status=CourseStatus.AVAILABLE,
+        )
+        self.enrollment = CourseEnrollment.objects.create(
+            user=self.user,
+            course=self.course,
+            is_theory_completed=True,
         )
         self.test = CourseTest.objects.create(
             course=self.course,
@@ -148,3 +153,45 @@ class TestingApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["attempt_number"], 1)
+
+    def test_submit_denied_without_enrollment(self):
+        self.client.force_authenticate(user=self.other_user)
+        payload = {
+            "answers": [
+                {
+                    "question": str(self.question.id),
+                    "selected_option": str(self.correct_option.id),
+                }
+            ]
+        }
+
+        response = self.client.post(
+            reverse("test-submit", kwargs={"test_id": self.test.id}),
+            payload,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "User is not enrolled in this course.")
+
+    def test_submit_denied_without_completed_theory(self):
+        self.client.force_authenticate(user=self.user)
+        self.enrollment.is_theory_completed = False
+        self.enrollment.save(update_fields=("is_theory_completed",))
+        payload = {
+            "answers": [
+                {
+                    "question": str(self.question.id),
+                    "selected_option": str(self.correct_option.id),
+                }
+            ]
+        }
+
+        response = self.client.post(
+            reverse("test-submit", kwargs={"test_id": self.test.id}),
+            payload,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "Theory must be completed before testing")

@@ -12,4 +12,13 @@ class CourseAdmin(admin.ModelAdmin):
 
 @admin.register(CourseEnrollment)
 class CourseEnrollmentAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "course", "progress_status", "enrolled_at")
+    list_display = (
+        "id",
+        "user",
+        "course",
+        "progress_status",
+        "is_theory_completed",
+        "theory_completed_at",
+        "enrolled_at",
+    )
+    list_filter = ("is_theory_completed", "enrolled_at")
