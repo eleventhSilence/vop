@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     "dto",
     "courses",
+    "testing",
 ]
 
 AUTH_USER_MODEL = "accounts.Account"
