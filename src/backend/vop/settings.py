@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "dto",
     "courses",
     "testing",
+    "reviews",
 ]
 
 AUTH_USER_MODEL = "accounts.Account"
