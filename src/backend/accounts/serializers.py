@@ -7,6 +7,9 @@ from accounts.models import Account
 
 
 class AccountMeSerializer(serializers.ModelSerializer):
+    created_at = serializers.SerializerMethodField()
+    updated_at = serializers.SerializerMethodField()
+
     class Meta:
         model = Account
         fields = (
@@ -16,8 +19,16 @@ class AccountMeSerializer(serializers.ModelSerializer):
             "last_name",
             "role",
             "status",
+            "created_at",
+            "updated_at",
         )
         read_only_fields = fields
+
+    def get_created_at(self, obj):
+        return getattr(obj, "created_at", None)
+
+    def get_updated_at(self, obj):
+        return getattr(obj, "updated_at", None)
 
 
 class AccountMeUpdateSerializer(serializers.ModelSerializer):

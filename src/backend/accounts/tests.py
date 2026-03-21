@@ -99,6 +99,8 @@ class AccountMeApiTests(APITestCase):
         self.assertEqual(response.data["last_name"], self.user.last_name)
         self.assertEqual(response.data["role"], self.user.role)
         self.assertEqual(response.data["status"], self.user.status)
+        self.assertIn("created_at", response.data)
+        self.assertIn("updated_at", response.data)
 
     def test_get_my_profile_requires_auth(self):
         response = self.client.get(self.me_url)
