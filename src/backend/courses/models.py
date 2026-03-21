@@ -38,6 +38,8 @@ class CourseEnrollment(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="course_enrollments")
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="enrollments")
     progress_status = models.CharField(max_length=50, default="in_progress")
+    is_theory_completed = models.BooleanField(default=False)
+    theory_completed_at = models.DateTimeField(null=True, blank=True)
     enrolled_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
