@@ -38,7 +38,6 @@ class LogoutView(APIView):
 
 class AccountMeView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["get", "patch", "head", "options"]
 
     def get_object(self):
         return self.request.user
