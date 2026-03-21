@@ -121,6 +121,17 @@ class AccountMeApiTests(APITestCase):
         self.assertEqual(self.user.first_name, "Updated")
         self.assertEqual(self.user.last_name, "Name")
 
+    def test_put_my_profile_is_not_allowed(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.put(
+            self.me_url,
+            {"first_name": "Updated", "last_name": "Name", "email": self.user.email},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
     def test_patch_my_profile_forbids_role_and_status_update(self):
         self.client.force_authenticate(user=self.user)
 
