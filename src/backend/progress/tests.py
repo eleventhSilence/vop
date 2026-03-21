@@ -62,6 +62,7 @@ class ProgressApiTests(APITestCase):
         self.enrollment.refresh_from_db()
         self.assertTrue(self.enrollment.is_theory_completed)
         self.assertIsNotNone(self.enrollment.theory_completed_at)
+        self.assertEqual(self.enrollment.progress_status, "theory_completed")
         self.assertEqual(response.data["progress_percent"], 50)
         self.assertEqual(response.data["progress_status"], "theory_completed")
 
@@ -111,6 +112,8 @@ class ProgressApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.enrollment.refresh_from_db()
+        self.assertEqual(self.enrollment.progress_status, "enrolled")
         self.assertEqual(response.data["progress_percent"], 25)
         self.assertEqual(response.data["progress_status"], "enrolled")
 
@@ -124,6 +127,8 @@ class ProgressApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.enrollment.refresh_from_db()
+        self.assertEqual(self.enrollment.progress_status, "theory_completed")
         self.assertEqual(response.data["progress_percent"], 50)
         self.assertEqual(response.data["progress_status"], "theory_completed")
 
@@ -138,6 +143,8 @@ class ProgressApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.enrollment.refresh_from_db()
+        self.assertEqual(self.enrollment.progress_status, "testing_in_progress")
         self.assertEqual(response.data["progress_percent"], 75)
         self.assertEqual(response.data["progress_status"], "testing_in_progress")
 
@@ -152,5 +159,7 @@ class ProgressApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.enrollment.refresh_from_db()
+        self.assertEqual(self.enrollment.progress_status, "completed")
         self.assertEqual(response.data["progress_percent"], 100)
         self.assertEqual(response.data["progress_status"], "completed")

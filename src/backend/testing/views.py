@@ -2,7 +2,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
-from courses.models import Course, CourseEnrollment
+from courses.models import Course, CourseEnrollment, CourseStatus
 from testing.models import CourseTest, TestAttempt
 from testing.serializers import (
     CourseTestInfoSerializer,
@@ -18,7 +18,7 @@ class CourseTestInfoView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
-        course = get_object_or_404(Course, id=self.kwargs["course_id"])
+        course = get_object_or_404(Course, id=self.kwargs["course_id"], status=CourseStatus.AVAILABLE)
         test = CourseTest.objects.filter(course=course, is_active=True).first()
 
         if test is None:

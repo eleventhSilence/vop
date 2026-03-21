@@ -5,6 +5,7 @@ from rest_framework.response import Response
 
 from courses.models import CourseEnrollment
 from progress.serializers import CompleteTheorySerializer, CourseProgressDetailSerializer, CourseProgressSerializer
+from progress.utils import sync_enrollment_progress_status
 
 
 class MyCourseProgressListView(generics.ListAPIView):
@@ -42,6 +43,8 @@ class CompleteTheoryView(generics.GenericAPIView):
             enrollment.is_theory_completed = True
             enrollment.theory_completed_at = timezone.now()
             enrollment.save(update_fields=("is_theory_completed", "theory_completed_at"))
+
+        sync_enrollment_progress_status(enrollment=enrollment)
 
         serializer = self.get_serializer(enrollment)
         return Response(serializer.data, status=status.HTTP_200_OK)

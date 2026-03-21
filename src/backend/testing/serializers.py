@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from progress.utils import sync_enrollment_progress_status
 from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion, UserAnswer
 
 
@@ -29,7 +30,7 @@ class SubmitAnswerItemSerializer(serializers.Serializer):
 
 
 class TestSubmitSerializer(serializers.Serializer):
-    answers = SubmitAnswerItemSerializer(many=True)
+    answers = SubmitAnswerItemSerializer(many=True, allow_empty=False)
 
 
 class TestSubmitResultSerializer(serializers.Serializer):
@@ -55,6 +56,8 @@ def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[di
     question_ids = [item["question"] for item in answers_data]
     if len(question_ids) != len(set(question_ids)):
         raise serializers.ValidationError("Duplicate answers for the same question")
+    if len(question_ids) != test.questions.count():
+        raise serializers.ValidationError("All test questions must be answered")
 
     option_ids = [item["selected_option"] for item in answers_data]
 
@@ -96,6 +99,10 @@ def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[di
                 for question, option in user_answers_payload
             ]
         )
+
+    enrollment = user.course_enrollments.filter(course=test.course).first()
+    if enrollment is not None:
+        sync_enrollment_progress_status(enrollment=enrollment)
 
     return {
         "score": score,
