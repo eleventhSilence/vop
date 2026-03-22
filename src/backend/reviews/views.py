@@ -65,9 +65,12 @@ class AdminReviewListView(generics.ListAPIView):
     serializer_class = AdminReviewListSerializer
     http_method_names = ["get", "head", "options"]
 
+    def get_status_filter(self):
+        return self.request.query_params.get("status")
+
     def get_queryset(self):
         queryset = Review.objects.select_related("user", "course")
-        status_filter = self.request.query_params.get("status")
+        status_filter = self.get_status_filter()
 
         if status_filter is not None:
             valid_statuses = {choice for choice, _ in ReviewStatus.choices}
@@ -84,6 +87,11 @@ class AdminReviewListView(generics.ListAPIView):
         )
 
         return queryset.order_by(moderation_priority, "-created_at")
+
+
+class AdminPendingReviewListView(AdminReviewListView):
+    def get_status_filter(self):
+        return ReviewStatus.PENDING
 
 
 class AdminReviewModerationView(generics.UpdateAPIView):

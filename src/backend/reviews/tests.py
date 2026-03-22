@@ -490,6 +490,9 @@ class AdminReviewModerationApiTests(APITestCase):
     def get_admin_list_url(self):
         return reverse("admin-review-list")
 
+    def get_admin_pending_list_url(self):
+        return reverse("admin-review-pending-list")
+
     def get_admin_detail_url(self, review):
         return reverse("admin-review-moderate", kwargs={"pk": review.id})
 
@@ -537,6 +540,67 @@ class AdminReviewModerationApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data["detail"], "User account is blocked.")
+
+    def test_admin_can_get_pending_review_list(self):
+        newer_pending_review = Review.objects.create(
+            user=self.admin_user,
+            course=self.second_course,
+            text="Newest pending review",
+            rating=3,
+            status=ReviewStatus.PENDING,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_pending_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(
+            [item["review_id"] for item in response.data],
+            [str(newer_pending_review.id), str(self.pending_review.id)],
+        )
+        self.assertEqual({item["status"] for item in response.data}, {ReviewStatus.PENDING})
+        self.assertNotIn(str(self.approved_review.id), [item["review_id"] for item in response.data])
+        self.assertNotIn(str(self.rejected_review.id), [item["review_id"] for item in response.data])
+
+    def test_regular_user_cannot_get_pending_review_list(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.get(self.get_admin_pending_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_cannot_get_pending_review_list(self):
+        response = self.client.get(self.get_admin_pending_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_blocked_admin_cannot_get_pending_review_list(self):
+        blocked_admin = Account.objects.create_user(
+            email="blocked-pending-admin@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="Admin",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.authenticate_with_jwt(blocked_admin)
+
+        response = self.client.get(self.get_admin_pending_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+
+    def test_pending_review_list_has_same_response_structure_as_admin_review_list(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        pending_response = self.client.get(self.get_admin_pending_list_url())
+        list_response = self.client.get(self.get_admin_list_url(), {"status": ReviewStatus.PENDING})
+
+        self.assertEqual(pending_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(pending_response.data, list_response.data)
 
     def test_admin_can_filter_reviews_by_status(self):
         self.client.force_authenticate(user=self.admin_user)
