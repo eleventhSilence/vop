@@ -5,11 +5,14 @@ from rest_framework.response import Response
 
 from courses.models import Course, CourseEnrollment, CourseStatus
 from reviews.permissions import IsAdminUserRole
-from testing.models import CourseTest, TestAttempt
+from testing.models import CourseTest, TestAttempt, TestQuestion
 from testing.serializers import (
     AdminCourseTestDetailSerializer,
     AdminCourseTestListSerializer,
     AdminCourseTestWriteSerializer,
+    AdminTestQuestionDetailSerializer,
+    AdminTestQuestionListSerializer,
+    AdminTestQuestionWriteSerializer,
     CourseTestInfoSerializer,
     EmptyCourseTestInfoSerializer,
     TestAttemptSerializer,
@@ -130,6 +133,60 @@ class AdminCourseTestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPI
 
         if instance.questions.exists():
             raise ValidationError({"detail": "Test cannot be deleted because it still has questions. Delete questions first."})
+
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminTestQuestionListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    http_method_names = ["get", "post", "head", "options"]
+
+    def get_queryset(self):
+        return TestQuestion.objects.select_related("test").order_by("test__created_at", "order", "created_at")
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return AdminTestQuestionWriteSerializer
+        return AdminTestQuestionListSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        response_serializer = AdminTestQuestionDetailSerializer(serializer.instance)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class AdminTestQuestionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    queryset = TestQuestion.objects.select_related("test")
+    http_method_names = ["get", "patch", "delete", "head", "options"]
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return AdminTestQuestionWriteSerializer
+        return AdminTestQuestionDetailSerializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        response_serializer = AdminTestQuestionDetailSerializer(instance)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.answer_options.exists():
+            raise ValidationError(
+                {"detail": "Question cannot be deleted because it still has answer options. Delete answer options first."}
+            )
 
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)

@@ -634,3 +634,203 @@ class AdminTestingApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data["detail"], "User account is blocked.")
         self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
+    def get_admin_question_list_url(self):
+        return reverse("admin-question-list-create")
+
+    def get_admin_question_detail_url(self, question):
+        return reverse("admin-question-detail", kwargs={"pk": question.id})
+
+    def create_question(self, **kwargs):
+        payload = {
+            "test": self.test,
+            "text": "Question text",
+            "order": 1,
+        }
+        payload.update(kwargs)
+        return TestQuestion.objects.create(**payload)
+
+    def test_admin_can_get_question_list(self):
+        first_question = self.create_question(text="First admin question", order=1)
+        second_question = self.create_question(text="Second admin question", order=2)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_question_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]["question_id"], str(first_question.id))
+        self.assertEqual(response.data[0]["test_id"], str(self.test.id))
+        self.assertEqual(response.data[0]["test_title"], self.test.title)
+        self.assertEqual(response.data[1]["question_id"], str(second_question.id))
+
+    def test_regular_user_cannot_get_question_list(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.get(self.get_admin_question_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_gets_401_for_question_list(self):
+        response = self.client.get(self.get_admin_question_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_blocked_admin_cannot_get_question_list(self):
+        blocked_admin = Account.objects.create_user(
+            email="blocked-question-admin@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="Question",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.authenticate_with_jwt(blocked_admin)
+
+        response = self.client.get(self.get_admin_question_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+
+    def test_admin_can_create_question(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_question_list_url(),
+            {
+                "test_id": str(self.test.id),
+                "text": "Created admin question",
+                "order": 1,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created_question = TestQuestion.objects.get(text="Created admin question")
+        self.assertEqual(created_question.test, self.test)
+        self.assertEqual(response.data["question_id"], str(created_question.id))
+        self.assertEqual(response.data["test_id"], str(self.test.id))
+        self.assertEqual(response.data["test_title"], self.test.title)
+
+    def test_invalid_data_returns_400_on_question_create(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_question_list_url(),
+            {
+                "test_id": str(self.test.id),
+                "text": "",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("text", response.data)
+        self.assertIn("order", response.data)
+
+    def test_cannot_create_question_for_nonexistent_test(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_question_list_url(),
+            {
+                "test_id": "da4ec6f5-b4ca-42da-bef0-df7dd5918eb5",
+                "text": "Ghost question",
+                "order": 1,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("test_id", response.data)
+
+    def test_admin_can_get_specific_question(self):
+        question = self.create_question(text="Specific question", order=1)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_question_detail_url(question))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["question_id"], str(question.id))
+        self.assertEqual(response.data["test_id"], str(self.test.id))
+        self.assertEqual(response.data["text"], question.text)
+
+    def test_admin_can_patch_question(self):
+        question = self.create_question(text="Original question", order=1)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_question_detail_url(question),
+            {
+                "text": "Updated question",
+                "order": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        question.refresh_from_db()
+        self.assertEqual(question.text, "Updated question")
+        self.assertEqual(question.order, 2)
+
+    def test_question_patch_updates_only_passed_fields(self):
+        question = self.create_question(text="Partial question", order=1)
+        original_order = question.order
+        original_test_id = question.test_id
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_question_detail_url(question),
+            {"text": "Only text updated"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        question.refresh_from_db()
+        self.assertEqual(question.text, "Only text updated")
+        self.assertEqual(question.order, original_order)
+        self.assertEqual(question.test_id, original_test_id)
+
+    def test_nonexistent_question_returns_404(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(reverse("admin-question-detail", kwargs={"pk": "d9816d64-20e4-4190-8fa1-7924a35d8426"}))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_admin_can_delete_question_without_answer_options(self):
+        question = self.create_question(text="Delete me", order=1)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.delete(self.get_admin_question_detail_url(question))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(TestQuestion.objects.filter(id=question.id).exists())
+
+    def test_cannot_delete_question_with_answer_options(self):
+        question = self.create_question(text="Protected question", order=1)
+        AnswerOption.objects.create(
+            question=question,
+            text="Option blocks deletion",
+            is_correct=True,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.delete(self.get_admin_question_detail_url(question))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["detail"],
+            "Question cannot be deleted because it still has answer options. Delete answer options first.",
+        )
+        self.assertTrue(TestQuestion.objects.filter(id=question.id).exists())
+
+    def test_regular_user_cannot_delete_question(self):
+        question = self.create_question(text="Regular cannot delete", order=1)
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.delete(self.get_admin_question_detail_url(question))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(TestQuestion.objects.filter(id=question.id).exists())

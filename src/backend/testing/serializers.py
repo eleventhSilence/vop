@@ -98,6 +98,72 @@ class AdminCourseTestWriteSerializer(serializers.ModelSerializer):
         return value
 
 
+class AdminTestQuestionBaseSerializer(serializers.ModelSerializer):
+    question_id = serializers.UUIDField(source="id", read_only=True)
+    test_id = serializers.UUIDField(read_only=True)
+    test_title = serializers.CharField(source="test.title", read_only=True)
+
+    class Meta:
+        model = TestQuestion
+        fields = (
+            "question_id",
+            "test_id",
+            "test_title",
+            "text",
+            "order",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "question_id",
+            "test_id",
+            "test_title",
+            "created_at",
+            "updated_at",
+        )
+
+
+class AdminTestQuestionListSerializer(AdminTestQuestionBaseSerializer):
+    pass
+
+
+class AdminTestQuestionDetailSerializer(AdminTestQuestionBaseSerializer):
+    pass
+
+
+class AdminTestQuestionWriteSerializer(serializers.ModelSerializer):
+    question_id = serializers.UUIDField(source="id", read_only=True)
+    test_id = serializers.PrimaryKeyRelatedField(source="test", queryset=CourseTest.objects.all())
+    test_title = serializers.CharField(source="test.title", read_only=True)
+
+    class Meta:
+        model = TestQuestion
+        fields = (
+            "question_id",
+            "test_id",
+            "test_title",
+            "text",
+            "order",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("question_id", "test_title", "created_at", "updated_at")
+
+    def validate(self, attrs):
+        test = attrs.get("test", getattr(self.instance, "test", None))
+        order = attrs.get("order", getattr(self.instance, "order", None))
+
+        if test is not None and order is not None:
+            existing_question = TestQuestion.objects.filter(test=test, order=order)
+            if self.instance is not None:
+                existing_question = existing_question.exclude(pk=self.instance.pk)
+
+            if existing_question.exists():
+                raise serializers.ValidationError({"order": "Question order must be unique within the test."})
+
+        return attrs
+
+
 class SubmitAnswerItemSerializer(serializers.Serializer):
     question = serializers.UUIDField()
     selected_option = serializers.UUIDField()

@@ -32,6 +32,8 @@ class TestQuestion(models.Model):
     test = models.ForeignKey(CourseTest, on_delete=models.CASCADE, related_name="questions")
     text = models.TextField()
     order = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "test_questions"
