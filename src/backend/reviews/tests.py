@@ -1,8 +1,9 @@
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Account
+from accounts.models import Account, AccountStatus
 from courses.models import Course, CourseEnrollment, CourseStatus
 from reviews.models import Review, ReviewStatus
 
@@ -35,6 +36,24 @@ class ReviewsApiTests(APITestCase):
         )
         CourseEnrollment.objects.create(user=self.user, course=self.course)
 
+    def authenticate_with_jwt(self, user):
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+    def get_update_url(self, review):
+        return reverse("review-update", kwargs={"pk": review.id})
+
+    def create_review(self, **kwargs):
+        defaults = {
+            "user": self.user,
+            "course": self.course,
+            "text": "Первый отзыв",
+            "rating": 4,
+            "status": ReviewStatus.PENDING,
+        }
+        defaults.update(kwargs)
+        return Review.objects.create(**defaults)
+
     def test_create_review_authorized_user(self):
         self.client.force_authenticate(user=self.user)
 
@@ -49,7 +68,6 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(review.status, ReviewStatus.PENDING)
         self.assertEqual(review.text, "Очень полезный курс")
         self.assertEqual(review.rating, 1)
-
 
     def test_create_review_accepts_max_rating_value(self):
         CourseEnrollment.objects.create(user=self.user, course=self.second_course)
@@ -111,7 +129,7 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(response.data["course"][0], "You are not enrolled in this course.")
 
     def test_create_second_review_for_same_course_is_forbidden(self):
-        Review.objects.create(user=self.user, course=self.course, text="Первый отзыв", rating=4)
+        self.create_review()
         self.client.force_authenticate(user=self.user)
 
         response = self.client.post(
@@ -184,3 +202,226 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(len(response.data), 2)
         self.assertEqual({item["status"] for item in response.data}, {ReviewStatus.PENDING, ReviewStatus.REJECTED})
         self.assertEqual({item["rating"] for item in response.data}, {1, 5})
+
+    def test_author_can_update_own_review(self):
+        review = self.create_review(status=ReviewStatus.APPROVED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Обновленный отзыв", "rating": 5},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        review.refresh_from_db()
+        self.assertEqual(review.text, "Обновленный отзыв")
+        self.assertEqual(review.rating, 5)
+        self.assertEqual(review.status, ReviewStatus.PENDING)
+        self.assertEqual(response.data["id"], str(review.id))
+
+    def test_update_review_allows_changing_only_comment(self):
+        review = self.create_review(text="Старый комментарий", rating=4, status=ReviewStatus.APPROVED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Новый комментарий"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        review.refresh_from_db()
+        self.assertEqual(review.text, "Новый комментарий")
+        self.assertEqual(review.rating, 4)
+        self.assertEqual(review.status, ReviewStatus.PENDING)
+
+    def test_update_review_allows_changing_only_rating(self):
+        review = self.create_review(text="Комментарий", rating=2, status=ReviewStatus.REJECTED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"rating": 5},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        review.refresh_from_db()
+        self.assertEqual(review.text, "Комментарий")
+        self.assertEqual(review.rating, 5)
+        self.assertEqual(review.status, ReviewStatus.PENDING)
+
+    def test_update_review_allows_changing_comment_and_rating_together(self):
+        review = self.create_review(text="Было", rating=1, status=ReviewStatus.APPROVED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Стало", "rating": 3},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        review.refresh_from_db()
+        self.assertEqual(review.text, "Стало")
+        self.assertEqual(review.rating, 3)
+        self.assertEqual(review.status, ReviewStatus.PENDING)
+
+    def test_update_approved_review_resets_status_to_pending(self):
+        review = self.create_review(status=ReviewStatus.APPROVED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Обновлен после модерации"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        review.refresh_from_db()
+        self.assertEqual(review.status, ReviewStatus.PENDING)
+
+    def test_update_rejected_review_resets_status_to_pending(self):
+        review = self.create_review(status=ReviewStatus.REJECTED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Исправленный отзыв"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        review.refresh_from_db()
+        self.assertEqual(review.status, ReviewStatus.PENDING)
+
+    def test_update_pending_review_keeps_status_pending(self):
+        review = self.create_review(status=ReviewStatus.PENDING)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Новая версия"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        review.refresh_from_db()
+        self.assertEqual(review.status, ReviewStatus.PENDING)
+
+    def test_other_user_cannot_update_foreign_review(self):
+        review = self.create_review()
+        self.client.force_authenticate(user=self.other_user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Чужое изменение"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        review.refresh_from_db()
+        self.assertEqual(review.text, "Первый отзыв")
+
+    def test_update_review_requires_auth(self):
+        review = self.create_review()
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Без авторизации"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_blocked_user_cannot_update_review(self):
+        blocked_user = Account.objects.create_user(
+            email="blocked-reviewer@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="User",
+            status=AccountStatus.BLOCKED,
+        )
+        review = self.create_review(user=blocked_user)
+        self.authenticate_with_jwt(blocked_user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Попытка blocked user"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+
+    def test_update_review_forbids_course_changes(self):
+        review = self.create_review(status=ReviewStatus.APPROVED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"course": str(self.second_course.id)},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        review.refresh_from_db()
+        self.assertEqual(review.course, self.course)
+        self.assertEqual(response.data["course"][0], "This field cannot be updated.")
+
+    def test_update_review_forbids_user_changes(self):
+        review = self.create_review(status=ReviewStatus.APPROVED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"user": str(self.other_user.id)},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        review.refresh_from_db()
+        self.assertEqual(review.user, self.user)
+        self.assertEqual(response.data["user"][0], "This field cannot be updated.")
+
+    def test_update_review_rejects_rating_below_min_value(self):
+        review = self.create_review()
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"rating": 0},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["rating"][0].code, "min_value")
+
+    def test_update_review_rejects_rating_above_max_value(self):
+        review = self.create_review()
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"rating": 6},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["rating"][0].code, "max_value")
+
+    def test_update_review_keeps_same_object_and_does_not_create_new_one(self):
+        review = self.create_review(status=ReviewStatus.APPROVED)
+        self.client.force_authenticate(user=self.user)
+        reviews_before = Review.objects.count()
+
+        response = self.client.patch(
+            self.get_update_url(review),
+            {"comment": "Тот же объект", "rating": 2},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Review.objects.count(), reviews_before)
+        self.assertTrue(Review.objects.filter(id=review.id, user=self.user, course=self.course).exists())
