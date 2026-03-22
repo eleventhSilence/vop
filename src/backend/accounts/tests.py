@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -114,6 +115,31 @@ class AuthApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data["detail"], "Invalid email or password.")
+
+    def test_global_default_permission_is_authenticated(self):
+        self.assertEqual(
+            settings.REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"],
+            ["rest_framework.permissions.IsAuthenticated"],
+        )
+
+    def test_token_refresh_is_public(self):
+        refresh = RefreshToken.for_user(self.user)
+
+        response = self.client.post(
+            reverse("token_refresh"),
+            {"refresh": str(refresh)},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+
+    def test_swagger_and_redoc_are_public(self):
+        swagger_response = self.client.get(reverse("swagger-ui"))
+        redoc_response = self.client.get(reverse("schema-redoc"))
+
+        self.assertEqual(swagger_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(redoc_response.status_code, status.HTTP_200_OK)
 
     def test_register_returns_normalized_user_identifier(self):
         response = self.client.post(

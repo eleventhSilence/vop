@@ -8,6 +8,8 @@ from rest_framework.views import APIView
 
 from drf_yasg.utils import swagger_auto_schema
 
+from rest_framework_simplejwt.views import TokenRefreshView
+
 from accounts.models import Account, AccountRole, AccountStatus
 from accounts.serializers import (
     AccountDashboardSerializer,
@@ -37,6 +39,10 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+
+class PublicTokenRefreshView(TokenRefreshView):
+    permission_classes = [permissions.AllowAny]
 
 
 class LogoutView(APIView):
