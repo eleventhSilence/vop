@@ -128,7 +128,7 @@ class AccountDashboardRecentReviewSerializer(serializers.ModelSerializer):
     review_id = serializers.UUIDField(source="id", read_only=True)
     course_id = serializers.UUIDField(source="course.id", read_only=True)
     course_title = serializers.CharField(source="course.title", read_only=True)
-    rating = serializers.SerializerMethodField()
+    rating = serializers.IntegerField(read_only=True)
     comment = serializers.CharField(source="text", read_only=True)
 
     class Meta:
@@ -143,9 +143,6 @@ class AccountDashboardRecentReviewSerializer(serializers.ModelSerializer):
             "created_at",
         )
         read_only_fields = fields
-
-    def get_rating(self, obj):
-        return None
 
 
 class AccountDashboardSerializer(serializers.Serializer):

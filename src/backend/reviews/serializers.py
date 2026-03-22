@@ -9,7 +9,7 @@ from reviews.models import Review, ReviewStatus
 class ReviewCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = ("course", "text")
+        fields = ("course", "text", "rating")
 
     def validate(self, attrs):
         user = self.context["request"].user
@@ -36,10 +36,10 @@ class ReviewPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ("id", "user", "text", "created_at")
+        fields = ("id", "user", "text", "rating", "created_at")
 
 
 class ReviewMySerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = ("id", "course", "text", "status", "created_at", "updated_at")
+        fields = ("id", "course", "text", "rating", "status", "created_at", "updated_at")
