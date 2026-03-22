@@ -1,8 +1,9 @@
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Account
+from accounts.models import Account, AccountRole, AccountStatus
 from courses.models import Course, CourseEnrollment, CourseStatus
 from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion
 
@@ -332,3 +333,304 @@ class TestingApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "Theory must be completed before testing")
+
+
+class AdminTestingApiTests(APITestCase):
+    def setUp(self):
+        self.admin_user = Account.objects.create_user(
+            email="admin-testing@example.com",
+            password="StrongPass123",
+            first_name="Admin",
+            last_name="Testing",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+        )
+        self.regular_user = Account.objects.create_user(
+            email="regular-testing@example.com",
+            password="StrongPass123",
+            first_name="Regular",
+            last_name="Testing",
+        )
+        self.course = Course.objects.create(
+            title="Admin Python course",
+            short_description="Short admin description",
+            content="# admin content",
+            status=CourseStatus.AVAILABLE,
+        )
+        self.second_course = Course.objects.create(
+            title="Admin Django course",
+            short_description="Second admin description",
+            content="# second content",
+            status=CourseStatus.UNAVAILABLE,
+        )
+        self.test = CourseTest.objects.create(
+            course=self.course,
+            title="Admin final test",
+            description="Admin managed test",
+            passing_score=2,
+            max_attempts=3,
+            is_active=True,
+        )
+
+    def authenticate_with_jwt(self, user):
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+    def get_admin_list_url(self):
+        return reverse("admin-test-list-create")
+
+    def get_admin_detail_url(self, test):
+        return reverse("admin-test-detail", kwargs={"pk": test.id})
+
+    def test_admin_can_get_test_list(self):
+        second_test = CourseTest.objects.create(
+            course=self.second_course,
+            title="Second admin test",
+            description="Second test description",
+            passing_score=1,
+            max_attempts=2,
+            is_active=False,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]["test_id"], str(second_test.id))
+        self.assertEqual(response.data[0]["course_id"], str(self.second_course.id))
+        self.assertEqual(response.data[0]["course_title"], self.second_course.title)
+        self.assertEqual(response.data[1]["test_id"], str(self.test.id))
+
+    def test_regular_user_cannot_get_test_list(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.get(self.get_admin_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_gets_401_for_test_list(self):
+        response = self.client.get(self.get_admin_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_blocked_admin_cannot_get_test_list(self):
+        blocked_admin = Account.objects.create_user(
+            email="blocked-testing-admin@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="Testing",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.authenticate_with_jwt(blocked_admin)
+
+        response = self.client.get(self.get_admin_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+
+    def test_admin_can_create_test(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_list_url(),
+            {
+                "course_id": str(self.second_course.id),
+                "title": "Created admin test",
+                "description": "Created by admin endpoint",
+                "passing_score": 4,
+                "max_attempts": 5,
+                "is_active": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created_test = CourseTest.objects.get(title="Created admin test")
+        self.assertEqual(created_test.course, self.second_course)
+        self.assertEqual(response.data["test_id"], str(created_test.id))
+        self.assertEqual(response.data["course_id"], str(self.second_course.id))
+        self.assertEqual(response.data["course_title"], self.second_course.title)
+
+    def test_invalid_data_returns_400_on_test_create(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_list_url(),
+            {
+                "course_id": str(self.second_course.id),
+                "title": "",
+                "description": "Created by admin endpoint",
+                "passing_score": 0,
+                "max_attempts": 0,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("title", response.data)
+        self.assertIn("passing_score", response.data)
+        self.assertIn("max_attempts", response.data)
+
+    def test_cannot_create_test_for_nonexistent_course(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_list_url(),
+            {
+                "course_id": "da4ec6f5-b4ca-42da-bef0-df7dd5918eb5",
+                "title": "Ghost course test",
+                "description": "Should fail",
+                "passing_score": 1,
+                "max_attempts": 1,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("course_id", response.data)
+
+    def test_admin_can_get_specific_test(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_detail_url(self.test))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["test_id"], str(self.test.id))
+        self.assertEqual(response.data["course_id"], str(self.course.id))
+        self.assertEqual(response.data["title"], self.test.title)
+
+    def test_admin_can_patch_test(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_detail_url(self.test),
+            {
+                "title": "Updated admin test",
+                "description": "Updated description",
+                "passing_score": 3,
+                "is_active": False,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.test.refresh_from_db()
+        self.assertEqual(self.test.title, "Updated admin test")
+        self.assertEqual(self.test.description, "Updated description")
+        self.assertEqual(self.test.passing_score, 3)
+        self.assertFalse(self.test.is_active)
+
+    def test_patch_updates_only_passed_fields(self):
+        self.client.force_authenticate(user=self.admin_user)
+        original_description = self.test.description
+        original_max_attempts = self.test.max_attempts
+        original_is_active = self.test.is_active
+
+        response = self.client.patch(
+            self.get_admin_detail_url(self.test),
+            {"title": "Only title updated"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.test.refresh_from_db()
+        self.assertEqual(self.test.title, "Only title updated")
+        self.assertEqual(self.test.description, original_description)
+        self.assertEqual(self.test.max_attempts, original_max_attempts)
+        self.assertEqual(self.test.is_active, original_is_active)
+
+    def test_nonexistent_test_returns_404(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(reverse("admin-test-detail", kwargs={"pk": "d9816d64-20e4-4190-8fa1-7924a35d8426"}))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_admin_can_delete_test_without_attempts_and_questions(self):
+        deletable_test = CourseTest.objects.create(
+            course=self.second_course,
+            title="Deletable test",
+            description="Can be deleted",
+            passing_score=1,
+            max_attempts=1,
+            is_active=True,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.delete(self.get_admin_detail_url(deletable_test))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(CourseTest.objects.filter(id=deletable_test.id).exists())
+
+    def test_cannot_delete_test_with_attempts(self):
+        TestAttempt.objects.create(
+            user=self.regular_user,
+            test=self.test,
+            score=2,
+            is_passed=True,
+            attempt_number=1,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.delete(self.get_admin_detail_url(self.test))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "Test cannot be deleted because it already has attempts.")
+        self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
+    def test_cannot_delete_test_with_questions(self):
+        question = TestQuestion.objects.create(
+            test=self.test,
+            text="Question blocks deletion",
+            order=1,
+        )
+        AnswerOption.objects.create(
+            question=question,
+            text="Option",
+            is_correct=True,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.delete(self.get_admin_detail_url(self.test))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["detail"],
+            "Test cannot be deleted because it still has questions. Delete questions first.",
+        )
+        self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
+    def test_regular_user_cannot_delete_test(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.delete(self.get_admin_detail_url(self.test))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
+    def test_unauthorized_user_gets_401_for_test_delete(self):
+        response = self.client.delete(self.get_admin_detail_url(self.test))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
+    def test_blocked_admin_cannot_delete_test(self):
+        blocked_admin = Account.objects.create_user(
+            email="blocked-delete-admin@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="Delete",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.authenticate_with_jwt(blocked_admin)
+
+        response = self.client.delete(self.get_admin_detail_url(self.test))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+        self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
