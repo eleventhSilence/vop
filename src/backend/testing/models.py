@@ -4,7 +4,7 @@ import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 
 from courses.models import Course
 
@@ -124,12 +124,15 @@ class AnswerOption(models.Model):
     def save(self, *args, **kwargs):
         total_options, correct_options = self._get_configuration_counts()
         self.full_clean()
-        instance = super().save(*args, **kwargs)
-        if not (total_options == 1 and correct_options == 0):
-            self.question.validate_answer_configuration(
-                total_options=total_options,
-                correct_options=correct_options,
-            )
+
+        with transaction.atomic():
+            instance = super().save(*args, **kwargs)
+            if not (total_options == 1 and correct_options == 0):
+                self.question.validate_answer_configuration(
+                    total_options=total_options,
+                    correct_options=correct_options,
+                )
+
         return instance
 
     def delete(self, *args, **kwargs):
@@ -137,8 +140,10 @@ class AnswerOption(models.Model):
         remaining_options = question.answer_options.exclude(pk=self.pk)
         total_options = remaining_options.count()
         correct_options = remaining_options.filter(is_correct=True).count()
-        question.validate_answer_configuration(total_options=total_options, correct_options=correct_options)
-        return super().delete(*args, **kwargs)
+
+        with transaction.atomic():
+            question.validate_answer_configuration(total_options=total_options, correct_options=correct_options)
+            return super().delete(*args, **kwargs)
 
 
 class TestAttempt(models.Model):

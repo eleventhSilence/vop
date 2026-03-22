@@ -1123,6 +1123,25 @@ class AdminTestingApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["is_correct"][0], "Single choice question must have exactly one correct answer")
 
+    def test_invalid_answer_option_create_does_not_persist_object(self):
+        question = self.create_question(text="Atomic create question", order=1)
+        AnswerOption.objects.create(question=question, text="Correct A", is_correct=True)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_answer_option_list_url(),
+            {
+                "question_id": str(question.id),
+                "text": "Should not persist",
+                "is_correct": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(AnswerOption.objects.filter(question=question, text="Should not persist").exists())
+        self.assertEqual(question.answer_options.filter(is_correct=True).count(), 1)
+
     def test_multiple_choice_question_must_have_correct_answer(self):
         question = self.create_question(
             text="Multiple choice question",
@@ -1164,6 +1183,29 @@ class AdminTestingApiTests(APITestCase):
         self.assertEqual(option.text, "Updated answer option")
         self.assertTrue(option.is_correct)
 
+    def test_invalid_answer_option_update_does_not_persist_changes(self):
+        question = self.create_question(text="Atomic update question", order=1)
+        correct_option = AnswerOption.objects.create(question=question, text="Correct option", is_correct=True)
+        option = AnswerOption.objects.create(question=question, text="Wrong option", is_correct=False)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_answer_option_detail_url(option),
+            {
+                "text": "Should rollback",
+                "is_correct": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        option.refresh_from_db()
+        correct_option.refresh_from_db()
+        self.assertEqual(option.text, "Wrong option")
+        self.assertFalse(option.is_correct)
+        self.assertEqual(question.answer_options.filter(is_correct=True).count(), 1)
+        self.assertEqual(correct_option.text, "Correct option")
+
     def test_answer_option_patch_updates_only_passed_fields(self):
         first_question = self.create_question(text="First patch option question", order=1)
         second_question = self.create_question(text="Second patch option question", order=2)
@@ -1203,6 +1245,22 @@ class AdminTestingApiTests(APITestCase):
         self.assertFalse(AnswerOption.objects.filter(id=option.id).exists())
         self.assertTrue(TestQuestion.objects.filter(id=question.id).exists())
         self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
+    def test_invalid_answer_option_delete_does_not_remove_object(self):
+        question = self.create_question(
+            text="Atomic delete question",
+            order=1,
+            question_type=TestQuestion.QuestionType.MULTIPLE_CHOICE,
+        )
+        correct_option = AnswerOption.objects.create(question=question, text="Correct option", is_correct=True)
+        AnswerOption.objects.create(question=question, text="Wrong option", is_correct=False)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.delete(self.get_admin_answer_option_detail_url(correct_option))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(AnswerOption.objects.filter(id=correct_option.id).exists())
+        self.assertEqual(question.answer_options.filter(is_correct=True).count(), 1)
 
     def test_regular_user_cannot_delete_answer_option(self):
         question = self.create_question(text="Regular delete option question", order=1)
