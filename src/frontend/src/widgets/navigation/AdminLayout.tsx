@@ -7,7 +7,7 @@ const adminNavItems = [
   { to: '/admin/users', label: 'Пользователи' },
   { to: '/admin/courses', label: 'Курсы' },
   { to: '/admin/tests', label: 'Тесты' },
-  { to: '/admin/reviews', label: 'Отзывы' },
+  { to: '/admin/reviews', label: 'Отзывы', end: true },
   { to: '/admin/reviews/pending', label: 'На модерации' },
 ];
 
