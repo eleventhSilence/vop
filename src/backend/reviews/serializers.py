@@ -2,24 +2,37 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from courses.models import CourseEnrollment
+from courses.models import Course, CourseEnrollment
 from reviews.models import Review, ReviewStatus
 
 
 class ReviewCreateSerializer(serializers.ModelSerializer):
+    review_id = serializers.UUIDField(source="id", read_only=True)
+    course_id = serializers.PrimaryKeyRelatedField(source="course", queryset=Course.objects.all())
+    comment = serializers.CharField(source="text")
+
     class Meta:
         model = Review
-        fields = ("course", "text", "rating")
+        fields = ("review_id", "course_id", "comment", "rating", "status", "created_at", "updated_at")
+        read_only_fields = ("review_id", "status", "created_at", "updated_at")
+
+    def to_internal_value(self, data):
+        payload = data.copy()
+        if "course_id" not in payload and "course" in payload:
+            payload["course_id"] = payload["course"]
+        if "comment" not in payload and "text" in payload:
+            payload["comment"] = payload["text"]
+        return super().to_internal_value(payload)
 
     def validate(self, attrs):
         user = self.context["request"].user
         course = attrs["course"]
 
         if not CourseEnrollment.objects.filter(user=user, course=course).exists():
-            raise serializers.ValidationError({"course": "You are not enrolled in this course."})
+            raise serializers.ValidationError({"course_id": "You are not enrolled in this course."})
 
         if Review.objects.filter(user=user, course=course).exists():
-            raise serializers.ValidationError({"course": "You have already reviewed this course."})
+            raise serializers.ValidationError({"course_id": "You have already reviewed this course."})
 
         return attrs
 
@@ -40,6 +53,12 @@ class ReviewUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ("comment", "rating")
+
+    def to_internal_value(self, data):
+        payload = data.copy()
+        if "comment" not in payload and "text" in payload:
+            payload["comment"] = payload["text"]
+        return super().to_internal_value(payload)
 
     def validate(self, attrs):
         errors = {}
@@ -130,14 +149,19 @@ class AdminReviewStatusUpdateSerializer(serializers.ModelSerializer):
 
 
 class ReviewPublicSerializer(serializers.ModelSerializer):
-    user = serializers.EmailField(source="user.email", read_only=True)
+    review_id = serializers.UUIDField(source="id", read_only=True)
+    comment = serializers.CharField(source="text", read_only=True)
 
     class Meta:
         model = Review
-        fields = ("id", "user", "text", "rating", "created_at")
+        fields = ("review_id", "comment", "rating", "created_at")
 
 
 class ReviewMySerializer(serializers.ModelSerializer):
+    review_id = serializers.UUIDField(source="id", read_only=True)
+    course_id = serializers.UUIDField(source="course.id", read_only=True)
+    comment = serializers.CharField(source="text", read_only=True)
+
     class Meta:
         model = Review
-        fields = ("id", "course", "text", "rating", "status", "created_at", "updated_at")
+        fields = ("review_id", "course_id", "comment", "rating", "status", "created_at", "updated_at")

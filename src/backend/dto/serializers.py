@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.contrib.auth import authenticate
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Account, AccountStatus
@@ -9,11 +10,12 @@ from accounts.models import Account, AccountStatus
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    user_id = serializers.UUIDField(source="id", read_only=True)
 
     class Meta:
         model = Account
-        fields = ("id", "email", "first_name", "last_name", "password")
-        read_only_fields = ("id",)
+        fields = ("user_id", "email", "first_name", "last_name", "password")
+        read_only_fields = ("user_id",)
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -42,15 +44,15 @@ class LoginSerializer(serializers.Serializer):
 
         user = authenticate(email=email, password=password)
         if not user:
-            raise serializers.ValidationError("Invalid email or password")
+            raise AuthenticationFailed("Invalid email or password.")
 
         if user.status == AccountStatus.BLOCKED:
-            raise serializers.ValidationError("Account is blocked")
+            raise AuthenticationFailed("Account is blocked.")
 
         refresh = RefreshToken.for_user(user)
         return {
             "user": {
-                "id": str(user.id),
+                "user_id": str(user.id),
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,

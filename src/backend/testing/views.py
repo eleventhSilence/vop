@@ -1,7 +1,6 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
-from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from courses.models import Course, CourseEnrollment, CourseStatus
@@ -135,10 +134,16 @@ class AdminCourseTestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPI
         instance = self.get_object()
 
         if instance.attempts.exists():
-            raise ValidationError({"detail": "Test cannot be deleted because it already has attempts."})
+            return Response(
+                {"detail": "Test cannot be deleted because it already has attempts."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if instance.questions.exists():
-            raise ValidationError({"detail": "Test cannot be deleted because it still has questions. Delete questions first."})
+            return Response(
+                {"detail": "Test cannot be deleted because it still has questions. Delete questions first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -190,8 +195,9 @@ class AdminTestQuestionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyA
         instance = self.get_object()
 
         if instance.answer_options.exists():
-            raise ValidationError(
-                {"detail": "Question cannot be deleted because it still has answer options. Delete answer options first."}
+            return Response(
+                {"detail": "Question cannot be deleted because it still has answer options. Delete answer options first."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         self.perform_destroy(instance)
@@ -248,6 +254,6 @@ class AdminAnswerOptionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyA
         try:
             self.perform_destroy(instance)
         except DjangoValidationError as exc:
-            raise ValidationError({"detail": exc.messages[0]})
+            return Response({"detail": exc.messages[0]}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(status=status.HTTP_204_NO_CONTENT)

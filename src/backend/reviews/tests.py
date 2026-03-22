@@ -68,6 +68,10 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(review.status, ReviewStatus.PENDING)
         self.assertEqual(review.text, "Очень полезный курс")
         self.assertEqual(review.rating, 1)
+        self.assertEqual(response.data["review_id"], str(review.id))
+        self.assertEqual(str(response.data["course_id"]), str(self.course.id))
+        self.assertEqual(response.data["comment"], review.text)
+        self.assertNotIn("text", response.data)
 
     def test_create_review_accepts_max_rating_value(self):
         CourseEnrollment.objects.create(user=self.user, course=self.second_course)
@@ -82,6 +86,7 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         review = Review.objects.get(user=self.user, course=self.second_course)
         self.assertEqual(review.rating, 5)
+        self.assertEqual(response.data["comment"], review.text)
 
     def test_create_review_rejects_rating_below_min_value(self):
         self.client.force_authenticate(user=self.user)
@@ -126,7 +131,7 @@ class ReviewsApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["course"][0], "You are not enrolled in this course.")
+        self.assertEqual(response.data["course_id"][0], "You are not enrolled in this course.")
 
     def test_create_second_review_for_same_course_is_forbidden(self):
         self.create_review()
@@ -139,7 +144,7 @@ class ReviewsApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["course"][0], "You have already reviewed this course.")
+        self.assertEqual(response.data["course_id"][0], "You have already reviewed this course.")
 
     def test_get_approved_reviews_for_course(self):
         Review.objects.create(
@@ -168,9 +173,12 @@ class ReviewsApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["text"], "Одобренный отзыв")
-        self.assertEqual(response.data[0]["user"], self.user.email)
+        self.assertEqual(response.data[0]["review_id"], str(Review.objects.get(course=self.course, status=ReviewStatus.APPROVED).id))
+        self.assertEqual(response.data[0]["comment"], "Одобренный отзыв")
         self.assertEqual(response.data[0]["rating"], 5)
+        self.assertNotIn("user_email", response.data[0])
+        self.assertNotIn("user_id", response.data[0])
+        self.assertNotIn("text", response.data[0])
 
     def test_get_my_reviews(self):
         Review.objects.create(
@@ -202,6 +210,8 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(len(response.data), 2)
         self.assertEqual({item["status"] for item in response.data}, {ReviewStatus.PENDING, ReviewStatus.REJECTED})
         self.assertEqual({item["rating"] for item in response.data}, {1, 5})
+        self.assertEqual({item["course_id"] for item in response.data}, {str(self.course.id), str(self.second_course.id)})
+        self.assertTrue(all("comment" in item for item in response.data))
 
     def test_author_can_update_own_review(self):
         review = self.create_review(status=ReviewStatus.APPROVED)
@@ -218,7 +228,7 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(review.text, "Обновленный отзыв")
         self.assertEqual(review.rating, 5)
         self.assertEqual(review.status, ReviewStatus.PENDING)
-        self.assertEqual(response.data["id"], str(review.id))
+        self.assertEqual(response.data["review_id"], str(review.id))
 
     def test_update_review_allows_changing_only_comment(self):
         review = self.create_review(text="Старый комментарий", rating=4, status=ReviewStatus.APPROVED)
