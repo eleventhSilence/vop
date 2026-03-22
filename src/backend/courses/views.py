@@ -1,6 +1,9 @@
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+
+from drf_yasg.utils import swagger_auto_schema
 
 from courses.models import Course, CourseEnrollment, CourseStatus
 from courses.serializers import (
@@ -52,7 +55,29 @@ class CourseEnrollView(generics.CreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_summary="List courses for admin",
+        operation_description=(
+            "Returns all courses for admin management. Course lifecycle is managed via the status field; "
+            "admin API does not support physical course deletion."
+        ),
+    ),
+)
+@method_decorator(
+    name="post",
+    decorator=swagger_auto_schema(
+        operation_summary="Create course",
+        operation_description=(
+            "Creates a course for admin management. To hide or deactivate a course later, update its status; "
+            "do not delete it through admin API."
+        ),
+    ),
+)
 class AdminCourseListCreateView(generics.ListCreateAPIView):
+    """Admin course management entrypoint without destroy semantics."""
+
     permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
     http_method_names = ["get", "post", "head", "options"]
 
@@ -65,7 +90,28 @@ class AdminCourseListCreateView(generics.ListCreateAPIView):
         return AdminCourseListSerializer
 
 
+@method_decorator(
+    name="get",
+    decorator=swagger_auto_schema(
+        operation_summary="Retrieve course for admin",
+        operation_description=(
+            "Returns a course for admin management. Admin API intentionally does not provide course deletion; "
+            "course lifecycle changes must be done via status."
+        ),
+    ),
+)
+@method_decorator(
+    name="patch",
+    decorator=swagger_auto_schema(
+        operation_summary="Update course for admin",
+        operation_description=(
+            "Updates course fields for admin management. Use status to make a course unavailable instead of deleting it."
+        ),
+    ),
+)
 class AdminCourseRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    """Admin course detail endpoint that supports retrieval and partial updates only."""
+
     permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
     queryset = Course.objects.all()
     http_method_names = ["get", "patch", "head", "options"]
