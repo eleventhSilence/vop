@@ -285,30 +285,35 @@ class AccountDashboardApiTests(APITestCase):
             user=self.user,
             course=self.course_1,
             text="Review 1",
+            rating=1,
             status=ReviewStatus.PENDING,
         )
         self.review_2 = Review.objects.create(
             user=self.user,
             course=self.course_2,
             text="Review 2",
+            rating=2,
             status=ReviewStatus.APPROVED,
         )
         self.review_3 = Review.objects.create(
             user=self.user,
             course=self.course_3,
             text="Review 3",
+            rating=3,
             status=ReviewStatus.REJECTED,
         )
         self.review_4 = Review.objects.create(
             user=self.user,
             course=self.course_4,
             text="Review 4",
+            rating=4,
             status=ReviewStatus.PENDING,
         )
         self.other_review = Review.objects.create(
             user=self.other_user,
             course=self.other_course,
             text="Other review",
+            rating=5,
             status=ReviewStatus.APPROVED,
         )
 
@@ -382,7 +387,7 @@ class AccountDashboardApiTests(APITestCase):
         )
         self.assertNotIn(str(self.other_review.id), {item["review_id"] for item in response.data["recent_reviews"]})
         self.assertEqual(response.data["recent_reviews"][0]["comment"], "Review 4")
-        self.assertIsNone(response.data["recent_reviews"][0]["rating"])
+        self.assertEqual(response.data["recent_reviews"][0]["rating"], 4)
 
     def test_recent_courses_progress_fields_are_returned_correctly(self):
         self.client.force_authenticate(user=self.user)
