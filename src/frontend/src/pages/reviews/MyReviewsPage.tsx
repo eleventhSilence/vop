@@ -1,5 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
 import { reviewsApi } from '@/entities/review/api';
 import { extractApiError } from '@/shared/api/client';
@@ -117,7 +118,10 @@ const ReviewEditor = ({
       </div>
       <Input id={`comment-${reviewId}`} label="Комментарий" value={draftComment} onChange={(event) => setDraftComment(event.target.value)} required />
       <Input id={`rating-${reviewId}`} label="Оценка" type="number" min={1} max={5} value={draftRating} onChange={(event) => setDraftRating(Number(event.target.value))} required />
-      <Button type="submit" variant="secondary" disabled={isSaving}>Обновить</Button>
+      <div className="card__row">
+        <Button type="submit" variant="secondary" disabled={isSaving}>Обновить</Button>
+        <Link to={`/account/reviews/${reviewId}/edit`} className="text-link">Открыть отдельную страницу →</Link>
+      </div>
     </form>
   );
 };

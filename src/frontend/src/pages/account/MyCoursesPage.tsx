@@ -31,8 +31,8 @@ export const MyCoursesPage = () => {
               <strong>{course.progress_percent}%</strong>
             </div>
             <div className="card__row">
-              <Link to={`/learning/${course.course_id}`} className="text-link">Учебная страница →</Link>
-              <Link to={`/tests/${course.course_id}`} className="text-link">Тестирование →</Link>
+              <Link to={`/account/courses/${course.course_id}`} className="text-link">Учебная страница →</Link>
+              <Link to={`/account/courses/${course.course_id}/test`} className="text-link">Тестирование →</Link>
             </div>
           </div>
         ))}

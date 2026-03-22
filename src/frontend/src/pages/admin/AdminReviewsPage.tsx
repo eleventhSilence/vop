@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/Button';
 import { ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 
-export const AdminReviewsPage = () => {
+export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolean }) => {
   const reviewsQuery = useQuery({ queryKey: ['admin', 'reviews'], queryFn: reviewsApi.adminPending });
   const moderateMutation = useMutation({
     mutationFn: ({ reviewId, status }: { reviewId: string; status: 'APPROVED' | 'REJECTED' }) => reviewsApi.adminModerate(reviewId, status),
@@ -19,8 +19,15 @@ export const AdminReviewsPage = () => {
 
   return (
     <PageSection>
-      <h2>Администратор: отзывы</h2>
-      <p className="muted">На первом этапе страница показывает очередь модерации и даёт базовые approve/reject actions через <code>/api/admin/reviews/:id/</code>.</p>
+      <div className="section-header">
+        <div>
+          <p className="eyebrow">Администрирование</p>
+          <h2>{pendingOnly ? 'Отзывы на модерации' : 'Отзывы'}</h2>
+          <p className="muted">
+            На текущем этапе раздел использует очередь модерации и базовые approve/reject actions через <code>/api/admin/reviews/:id/</code>.
+          </p>
+        </div>
+      </div>
       {reviewsQuery.isLoading ? <LoadingState /> : null}
       {reviewsQuery.isError ? <ErrorState message={extractApiError(reviewsQuery.error)} /> : null}
       {moderateMutation.isError ? <ErrorState message={extractApiError(moderateMutation.error)} /> : null}
