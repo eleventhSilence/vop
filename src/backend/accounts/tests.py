@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import Account, AccountRole, AccountStatus
 from courses.models import Course, CourseEnrollment, CourseStatus
 from reviews.models import Review, ReviewStatus
-from testing.models import CourseTest, TestAttempt
+from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion
 
 
 class LogoutTestCase(APITestCase):
@@ -683,3 +683,306 @@ class AdminUserApiTests(APITestCase):
         self.admin_user.refresh_from_db()
         self.assertEqual(self.admin_user.role, AccountRole.ADMIN)
         self.assertEqual(response.data["role"][0], "You cannot change your own role.")
+
+
+class AdminDashboardApiTests(APITestCase):
+    def setUp(self):
+        self.admin_user = Account.objects.create_user(
+            email="admin-dashboard@example.com",
+            password="StrongPass123",
+            first_name="Admin",
+            last_name="Dashboard",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+        )
+        self.regular_user = Account.objects.create_user(
+            email="regular-dashboard@example.com",
+            password="StrongPass123",
+            first_name="Regular",
+            last_name="User",
+        )
+        self.blocked_admin = Account.objects.create_user(
+            email="blocked-admin-dashboard@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="Admin",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.dashboard_url = reverse("admin-dashboard")
+
+        self.available_course = Course.objects.create(
+            title="Available course",
+            short_description="Course available",
+            content="# available",
+            status=CourseStatus.AVAILABLE,
+        )
+        self.unavailable_course = Course.objects.create(
+            title="Unavailable course",
+            short_description="Course unavailable",
+            content="# unavailable",
+            status=CourseStatus.UNAVAILABLE,
+        )
+
+        self.pending_review = Review.objects.create(
+            user=self.regular_user,
+            course=self.available_course,
+            text="Pending review",
+            rating=5,
+            status=ReviewStatus.PENDING,
+        )
+        self.approved_review = Review.objects.create(
+            user=self.admin_user,
+            course=self.unavailable_course,
+            text="Approved review",
+            rating=4,
+            status=ReviewStatus.APPROVED,
+        )
+        self.rejected_user = Account.objects.create_user(
+            email="rejected-review@example.com",
+            password="StrongPass123",
+            first_name="Rejected",
+            last_name="Reviewer",
+        )
+        self.rejected_review = Review.objects.create(
+            user=self.rejected_user,
+            course=self.available_course,
+            text="Rejected review",
+            rating=2,
+            status=ReviewStatus.REJECTED,
+        )
+
+        self.course_test = CourseTest.objects.create(
+            course=self.available_course,
+            title="Dashboard test",
+            description="Admin summary test",
+            passing_score=1,
+            max_attempts=2,
+            is_active=True,
+        )
+        self.question_one = TestQuestion.objects.create(
+            test=self.course_test,
+            text="Question 1",
+            order=1,
+        )
+        self.question_two = TestQuestion.objects.create(
+            test=self.course_test,
+            text="Question 2",
+            order=2,
+        )
+        AnswerOption.objects.create(
+            question=self.question_one,
+            text="Answer 1",
+            is_correct=True,
+        )
+        AnswerOption.objects.create(
+            question=self.question_one,
+            text="Answer 2",
+            is_correct=False,
+        )
+        AnswerOption.objects.create(
+            question=self.question_two,
+            text="Answer 3",
+            is_correct=True,
+        )
+
+    def authenticate_with_jwt(self, user):
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+    def _create_recent_user(self, index, registered_at):
+        user = Account.objects.create_user(
+            email=f"recent-{index}@example.com",
+            password="StrongPass123",
+            first_name=f"Recent{index}",
+            last_name="User",
+        )
+        Account.objects.filter(pk=user.pk).update(registered_at=registered_at)
+        user.refresh_from_db()
+        return user
+
+    def _create_pending_review(self, index, created_at):
+        user = Account.objects.create_user(
+            email=f"pending-review-{index}@example.com",
+            password="StrongPass123",
+            first_name=f"Pending{index}",
+            last_name="Reviewer",
+        )
+        course = Course.objects.create(
+            title=f"Pending course {index}",
+            short_description="Pending course",
+            content="# pending",
+            status=CourseStatus.AVAILABLE,
+        )
+        review = Review.objects.create(
+            user=user,
+            course=course,
+            text=f"Pending review {index}",
+            rating=5,
+            status=ReviewStatus.PENDING,
+        )
+        Review.objects.filter(pk=review.pk).update(created_at=created_at, updated_at=created_at)
+        review.refresh_from_db()
+        return review
+
+    def test_admin_can_get_dashboard(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            set(response.data.keys()),
+            {"users", "courses", "reviews", "testing", "recent_users", "pending_reviews"},
+        )
+
+    def test_regular_user_cannot_get_dashboard(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_gets_401_for_dashboard(self):
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_blocked_admin_cannot_get_dashboard(self):
+        self.authenticate_with_jwt(self.blocked_admin)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+
+    def test_user_counts_are_calculated_correctly(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["users"],
+            {
+                "total_users": 4,
+                "active_users_count": 3,
+                "blocked_users_count": 1,
+                "admins_count": 2,
+                "regular_users_count": 2,
+            },
+        )
+
+    def test_course_counts_are_calculated_correctly(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["courses"],
+            {
+                "total_courses": 2,
+                "available_courses_count": 1,
+                "unavailable_courses_count": 1,
+            },
+        )
+
+    def test_review_counts_are_calculated_correctly(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["reviews"],
+            {
+                "total_reviews": 3,
+                "pending_reviews_count": 1,
+                "approved_reviews_count": 1,
+                "rejected_reviews_count": 1,
+            },
+        )
+
+    def test_testing_counts_are_calculated_correctly(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["testing"],
+            {
+                "total_tests": 1,
+                "total_questions": 2,
+                "total_answer_options": 3,
+            },
+        )
+
+    def test_recent_users_returns_latest_users_only_in_descending_order(self):
+        now = timezone.now()
+        oldest_included = self._create_recent_user(index=1, registered_at=now - timedelta(days=5))
+        second_included = self._create_recent_user(index=2, registered_at=now - timedelta(days=4))
+        middle_included = self._create_recent_user(index=3, registered_at=now - timedelta(days=3))
+        second_latest = self._create_recent_user(index=4, registered_at=now - timedelta(days=2))
+        latest = self._create_recent_user(index=5, registered_at=now - timedelta(days=1))
+        excluded = self._create_recent_user(index=6, registered_at=now - timedelta(days=6))
+        Account.objects.filter(pk=self.admin_user.pk).update(registered_at=now - timedelta(days=10))
+        Account.objects.filter(pk=self.regular_user.pk).update(registered_at=now - timedelta(days=11))
+        Account.objects.filter(pk=self.blocked_admin.pk).update(registered_at=now - timedelta(days=12))
+        Account.objects.filter(pk=self.rejected_user.pk).update(registered_at=now - timedelta(days=13))
+
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["recent_users"]), 5)
+        self.assertEqual(
+            [item["user_id"] for item in response.data["recent_users"]],
+            [
+                str(latest.id),
+                str(second_latest.id),
+                str(middle_included.id),
+                str(second_included.id),
+                str(oldest_included.id),
+            ],
+        )
+        self.assertNotIn(str(excluded.id), {item["user_id"] for item in response.data["recent_users"]})
+        self.assertEqual(response.data["recent_users"][0]["email"], latest.email)
+        self.assertIn("created_at", response.data["recent_users"][0])
+        self.assertNotIn("updated_at", response.data["recent_users"][0])
+
+    def test_pending_reviews_returns_latest_pending_reviews_only_in_descending_order(self):
+        now = timezone.now()
+        oldest_included = self._create_pending_review(index=1, created_at=now - timedelta(days=5))
+        second_included = self._create_pending_review(index=2, created_at=now - timedelta(days=4))
+        middle_included = self._create_pending_review(index=3, created_at=now - timedelta(days=3))
+        second_latest = self._create_pending_review(index=4, created_at=now - timedelta(days=2))
+        latest = self._create_pending_review(index=5, created_at=now - timedelta(days=1))
+        excluded = self._create_pending_review(index=6, created_at=now - timedelta(days=6))
+        Review.objects.filter(pk=self.pending_review.pk).update(
+            created_at=now - timedelta(days=10),
+            updated_at=now - timedelta(days=10),
+        )
+
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["pending_reviews"]), 5)
+        self.assertEqual(
+            [item["review_id"] for item in response.data["pending_reviews"]],
+            [
+                str(latest.id),
+                str(second_latest.id),
+                str(middle_included.id),
+                str(second_included.id),
+                str(oldest_included.id),
+            ],
+        )
+        self.assertNotIn(str(excluded.id), {item["review_id"] for item in response.data["pending_reviews"]})
+        self.assertNotIn(str(self.approved_review.id), {item["review_id"] for item in response.data["pending_reviews"]})
+        self.assertNotIn(str(self.rejected_review.id), {item["review_id"] for item in response.data["pending_reviews"]})
+        self.assertEqual(response.data["pending_reviews"][0]["status"], ReviewStatus.PENDING)
+        self.assertEqual(response.data["pending_reviews"][0]["comment"], latest.text)

@@ -6,6 +6,7 @@ from rest_framework import serializers
 from accounts.models import Account
 from courses.models import CourseEnrollment
 from reviews.models import Review
+from reviews.serializers import AdminReviewListSerializer
 
 
 class AccountMeSerializer(serializers.ModelSerializer):
@@ -186,6 +187,56 @@ class AdminAccountDetailSerializer(AdminAccountBaseSerializer):
             "reviews_count",
         )
         read_only_fields = fields
+
+
+class AdminDashboardUserSummarySerializer(serializers.Serializer):
+    total_users = serializers.IntegerField(read_only=True)
+    active_users_count = serializers.IntegerField(read_only=True)
+    blocked_users_count = serializers.IntegerField(read_only=True)
+    admins_count = serializers.IntegerField(read_only=True)
+    regular_users_count = serializers.IntegerField(read_only=True)
+
+
+class AdminDashboardCourseSummarySerializer(serializers.Serializer):
+    total_courses = serializers.IntegerField(read_only=True)
+    available_courses_count = serializers.IntegerField(read_only=True)
+    unavailable_courses_count = serializers.IntegerField(read_only=True)
+
+
+class AdminDashboardReviewSummarySerializer(serializers.Serializer):
+    total_reviews = serializers.IntegerField(read_only=True)
+    pending_reviews_count = serializers.IntegerField(read_only=True)
+    approved_reviews_count = serializers.IntegerField(read_only=True)
+    rejected_reviews_count = serializers.IntegerField(read_only=True)
+
+
+class AdminDashboardTestingSummarySerializer(serializers.Serializer):
+    total_tests = serializers.IntegerField(read_only=True)
+    total_questions = serializers.IntegerField(read_only=True)
+    total_answer_options = serializers.IntegerField(read_only=True)
+
+
+class AdminDashboardRecentUserSerializer(AdminAccountBaseSerializer):
+    class Meta(AdminAccountBaseSerializer.Meta):
+        fields = (
+            "user_id",
+            "email",
+            "first_name",
+            "last_name",
+            "role",
+            "status",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class AdminDashboardSerializer(serializers.Serializer):
+    users = AdminDashboardUserSummarySerializer(read_only=True)
+    courses = AdminDashboardCourseSummarySerializer(read_only=True)
+    reviews = AdminDashboardReviewSummarySerializer(read_only=True)
+    testing = AdminDashboardTestingSummarySerializer(read_only=True)
+    recent_users = AdminDashboardRecentUserSerializer(many=True, read_only=True)
+    pending_reviews = AdminReviewListSerializer(many=True, read_only=True)
 
 
 class AdminAccountWriteSerializer(serializers.ModelSerializer):
