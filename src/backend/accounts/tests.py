@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Account, AccountStatus
+from accounts.models import Account, AccountRole, AccountStatus
 from courses.models import Course, CourseEnrollment, CourseStatus
 from reviews.models import Review, ReviewStatus
 from testing.models import CourseTest, TestAttempt
@@ -427,3 +427,259 @@ class AccountDashboardApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data["detail"], "User account is blocked.")
+
+
+class AdminUserApiTests(APITestCase):
+    def setUp(self):
+        self.admin_user = Account.objects.create_user(
+            email="admin-users@example.com",
+            password="StrongPass123",
+            first_name="Admin",
+            last_name="Manager",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+        )
+        self.regular_user = Account.objects.create_user(
+            email="regular-users@example.com",
+            password="StrongPass123",
+            first_name="Regular",
+            last_name="User",
+        )
+        self.target_user = Account.objects.create_user(
+            email="target@example.com",
+            password="StrongPass123",
+            first_name="Target",
+            last_name="Person",
+        )
+        self.second_target_user = Account.objects.create_user(
+            email="second@example.com",
+            password="StrongPass123",
+            first_name="Second",
+            last_name="Member",
+            status=AccountStatus.BLOCKED,
+        )
+
+        self.list_url = reverse("admin-user-list")
+
+    def authenticate_with_jwt(self, user):
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+    def get_detail_url(self, user):
+        return reverse("admin-user-detail", kwargs={"pk": user.id})
+
+    def test_admin_can_get_user_list(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 4)
+        self.assertEqual(response.data[0]["user_id"], str(self.second_target_user.id))
+        self.assertEqual(response.data[0]["email"], self.second_target_user.email)
+        self.assertIn("created_at", response.data[0])
+        self.assertIn("updated_at", response.data[0])
+
+    def test_admin_can_filter_user_list(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(
+            self.list_url,
+            {"role": AccountRole.USER, "status": AccountStatus.BLOCKED, "search": "second"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["user_id"], str(self.second_target_user.id))
+
+    def test_regular_user_cannot_get_user_list(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_gets_401_for_user_list(self):
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_blocked_admin_cannot_get_user_list(self):
+        blocked_admin = Account.objects.create_user(
+            email="blocked-admin-users@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="Admin",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.authenticate_with_jwt(blocked_admin)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+
+    def test_admin_can_get_user_detail(self):
+        CourseEnrollment.objects.create(
+            user=self.target_user,
+            course=Course.objects.create(
+                title="Admin detail course",
+                short_description="Course",
+                content="Details",
+                status=CourseStatus.AVAILABLE,
+            ),
+        )
+        Review.objects.create(
+            user=self.target_user,
+            course=Course.objects.create(
+                title="Review course",
+                short_description="Review",
+                content="Review details",
+                status=CourseStatus.AVAILABLE,
+            ),
+            text="Helpful",
+            rating=5,
+            status=ReviewStatus.APPROVED,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_detail_url(self.target_user))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user_id"], str(self.target_user.id))
+        self.assertEqual(response.data["email"], self.target_user.email)
+        self.assertEqual(response.data["enrolled_courses_count"], 1)
+        self.assertEqual(response.data["reviews_count"], 1)
+
+    def test_nonexistent_user_returns_404(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(reverse("admin-user-detail", kwargs={"pk": "e5ce8bf7-3ad7-4e33-8f57-2c8dce9ced7a"}))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_admin_can_change_user_status(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_detail_url(self.target_user),
+            {"status": AccountStatus.BLOCKED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.target_user.refresh_from_db()
+        self.assertEqual(self.target_user.status, AccountStatus.BLOCKED)
+        self.assertEqual(response.data["status"], AccountStatus.BLOCKED)
+
+    def test_admin_can_change_user_role(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_detail_url(self.target_user),
+            {"role": AccountRole.ADMIN},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.target_user.refresh_from_db()
+        self.assertEqual(self.target_user.role, AccountRole.ADMIN)
+        self.assertEqual(response.data["role"], AccountRole.ADMIN)
+
+    def test_patch_updates_only_passed_fields(self):
+        self.client.force_authenticate(user=self.admin_user)
+        original_last_name = self.target_user.last_name
+        original_status = self.target_user.status
+        original_role = self.target_user.role
+
+        response = self.client.patch(
+            self.get_detail_url(self.target_user),
+            {"first_name": "Updated"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.target_user.refresh_from_db()
+        self.assertEqual(self.target_user.first_name, "Updated")
+        self.assertEqual(self.target_user.last_name, original_last_name)
+        self.assertEqual(self.target_user.status, original_status)
+        self.assertEqual(self.target_user.role, original_role)
+
+    def test_cannot_change_password_through_admin_endpoint(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_detail_url(self.target_user),
+            {"password": "NewPassword123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.target_user.refresh_from_db()
+        self.assertTrue(self.target_user.check_password("StrongPass123"))
+        self.assertEqual(response.data["password"][0], "This field cannot be updated.")
+
+    def test_cannot_change_email_through_admin_endpoint(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_detail_url(self.target_user),
+            {"email": "new-email@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.target_user.refresh_from_db()
+        self.assertEqual(self.target_user.email, "target@example.com")
+        self.assertEqual(response.data["email"][0], "This field cannot be updated.")
+
+    def test_regular_user_cannot_update_users(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.patch(
+            self.get_detail_url(self.target_user),
+            {"status": AccountStatus.BLOCKED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.target_user.refresh_from_db()
+        self.assertEqual(self.target_user.status, AccountStatus.ACTIVE)
+
+    def test_delete_endpoint_is_not_supported_for_users(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.delete(self.get_detail_url(self.target_user))
+
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertTrue(Account.objects.filter(id=self.target_user.id).exists())
+
+    def test_admin_cannot_block_self(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_detail_url(self.admin_user),
+            {"status": AccountStatus.BLOCKED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.admin_user.refresh_from_db()
+        self.assertEqual(self.admin_user.status, AccountStatus.ACTIVE)
+        self.assertEqual(response.data["status"][0], "You cannot change your own status.")
+
+    def test_admin_cannot_change_own_role(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_detail_url(self.admin_user),
+            {"role": AccountRole.USER},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.admin_user.refresh_from_db()
+        self.assertEqual(self.admin_user.role, AccountRole.ADMIN)
+        self.assertEqual(response.data["role"][0], "You cannot change your own role.")
