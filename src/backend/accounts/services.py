@@ -3,13 +3,17 @@ from __future__ import annotations
 from collections import defaultdict
 from uuid import UUID
 
-from courses.models import CourseEnrollment
+from django.db.models import Count, Q
+
+from accounts.models import Account, AccountRole, AccountStatus
+from courses.models import Course, CourseEnrollment, CourseStatus
 from progress.utils import build_progress_payload, sync_enrollment_progress_status
-from reviews.models import Review
-from testing.models import TestAttempt
+from reviews.models import Review, ReviewStatus
+from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion
 
 
 RECENT_DASHBOARD_ITEMS_LIMIT = 3
+ADMIN_DASHBOARD_ITEMS_LIMIT = 5
 
 
 def _build_attempt_ids_map(*, user, enrollments: list[CourseEnrollment]) -> dict[UUID, list[UUID]]:
@@ -83,4 +87,47 @@ def build_account_dashboard(*, user) -> dict:
         "recent_courses": recent_enrollments,
         "recent_reviews": recent_reviews,
         "recent_course_progress_payloads": recent_course_progress_payloads,
+    }
+
+
+def build_admin_dashboard() -> dict:
+    user_summary = Account.objects.aggregate(
+        total_users=Count("id"),
+        active_users_count=Count("id", filter=Q(status=AccountStatus.ACTIVE)),
+        blocked_users_count=Count("id", filter=Q(status=AccountStatus.BLOCKED)),
+        admins_count=Count("id", filter=Q(role=AccountRole.ADMIN)),
+        regular_users_count=Count("id", filter=Q(role=AccountRole.USER)),
+    )
+    course_summary = Course.objects.aggregate(
+        total_courses=Count("id"),
+        available_courses_count=Count("id", filter=Q(status=CourseStatus.AVAILABLE)),
+        unavailable_courses_count=Count("id", filter=Q(status=CourseStatus.UNAVAILABLE)),
+    )
+    review_summary = Review.objects.aggregate(
+        total_reviews=Count("id"),
+        pending_reviews_count=Count("id", filter=Q(status=ReviewStatus.PENDING)),
+        approved_reviews_count=Count("id", filter=Q(status=ReviewStatus.APPROVED)),
+        rejected_reviews_count=Count("id", filter=Q(status=ReviewStatus.REJECTED)),
+    )
+    testing_summary = {
+        "total_tests": CourseTest.objects.count(),
+        "total_questions": TestQuestion.objects.count(),
+        "total_answer_options": AnswerOption.objects.count(),
+    }
+    recent_users = list(
+        Account.objects.order_by("-registered_at", "email")[:ADMIN_DASHBOARD_ITEMS_LIMIT]
+    )
+    pending_reviews = list(
+        Review.objects.filter(status=ReviewStatus.PENDING)
+        .select_related("user", "course")
+        .order_by("-created_at")[:ADMIN_DASHBOARD_ITEMS_LIMIT]
+    )
+
+    return {
+        "users": user_summary,
+        "courses": course_summary,
+        "reviews": review_summary,
+        "testing": testing_summary,
+        "recent_users": recent_users,
+        "pending_reviews": pending_reviews,
     }

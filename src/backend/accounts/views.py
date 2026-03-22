@@ -16,9 +16,10 @@ from accounts.serializers import (
     AdminAccountDetailSerializer,
     AdminAccountListSerializer,
     AdminAccountWriteSerializer,
+    AdminDashboardSerializer,
     ChangePasswordSerializer,
 )
-from accounts.services import build_account_dashboard
+from accounts.services import build_account_dashboard, build_admin_dashboard
 from dto.serializers import LoginSerializer, LogoutSerializer, RegisterSerializer
 from reviews.permissions import IsAdminUserRole
 
@@ -95,6 +96,16 @@ class AccountDashboardView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         self.dashboard_payload = build_account_dashboard(user=request.user)
         serializer = self.get_serializer(self.dashboard_payload)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminDashboardView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    serializer_class = AdminDashboardSerializer
+    http_method_names = ["get", "head", "options"]
+
+    def get(self, request, *args, **kwargs):
+        serializer = self.get_serializer(build_admin_dashboard())
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
