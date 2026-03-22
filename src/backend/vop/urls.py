@@ -19,6 +19,7 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
+    path(start + "admin/", include("accounts.admin_urls")),
     path(start + "admin/", include("reviews.admin_urls")),
     path(start + "admin/", include("courses.admin_urls")),
     path(start + "admin/", include("testing.admin_urls")),

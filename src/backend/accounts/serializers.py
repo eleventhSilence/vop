@@ -150,3 +150,85 @@ class AccountDashboardSerializer(serializers.Serializer):
     stats = AccountDashboardStatsSerializer(read_only=True)
     recent_courses = AccountDashboardRecentCourseSerializer(many=True, read_only=True)
     recent_reviews = AccountDashboardRecentReviewSerializer(many=True, read_only=True)
+
+
+class AdminAccountBaseSerializer(serializers.ModelSerializer):
+    user_id = serializers.UUIDField(source="id", read_only=True)
+    created_at = serializers.DateTimeField(source="registered_at", read_only=True)
+    updated_at = serializers.DateTimeField(source="last_login_at", read_only=True)
+
+    class Meta:
+        model = Account
+        fields = (
+            "user_id",
+            "email",
+            "first_name",
+            "last_name",
+            "role",
+            "status",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+
+class AdminAccountListSerializer(AdminAccountBaseSerializer):
+    pass
+
+
+class AdminAccountDetailSerializer(AdminAccountBaseSerializer):
+    enrolled_courses_count = serializers.IntegerField(read_only=True)
+    reviews_count = serializers.IntegerField(read_only=True)
+
+    class Meta(AdminAccountBaseSerializer.Meta):
+        fields = AdminAccountBaseSerializer.Meta.fields + (
+            "enrolled_courses_count",
+            "reviews_count",
+        )
+        read_only_fields = fields
+
+
+class AdminAccountWriteSerializer(serializers.ModelSerializer):
+    allowed_fields = {"role", "status", "first_name", "last_name"}
+    forbidden_fields = {
+        "email",
+        "password",
+        "created_at",
+        "updated_at",
+        "registered_at",
+        "last_login_at",
+        "is_staff",
+        "is_superuser",
+        "user_permissions",
+        "groups",
+        "id",
+        "user_id",
+    }
+
+    class Meta:
+        model = Account
+        fields = ("first_name", "last_name", "role", "status")
+
+    def validate(self, attrs):
+        errors = {}
+
+        for field in self.forbidden_fields:
+            if field in self.initial_data:
+                errors[field] = "This field cannot be updated."
+
+        for field in self.initial_data:
+            if field not in self.allowed_fields and field not in self.forbidden_fields:
+                errors[field] = "This field cannot be updated."
+
+        request = self.context.get("request")
+        instance = getattr(self, "instance", None)
+        if request is not None and instance is not None and request.user.pk == instance.pk:
+            if "status" in attrs and attrs["status"] != instance.status:
+                errors["status"] = "You cannot change your own status."
+            if "role" in attrs and attrs["role"] != instance.role:
+                errors["role"] = "You cannot change your own role."
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return attrs
