@@ -90,9 +90,15 @@ class ProgressApiTests(APITestCase):
         response = self.client.get(reverse("progress-my-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual({item["course_id"] for item in response.data}, {str(self.course.id), str(self.second_course.id)})
-        second_course_payload = next(item for item in response.data if item["course_id"] == str(self.second_course.id))
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(
+            {item["course_id"] for item in response.data["results"]},
+            {str(self.course.id), str(self.second_course.id)},
+        )
+        second_course_payload = next(
+            item for item in response.data["results"] if item["course_id"] == str(self.second_course.id)
+        )
         self.second_enrollment.refresh_from_db()
         self.assertEqual(self.second_enrollment.progress_status, "completed")
         self.assertEqual(second_course_payload["progress_percent"], 50)

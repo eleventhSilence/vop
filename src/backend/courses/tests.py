@@ -39,14 +39,42 @@ class CoursesApiTests(APITestCase):
         response = self.client.get(reverse("course-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["course_id"], str(self.available_course.id))
-        self.assertNotIn("id", response.data[0])
+        self.assertEqual(response.data["count"], 1)
+        self.assertIsNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["course_id"], str(self.available_course.id))
+        self.assertNotIn("id", response.data["results"][0])
+
+    def test_get_courses_list_supports_page_navigation(self):
+        for index in range(10):
+            Course.objects.create(
+                title=f"Extra course {index}",
+                short_description="Extra description",
+                content="# Extra",
+                status=CourseStatus.AVAILABLE,
+            )
+
+        first_page_response = self.client.get(reverse("course-list"))
+        second_page_response = self.client.get(reverse("course-list"), {"page": 2})
+
+        self.assertEqual(first_page_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(first_page_response.data["count"], 11)
+        self.assertEqual(len(first_page_response.data["results"]), 10)
+        self.assertIsNotNone(first_page_response.data["next"])
+        self.assertIsNone(first_page_response.data["previous"])
+
+        self.assertEqual(second_page_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_page_response.data["count"], 11)
+        self.assertEqual(len(second_page_response.data["results"]), 1)
+        self.assertIsNone(second_page_response.data["next"])
+        self.assertIsNotNone(second_page_response.data["previous"])
 
     def test_get_course_detail(self):
         response = self.client.get(reverse("course-detail", kwargs={"pk": self.available_course.id}))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("results", response.data)
         self.assertEqual(response.data["course_id"], str(self.available_course.id))
         self.assertIn("content", response.data)
         self.assertEqual(response.data["content"], self.available_course.content)
@@ -124,18 +152,24 @@ class CoursesApiTests(APITestCase):
         response = self.client.get(reverse("course-my-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["course_id"], str(self.available_course.id))
-        self.assertEqual(response.data[0]["title"], self.available_course.title)
-        self.assertEqual(response.data[0]["short_description"], self.available_course.short_description)
-        self.assertEqual(response.data[0]["enrolled_at"], my_enrollment.enrolled_at.isoformat().replace("+00:00", "Z"))
-        self.assertTrue(response.data[0]["is_theory_completed"])
-        self.assertEqual(response.data[0]["progress_percent"], 100)
-        self.assertEqual(response.data[0]["progress_status"], "completed")
-        self.assertTrue(response.data[0]["is_test_passed"])
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["course_id"], str(self.available_course.id))
+        self.assertEqual(response.data["results"][0]["title"], self.available_course.title)
+        self.assertEqual(response.data["results"][0]["short_description"], self.available_course.short_description)
+        self.assertEqual(
+            response.data["results"][0]["enrolled_at"],
+            my_enrollment.enrolled_at.isoformat().replace("+00:00", "Z"),
+        )
+        self.assertTrue(response.data["results"][0]["is_theory_completed"])
+        self.assertEqual(response.data["results"][0]["progress_percent"], 100)
+        self.assertEqual(response.data["results"][0]["progress_status"], "completed")
+        self.assertTrue(response.data["results"][0]["is_test_passed"])
         my_enrollment.refresh_from_db()
         self.assertEqual(my_enrollment.progress_status, "theory_completed")
-        self.assertFalse(any(item["course_id"] == str(other_enrollment.course_id) for item in response.data))
+        self.assertFalse(
+            any(item["course_id"] == str(other_enrollment.course_id) for item in response.data["results"])
+        )
 
     def test_get_my_courses_returns_blocked_user_unauthorized(self):
         blocked_user = Account.objects.create_user(
@@ -201,10 +235,11 @@ class AdminCoursesApiTests(APITestCase):
         response = self.client.get(self.get_admin_list_url())
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(response.data[0]["course_id"], str(self.second_course.id))
-        self.assertEqual(response.data[1]["course_id"], str(self.course.id))
-        self.assertEqual(response.data[0]["description"], self.second_course.content)
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["results"][0]["course_id"], str(self.second_course.id))
+        self.assertEqual(response.data["results"][1]["course_id"], str(self.course.id))
+        self.assertEqual(response.data["results"][0]["description"], self.second_course.content)
 
     def test_regular_user_cannot_get_course_list(self):
         self.client.force_authenticate(user=self.regular_user)
@@ -359,7 +394,8 @@ class AdminCoursesApiTests(APITestCase):
         self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
         self.course.refresh_from_db()
         self.assertEqual(self.course.status, CourseStatus.UNAVAILABLE)
-        self.assertEqual(len(list_response.data), 0)
+        self.assertEqual(list_response.data["count"], 0)
+        self.assertEqual(list_response.data["results"], [])
         self.assertEqual(detail_response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_regular_user_cannot_patch_course(self):

@@ -31,7 +31,7 @@ class MyCourseListView(generics.ListAPIView):
     serializer_class = MyCourseSerializer
 
     def get_queryset(self):
-        return CourseEnrollment.objects.filter(user=self.request.user).select_related("course")
+        return CourseEnrollment.objects.filter(user=self.request.user).select_related("course").order_by("-enrolled_at")
 
 
 class CourseDetailView(generics.RetrieveAPIView):
