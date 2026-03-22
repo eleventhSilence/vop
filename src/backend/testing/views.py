@@ -5,11 +5,14 @@ from rest_framework.response import Response
 
 from courses.models import Course, CourseEnrollment, CourseStatus
 from reviews.permissions import IsAdminUserRole
-from testing.models import CourseTest, TestAttempt, TestQuestion
+from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion
 from testing.serializers import (
     AdminCourseTestDetailSerializer,
     AdminCourseTestListSerializer,
     AdminCourseTestWriteSerializer,
+    AdminAnswerOptionDetailSerializer,
+    AdminAnswerOptionListSerializer,
+    AdminAnswerOptionWriteSerializer,
     AdminTestQuestionDetailSerializer,
     AdminTestQuestionListSerializer,
     AdminTestQuestionWriteSerializer,
@@ -190,3 +193,48 @@ class AdminTestQuestionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyA
 
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminAnswerOptionListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    http_method_names = ["get", "post", "head", "options"]
+
+    def get_queryset(self):
+        return AnswerOption.objects.select_related("question").order_by(
+            "question__test__created_at", "question__order", "created_at"
+        )
+
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return AdminAnswerOptionWriteSerializer
+        return AdminAnswerOptionListSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        response_serializer = AdminAnswerOptionDetailSerializer(serializer.instance)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class AdminAnswerOptionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    queryset = AnswerOption.objects.select_related("question")
+    http_method_names = ["get", "patch", "delete", "head", "options"]
+
+    def get_serializer_class(self):
+        if self.request.method == "PATCH":
+            return AdminAnswerOptionWriteSerializer
+        return AdminAnswerOptionDetailSerializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        response_serializer = AdminAnswerOptionDetailSerializer(instance)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)

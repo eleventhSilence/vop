@@ -834,3 +834,234 @@ class AdminTestingApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(TestQuestion.objects.filter(id=question.id).exists())
+
+
+    def get_admin_answer_option_list_url(self):
+        return reverse("admin-answer-option-list-create")
+
+    def get_admin_answer_option_detail_url(self, option):
+        return reverse("admin-answer-option-detail", kwargs={"pk": option.id})
+
+    def create_answer_option(self, **kwargs):
+        payload = {
+            "question": TestQuestion.objects.create(
+                test=self.test,
+                text="Answer option question",
+                order=kwargs.pop("question_order", 1),
+            ),
+            "text": "Answer option text",
+            "is_correct": False,
+        }
+        payload.update(kwargs)
+        return AnswerOption.objects.create(**payload)
+
+    def test_admin_can_get_answer_option_list(self):
+        first_question = self.create_question(text="Question for first option", order=1)
+        second_question = self.create_question(text="Question for second option", order=2)
+        first_option = AnswerOption.objects.create(question=first_question, text="Option A", is_correct=True)
+        second_option = AnswerOption.objects.create(question=second_question, text="Option B", is_correct=False)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_answer_option_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data[0]["option_id"], str(first_option.id))
+        self.assertEqual(response.data[0]["question_id"], str(first_question.id))
+        self.assertEqual(response.data[0]["question_text"], first_question.text)
+        self.assertIn("created_at", response.data[0])
+        self.assertIn("updated_at", response.data[0])
+        self.assertEqual(response.data[1]["option_id"], str(second_option.id))
+
+    def test_regular_user_cannot_get_answer_option_list(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.get(self.get_admin_answer_option_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_gets_401_for_answer_option_list(self):
+        response = self.client.get(self.get_admin_answer_option_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_blocked_admin_cannot_get_answer_option_list(self):
+        blocked_admin = Account.objects.create_user(
+            email="blocked-answer-option-admin@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="Option",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.authenticate_with_jwt(blocked_admin)
+
+        response = self.client.get(self.get_admin_answer_option_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+
+    def test_admin_can_create_answer_option(self):
+        question = self.create_question(text="Question for create option", order=1)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_answer_option_list_url(),
+            {
+                "question_id": str(question.id),
+                "text": "Created answer option",
+                "is_correct": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created_option = AnswerOption.objects.get(text="Created answer option")
+        self.assertEqual(created_option.question, question)
+        self.assertEqual(response.data["option_id"], str(created_option.id))
+        self.assertEqual(response.data["question_id"], str(question.id))
+        self.assertEqual(response.data["question_text"], question.text)
+        self.assertTrue(response.data["is_correct"])
+
+    def test_invalid_data_returns_400_on_answer_option_create(self):
+        question = self.create_question(text="Question for invalid create", order=1)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_answer_option_list_url(),
+            {
+                "question_id": str(question.id),
+                "text": "",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("text", response.data)
+
+    def test_cannot_create_answer_option_for_nonexistent_question(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_answer_option_list_url(),
+            {
+                "question_id": "da4ec6f5-b4ca-42da-bef0-df7dd5918eb5",
+                "text": "Ghost answer option",
+                "is_correct": False,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("question_id", response.data)
+
+    def test_admin_can_get_specific_answer_option(self):
+        question = self.create_question(text="Specific option question", order=1)
+        option = AnswerOption.objects.create(question=question, text="Specific option", is_correct=False)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_answer_option_detail_url(option))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["option_id"], str(option.id))
+        self.assertEqual(response.data["question_id"], str(question.id))
+        self.assertEqual(response.data["text"], option.text)
+
+    def test_admin_can_patch_answer_option(self):
+        question = self.create_question(text="Original option question", order=1)
+        option = AnswerOption.objects.create(question=question, text="Original option", is_correct=False)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_answer_option_detail_url(option),
+            {
+                "text": "Updated answer option",
+                "is_correct": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        option.refresh_from_db()
+        self.assertEqual(option.text, "Updated answer option")
+        self.assertTrue(option.is_correct)
+
+    def test_answer_option_patch_updates_only_passed_fields(self):
+        first_question = self.create_question(text="First patch option question", order=1)
+        second_question = self.create_question(text="Second patch option question", order=2)
+        option = AnswerOption.objects.create(question=first_question, text="Patch option", is_correct=False)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_answer_option_detail_url(option),
+            {"text": "Only option text updated"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        option.refresh_from_db()
+        self.assertEqual(option.text, "Only option text updated")
+        self.assertFalse(option.is_correct)
+        self.assertEqual(option.question_id, first_question.id)
+        self.assertNotEqual(option.question_id, second_question.id)
+
+    def test_nonexistent_answer_option_returns_404(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(
+            reverse("admin-answer-option-detail", kwargs={"pk": "d9816d64-20e4-4190-8fa1-7924a35d8426"})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_admin_can_delete_answer_option(self):
+        question = self.create_question(text="Delete option question", order=1)
+        option = AnswerOption.objects.create(question=question, text="Delete option", is_correct=False)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.delete(self.get_admin_answer_option_detail_url(option))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(AnswerOption.objects.filter(id=option.id).exists())
+        self.assertTrue(TestQuestion.objects.filter(id=question.id).exists())
+        self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
+    def test_regular_user_cannot_delete_answer_option(self):
+        question = self.create_question(text="Regular delete option question", order=1)
+        option = AnswerOption.objects.create(question=question, text="Protected option", is_correct=False)
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.delete(self.get_admin_answer_option_detail_url(option))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(AnswerOption.objects.filter(id=option.id).exists())
+
+    def test_unauthorized_user_gets_401_for_answer_option_delete(self):
+        question = self.create_question(text="Unauthorized delete option question", order=1)
+        option = AnswerOption.objects.create(question=question, text="Unauthorized protected option", is_correct=False)
+
+        response = self.client.delete(self.get_admin_answer_option_detail_url(option))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(AnswerOption.objects.filter(id=option.id).exists())
+
+    def test_blocked_admin_cannot_delete_answer_option(self):
+        question = self.create_question(text="Blocked delete option question", order=1)
+        option = AnswerOption.objects.create(question=question, text="Blocked protected option", is_correct=False)
+        blocked_admin = Account.objects.create_user(
+            email="blocked-delete-answer-option@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="DeleteOption",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.authenticate_with_jwt(blocked_admin)
+
+        response = self.client.delete(self.get_admin_answer_option_detail_url(option))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+        self.assertTrue(AnswerOption.objects.filter(id=option.id).exists())
