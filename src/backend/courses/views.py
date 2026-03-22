@@ -3,7 +3,12 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
 from courses.models import Course, CourseEnrollment, CourseStatus
-from courses.serializers import CourseDetailSerializer, CourseEnrollmentSerializer, CourseListSerializer
+from courses.serializers import (
+    CourseDetailSerializer,
+    CourseEnrollmentSerializer,
+    CourseListSerializer,
+    MyCourseSerializer,
+)
 
 
 class CourseListView(generics.ListAPIView):
@@ -12,6 +17,14 @@ class CourseListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Course.objects.filter(status=CourseStatus.AVAILABLE)
+
+
+class MyCourseListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = MyCourseSerializer
+
+    def get_queryset(self):
+        return CourseEnrollment.objects.filter(user=self.request.user).select_related("course")
 
 
 class CourseDetailView(generics.RetrieveAPIView):
