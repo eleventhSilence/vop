@@ -24,6 +24,37 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         )
 
 
+class AdminCourseBaseSerializer(serializers.ModelSerializer):
+    course_id = serializers.UUIDField(source="id", read_only=True)
+    description = serializers.CharField(source="content")
+
+    class Meta:
+        model = Course
+        fields = (
+            "course_id",
+            "title",
+            "short_description",
+            "description",
+            "status",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("course_id", "created_at", "updated_at")
+
+
+class AdminCourseListSerializer(AdminCourseBaseSerializer):
+    pass
+
+
+class AdminCourseDetailSerializer(AdminCourseBaseSerializer):
+    pass
+
+
+class AdminCourseWriteSerializer(AdminCourseBaseSerializer):
+    class Meta(AdminCourseBaseSerializer.Meta):
+        read_only_fields = ("course_id", "created_at", "updated_at")
+
+
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
 
