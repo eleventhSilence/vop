@@ -65,7 +65,7 @@ def build_progress_payload(*, enrollment: CourseEnrollment, attempts: QuerySet[T
     attempts_summary = attempts.aggregate(best_score=Max("score"))
     total_attempts = attempts.count()
     is_test_passed = attempts.filter(is_passed=True).exists()
-    progress_status = sync_enrollment_progress_status(enrollment=enrollment, attempts=attempts)
+    progress_status = calculate_progress_status(enrollment=enrollment, attempts=attempts)
     progress_percent = PROGRESS_STATUS_TO_PERCENT[progress_status]
 
     return {

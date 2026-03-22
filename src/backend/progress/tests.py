@@ -82,14 +82,21 @@ class ProgressApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_get_my_progress_list(self):
+    def test_get_my_progress_list_does_not_sync_progress_status(self):
         self.client.force_authenticate(user=self.user)
+        self.second_enrollment.progress_status = "completed"
+        self.second_enrollment.save(update_fields=("progress_status",))
 
         response = self.client.get(reverse("progress-my-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
         self.assertEqual({item["course_id"] for item in response.data}, {str(self.course.id), str(self.second_course.id)})
+        second_course_payload = next(item for item in response.data if item["course_id"] == str(self.second_course.id))
+        self.second_enrollment.refresh_from_db()
+        self.assertEqual(self.second_enrollment.progress_status, "completed")
+        self.assertEqual(second_course_payload["progress_percent"], 50)
+        self.assertEqual(second_course_payload["progress_status"], "theory_completed")
 
     def test_get_course_progress_detail(self):
         self.client.force_authenticate(user=self.user)
@@ -121,7 +128,8 @@ class ProgressApiTests(APITestCase):
     def test_progress_is_50_when_theory_completed(self):
         self.client.force_authenticate(user=self.user)
         self.enrollment.is_theory_completed = True
-        self.enrollment.save(update_fields=("is_theory_completed",))
+        self.enrollment.progress_status = "enrolled"
+        self.enrollment.save(update_fields=("is_theory_completed", "progress_status"))
 
         response = self.client.get(
             reverse("progress-course-detail", kwargs={"course_id": self.course.id}),
@@ -129,14 +137,15 @@ class ProgressApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.enrollment.refresh_from_db()
-        self.assertEqual(self.enrollment.progress_status, "theory_completed")
+        self.assertEqual(self.enrollment.progress_status, "enrolled")
         self.assertEqual(response.data["progress_percent"], 50)
         self.assertEqual(response.data["progress_status"], "theory_completed")
 
     def test_progress_is_75_when_testing_started(self):
         self.client.force_authenticate(user=self.user)
         self.enrollment.is_theory_completed = True
-        self.enrollment.save(update_fields=("is_theory_completed",))
+        self.enrollment.progress_status = "theory_completed"
+        self.enrollment.save(update_fields=("is_theory_completed", "progress_status"))
         TestAttempt.objects.create(user=self.user, test=self.test, score=1, is_passed=False, attempt_number=1)
 
         response = self.client.get(
@@ -145,14 +154,15 @@ class ProgressApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.enrollment.refresh_from_db()
-        self.assertEqual(self.enrollment.progress_status, "testing_in_progress")
+        self.assertEqual(self.enrollment.progress_status, "theory_completed")
         self.assertEqual(response.data["progress_percent"], 75)
         self.assertEqual(response.data["progress_status"], "testing_in_progress")
 
     def test_progress_is_100_when_test_passed(self):
         self.client.force_authenticate(user=self.user)
         self.enrollment.is_theory_completed = True
-        self.enrollment.save(update_fields=("is_theory_completed",))
+        self.enrollment.progress_status = "testing_in_progress"
+        self.enrollment.save(update_fields=("is_theory_completed", "progress_status"))
         TestAttempt.objects.create(user=self.user, test=self.test, score=2, is_passed=True, attempt_number=1)
 
         response = self.client.get(
@@ -161,6 +171,6 @@ class ProgressApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.enrollment.refresh_from_db()
-        self.assertEqual(self.enrollment.progress_status, "completed")
+        self.assertEqual(self.enrollment.progress_status, "testing_in_progress")
         self.assertEqual(response.data["progress_percent"], 100)
         self.assertEqual(response.data["progress_status"], "completed")
