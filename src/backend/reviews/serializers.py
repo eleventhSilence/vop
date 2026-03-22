@@ -78,6 +78,57 @@ class ReviewUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
+
+
+class AdminReviewListSerializer(serializers.ModelSerializer):
+    review_id = serializers.UUIDField(source="id", read_only=True)
+    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+    course_id = serializers.UUIDField(source="course.id", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    comment = serializers.CharField(source="text", read_only=True)
+
+    class Meta:
+        model = Review
+        fields = (
+            "review_id",
+            "user_id",
+            "user_email",
+            "course_id",
+            "course_title",
+            "rating",
+            "comment",
+            "status",
+            "created_at",
+            "updated_at",
+        )
+
+
+class AdminReviewStatusUpdateSerializer(serializers.ModelSerializer):
+    forbidden_fields = {"user", "course", "rating", "comment", "text", "created_at", "updated_at", "id"}
+    allowed_fields = {"status"}
+
+    class Meta:
+        model = Review
+        fields = ("status",)
+
+    def validate(self, attrs):
+        errors = {}
+
+        for field in self.forbidden_fields:
+            if field in self.initial_data:
+                errors[field] = "This field cannot be updated."
+
+        for field in self.initial_data:
+            if field not in self.allowed_fields and field not in self.forbidden_fields:
+                errors[field] = "This field cannot be updated."
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return attrs
+
+
 class ReviewPublicSerializer(serializers.ModelSerializer):
     user = serializers.EmailField(source="user.email", read_only=True)
 
