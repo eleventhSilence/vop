@@ -14,7 +14,6 @@ class CourseListSerializer(serializers.ModelSerializer):
 
 class CourseDetailSerializer(serializers.ModelSerializer):
     course_id = serializers.UUIDField(source="id", read_only=True)
-    description = serializers.CharField(source="content", read_only=True)
 
     class Meta:
         model = Course
@@ -22,7 +21,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "course_id",
             "title",
             "short_description",
-            "description",
+            "content",
             "status",
             "created_at",
             "updated_at",

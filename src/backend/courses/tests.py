@@ -48,8 +48,9 @@ class CoursesApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["course_id"], str(self.available_course.id))
-        self.assertIn("description", response.data)
-        self.assertNotIn("content", response.data)
+        self.assertIn("content", response.data)
+        self.assertEqual(response.data["content"], self.available_course.content)
+        self.assertNotIn("description", response.data)
         self.assertNotIn("id", response.data)
 
     def test_get_unavailable_course_detail_returns_404(self):

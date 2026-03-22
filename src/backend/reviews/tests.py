@@ -175,8 +175,9 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["review_id"], str(Review.objects.get(course=self.course, status=ReviewStatus.APPROVED).id))
         self.assertEqual(response.data[0]["comment"], "Одобренный отзыв")
-        self.assertEqual(response.data[0]["user_email"], self.user.email)
         self.assertEqual(response.data[0]["rating"], 5)
+        self.assertNotIn("user_email", response.data[0])
+        self.assertNotIn("user_id", response.data[0])
         self.assertNotIn("text", response.data[0])
 
     def test_get_my_reviews(self):

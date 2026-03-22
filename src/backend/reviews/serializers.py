@@ -150,13 +150,11 @@ class AdminReviewStatusUpdateSerializer(serializers.ModelSerializer):
 
 class ReviewPublicSerializer(serializers.ModelSerializer):
     review_id = serializers.UUIDField(source="id", read_only=True)
-    user_id = serializers.UUIDField(source="user.id", read_only=True)
-    user_email = serializers.EmailField(source="user.email", read_only=True)
     comment = serializers.CharField(source="text", read_only=True)
 
     class Meta:
         model = Review
-        fields = ("review_id", "user_id", "user_email", "comment", "rating", "created_at")
+        fields = ("review_id", "comment", "rating", "created_at")
 
 
 class ReviewMySerializer(serializers.ModelSerializer):
