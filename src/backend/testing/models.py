@@ -4,7 +4,7 @@ import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 
 from courses.models import Course
 
@@ -28,10 +28,19 @@ class CourseTest(models.Model):
 
 
 class TestQuestion(models.Model):
+    class QuestionType(models.TextChoices):
+        SINGLE_CHOICE = "single_choice", "Single choice"
+        MULTIPLE_CHOICE = "multiple_choice", "Multiple choice"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     test = models.ForeignKey(CourseTest, on_delete=models.CASCADE, related_name="questions")
     text = models.TextField()
     order = models.PositiveIntegerField()
+    question_type = models.CharField(
+        max_length=32,
+        choices=QuestionType.choices,
+        default=QuestionType.SINGLE_CHOICE,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -44,6 +53,38 @@ class TestQuestion(models.Model):
 
     def __str__(self) -> str:
         return f"{self.test_id}#{self.order}"
+
+    def get_answer_configuration_error(self, *, total_options: int, correct_options: int) -> str | None:
+        if total_options == 0:
+            return None
+
+        if self.question_type == self.QuestionType.SINGLE_CHOICE and correct_options != 1:
+            return "Single choice question must have exactly one correct answer"
+
+        if self.question_type == self.QuestionType.MULTIPLE_CHOICE and correct_options < 1:
+            return "Multiple choice question must have at least one correct answer"
+
+        return None
+
+    def validate_answer_configuration(self, *, total_options: int | None = None, correct_options: int | None = None) -> None:
+        if total_options is None or correct_options is None:
+            answer_options = self.answer_options.all()
+            total_options = answer_options.count()
+            correct_options = answer_options.filter(is_correct=True).count()
+
+        error = self.get_answer_configuration_error(total_options=total_options, correct_options=correct_options)
+        if error is not None:
+            raise ValidationError(error)
+
+    def clean(self):
+        super().clean()
+
+        if self.pk:
+            self.validate_answer_configuration()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class AnswerOption(models.Model):
@@ -59,6 +100,50 @@ class AnswerOption(models.Model):
 
     def __str__(self) -> str:
         return f"{self.question_id}:{self.id}"
+
+    def _get_configuration_counts(self):
+        existing_options = self.question.answer_options.exclude(pk=self.pk)
+        total_options = existing_options.count() + 1
+        correct_options = existing_options.filter(is_correct=True).count() + int(self.is_correct)
+        return total_options, correct_options
+
+    def clean(self):
+        super().clean()
+
+        if self.question_id is None:
+            return
+
+        total_options, correct_options = self._get_configuration_counts()
+        error = self.question.get_answer_configuration_error(
+            total_options=total_options,
+            correct_options=correct_options,
+        )
+        if error is not None and not (total_options == 1 and correct_options == 0):
+            raise ValidationError(error)
+
+    def save(self, *args, **kwargs):
+        total_options, correct_options = self._get_configuration_counts()
+        self.full_clean()
+
+        with transaction.atomic():
+            instance = super().save(*args, **kwargs)
+            if not (total_options == 1 and correct_options == 0):
+                self.question.validate_answer_configuration(
+                    total_options=total_options,
+                    correct_options=correct_options,
+                )
+
+        return instance
+
+    def delete(self, *args, **kwargs):
+        question = self.question
+        remaining_options = question.answer_options.exclude(pk=self.pk)
+        total_options = remaining_options.count()
+        correct_options = remaining_options.filter(is_correct=True).count()
+
+        with transaction.atomic():
+            question.validate_answer_configuration(total_options=total_options, correct_options=correct_options)
+            return super().delete(*args, **kwargs)
 
 
 class TestAttempt(models.Model):
@@ -90,7 +175,10 @@ class UserAnswer(models.Model):
     class Meta:
         db_table = "user_answers"
         constraints = [
-            models.UniqueConstraint(fields=("attempt", "question"), name="unique_question_per_attempt"),
+            models.UniqueConstraint(
+                fields=("attempt", "question", "selected_option"),
+                name="unique_selected_option_per_question_attempt",
+            ),
         ]
 
     def clean(self):
