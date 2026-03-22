@@ -2,6 +2,8 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/features/auth/model/AuthContext';
 import { LoadingState } from '@/shared/ui/DataState';
 
+const getDefaultAuthorizedRoute = (isAdmin: boolean) => (isAdmin ? '/admin/dashboard' : '/account/dashboard');
+
 export const ProtectedRoute = () => {
   const { isAuthenticated, isInitialized } = useAuth();
   const location = useLocation();
@@ -19,17 +21,18 @@ export const ProtectedRoute = () => {
 
 export const AdminRoute = () => {
   const { isAdmin, isAuthenticated, isInitialized } = useAuth();
+  const location = useLocation();
 
   if (!isInitialized) {
     return <LoadingState message="Проверяем доступ администратора..." />;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/account/dashboard" replace />;
   }
 
   return <Outlet />;
@@ -43,7 +46,7 @@ export const PublicOnlyRoute = () => {
   }
 
   if (isAuthenticated) {
-    return <Navigate to={isAdmin ? '/admin/dashboard' : '/dashboard'} replace />;
+    return <Navigate to={getDefaultAuthorizedRoute(isAdmin)} replace />;
   }
 
   return <Outlet />;

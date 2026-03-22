@@ -23,7 +23,7 @@ export const LoginPage = () => {
     try {
       const user = await login({ email, password });
       const target = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-      navigate(target ?? (user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard'), { replace: true });
+      navigate(target ?? (user.role === 'ADMIN' ? '/admin/dashboard' : '/account/dashboard'), { replace: true });
     } catch (submitError) {
       setError(extractApiError(submitError));
     } finally {

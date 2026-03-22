@@ -25,7 +25,7 @@ export const RegisterPage = () => {
 
     try {
       await register(form);
-      navigate('/dashboard', { replace: true });
+      navigate('/account/dashboard', { replace: true });
     } catch (submitError) {
       setError(extractApiError(submitError));
     } finally {

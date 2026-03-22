@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
 import { extractApiError } from '@/shared/api/client';
 import { formatStatus } from '@/shared/lib/format';
@@ -22,6 +23,7 @@ export const AdminCoursesPage = () => {
             <div className="card__row"><h3>{course.title}</h3><span>{formatStatus(course.status)}</span></div>
             <p>{course.short_description}</p>
             <p className="muted">{course.description}</p>
+            <Link to={`/admin/courses/${course.course_id}`} className="text-link">Открыть карточку курса →</Link>
           </div>
         ))}
       </div>

@@ -49,7 +49,7 @@ export const CourseLearningPage = () => {
             <Button onClick={() => completeTheoryMutation.mutate()} disabled={completeTheoryMutation.isPending || progressQuery.data.is_theory_completed} fullWidth>
               {progressQuery.data.is_theory_completed ? 'Теория отмечена как завершённая' : 'Завершить теорию'}
             </Button>
-            <Link to={`/tests/${courseId}`} className="text-link">Перейти к тестированию →</Link>
+            <Link to={`/account/courses/${courseId}/test`} className="text-link">Перейти к тестированию →</Link>
           </aside>
         </div>
       ) : null}
