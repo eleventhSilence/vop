@@ -267,12 +267,19 @@ class TestingApiTests(APITestCase):
         self.assertEqual(response.data["detail"], "Max attempts exceeded.")
 
     def test_get_attempt_history_for_current_user(self):
-        TestAttempt.objects.create(
+        first_attempt = TestAttempt.objects.create(
             user=self.user,
             test=self.test,
             score=2,
             is_passed=True,
             attempt_number=1,
+        )
+        second_attempt = TestAttempt.objects.create(
+            user=self.user,
+            test=self.test,
+            score=1,
+            is_passed=False,
+            attempt_number=2,
         )
         TestAttempt.objects.create(
             user=self.other_user,
@@ -286,9 +293,12 @@ class TestingApiTests(APITestCase):
         response = self.client.get(reverse("test-attempts", kwargs={"test_id": self.test.id}))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertIn("attempt_id", response.data[0])
-        self.assertEqual(response.data[0]["attempt_number"], 1)
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["results"][0]["attempt_id"], str(second_attempt.id))
+        self.assertEqual(response.data["results"][0]["attempt_number"], 2)
+        self.assertEqual(response.data["results"][1]["attempt_id"], str(first_attempt.id))
+        self.assertEqual(response.data["results"][1]["attempt_number"], 1)
 
     def test_submit_denied_without_enrollment(self):
         self.client.force_authenticate(user=self.other_user)
@@ -518,11 +528,12 @@ class AdminTestingApiTests(APITestCase):
         response = self.client.get(self.get_admin_list_url())
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(response.data[0]["test_id"], str(second_test.id))
-        self.assertEqual(response.data[0]["course_id"], str(self.second_course.id))
-        self.assertEqual(response.data[0]["course_title"], self.second_course.title)
-        self.assertEqual(response.data[1]["test_id"], str(self.test.id))
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["results"][0]["test_id"], str(second_test.id))
+        self.assertEqual(response.data["results"][0]["course_id"], str(self.second_course.id))
+        self.assertEqual(response.data["results"][0]["course_title"], self.second_course.title)
+        self.assertEqual(response.data["results"][1]["test_id"], str(self.test.id))
 
     def test_regular_user_cannot_get_test_list(self):
         self.client.force_authenticate(user=self.regular_user)
@@ -780,11 +791,12 @@ class AdminTestingApiTests(APITestCase):
         response = self.client.get(self.get_admin_question_list_url())
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(response.data[0]["question_id"], str(first_question.id))
-        self.assertEqual(response.data[0]["test_id"], str(self.test.id))
-        self.assertEqual(response.data[0]["test_title"], self.test.title)
-        self.assertEqual(response.data[1]["question_id"], str(second_question.id))
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["results"][0]["question_id"], str(first_question.id))
+        self.assertEqual(response.data["results"][0]["test_id"], str(self.test.id))
+        self.assertEqual(response.data["results"][0]["test_title"], self.test.title)
+        self.assertEqual(response.data["results"][1]["question_id"], str(second_question.id))
 
     def test_regular_user_cannot_get_question_list(self):
         self.client.force_authenticate(user=self.regular_user)
@@ -1005,13 +1017,14 @@ class AdminTestingApiTests(APITestCase):
         response = self.client.get(self.get_admin_answer_option_list_url())
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(response.data[0]["option_id"], str(first_option.id))
-        self.assertEqual(response.data[0]["question_id"], str(first_question.id))
-        self.assertEqual(response.data[0]["question_text"], first_question.text)
-        self.assertIn("created_at", response.data[0])
-        self.assertIn("updated_at", response.data[0])
-        self.assertEqual(response.data[1]["option_id"], str(second_option.id))
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["results"][0]["option_id"], str(first_option.id))
+        self.assertEqual(response.data["results"][0]["question_id"], str(first_question.id))
+        self.assertEqual(response.data["results"][0]["question_text"], first_question.text)
+        self.assertIn("created_at", response.data["results"][0])
+        self.assertIn("updated_at", response.data["results"][0])
+        self.assertEqual(response.data["results"][1]["option_id"], str(second_option.id))
 
     def test_regular_user_cannot_get_answer_option_list(self):
         self.client.force_authenticate(user=self.regular_user)

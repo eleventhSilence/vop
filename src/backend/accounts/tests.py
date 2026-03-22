@@ -102,6 +102,7 @@ class AuthApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("results", response.data)
         self.assertEqual(response.data["user"]["user_id"], str(self.user.id))
         self.assertNotIn("id", response.data["user"])
         self.assertIn("tokens", response.data)
@@ -121,6 +122,13 @@ class AuthApiTests(APITestCase):
             settings.REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"],
             ["rest_framework.permissions.IsAuthenticated"],
         )
+
+    def test_global_default_pagination_is_page_number(self):
+        self.assertEqual(
+            settings.REST_FRAMEWORK["DEFAULT_PAGINATION_CLASS"],
+            "rest_framework.pagination.PageNumberPagination",
+        )
+        self.assertEqual(settings.REST_FRAMEWORK["PAGE_SIZE"], 10)
 
     def test_token_refresh_is_public(self):
         refresh = RefreshToken.for_user(self.user)
@@ -412,6 +420,7 @@ class AccountDashboardApiTests(APITestCase):
         response = self.client.get(self.dashboard_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn("results", response.data)
         self.assertEqual(response.data["user"]["user_id"], str(self.user.id))
         self.assertEqual(response.data["user"]["email"], self.user.email)
         self.assertNotEqual(response.data["user"]["user_id"], str(self.other_user.id))
@@ -552,11 +561,14 @@ class AdminUserApiTests(APITestCase):
         response = self.client.get(self.list_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 4)
-        self.assertEqual(response.data[0]["user_id"], str(self.second_target_user.id))
-        self.assertEqual(response.data[0]["email"], self.second_target_user.email)
-        self.assertIn("registered_at", response.data[0])
-        self.assertIn("last_login_at", response.data[0])
+        self.assertEqual(response.data["count"], 4)
+        self.assertIsNone(response.data["next"])
+        self.assertIsNone(response.data["previous"])
+        self.assertEqual(len(response.data["results"]), 4)
+        self.assertEqual(response.data["results"][0]["user_id"], str(self.second_target_user.id))
+        self.assertEqual(response.data["results"][0]["email"], self.second_target_user.email)
+        self.assertIn("registered_at", response.data["results"][0])
+        self.assertIn("last_login_at", response.data["results"][0])
 
     def test_admin_can_filter_user_list(self):
         self.client.force_authenticate(user=self.admin_user)
@@ -567,8 +579,9 @@ class AdminUserApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["user_id"], str(self.second_target_user.id))
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["user_id"], str(self.second_target_user.id))
 
     def test_regular_user_cannot_get_user_list(self):
         self.client.force_authenticate(user=self.regular_user)

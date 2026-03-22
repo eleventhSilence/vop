@@ -172,13 +172,17 @@ class ReviewsApiTests(APITestCase):
         response = self.client.get(reverse("review-course-list", kwargs={"course_id": self.course.id}))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["review_id"], str(Review.objects.get(course=self.course, status=ReviewStatus.APPROVED).id))
-        self.assertEqual(response.data[0]["comment"], "Одобренный отзыв")
-        self.assertEqual(response.data[0]["rating"], 5)
-        self.assertNotIn("user_email", response.data[0])
-        self.assertNotIn("user_id", response.data[0])
-        self.assertNotIn("text", response.data[0])
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(
+            response.data["results"][0]["review_id"],
+            str(Review.objects.get(course=self.course, status=ReviewStatus.APPROVED).id),
+        )
+        self.assertEqual(response.data["results"][0]["comment"], "Одобренный отзыв")
+        self.assertEqual(response.data["results"][0]["rating"], 5)
+        self.assertNotIn("user_email", response.data["results"][0])
+        self.assertNotIn("user_id", response.data["results"][0])
+        self.assertNotIn("text", response.data["results"][0])
 
     def test_get_my_reviews(self):
         Review.objects.create(
@@ -207,11 +211,20 @@ class ReviewsApiTests(APITestCase):
         response = self.client.get(reverse("review-my-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual({item["status"] for item in response.data}, {ReviewStatus.PENDING, ReviewStatus.REJECTED})
-        self.assertEqual({item["rating"] for item in response.data}, {1, 5})
-        self.assertEqual({item["course_id"] for item in response.data}, {str(self.course.id), str(self.second_course.id)})
-        self.assertTrue(all("comment" in item for item in response.data))
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["results"][0]["course_id"], str(self.second_course.id))
+        self.assertEqual(response.data["results"][1]["course_id"], str(self.course.id))
+        self.assertEqual(
+            {item["status"] for item in response.data["results"]},
+            {ReviewStatus.PENDING, ReviewStatus.REJECTED},
+        )
+        self.assertEqual({item["rating"] for item in response.data["results"]}, {1, 5})
+        self.assertEqual(
+            {item["course_id"] for item in response.data["results"]},
+            {str(self.course.id), str(self.second_course.id)},
+        )
+        self.assertTrue(all("comment" in item for item in response.data["results"]))
 
     def test_author_can_update_own_review(self):
         review = self.create_review(status=ReviewStatus.APPROVED)
@@ -512,15 +525,19 @@ class AdminReviewModerationApiTests(APITestCase):
         response = self.client.get(self.get_admin_list_url())
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 3)
-        self.assertEqual([item["review_id"] for item in response.data], [str(self.pending_review.id), str(self.approved_review.id), str(self.rejected_review.id)])
-        self.assertEqual(response.data[0]["review_id"], str(self.pending_review.id))
-        self.assertEqual(response.data[0]["user_id"], str(self.regular_user.id))
-        self.assertEqual(response.data[0]["user_email"], self.regular_user.email)
-        self.assertEqual(response.data[0]["course_id"], str(self.course.id))
-        self.assertEqual(response.data[0]["course_title"], self.course.title)
-        self.assertEqual(response.data[0]["comment"], self.pending_review.text)
-        self.assertEqual(response.data[0]["status"], ReviewStatus.PENDING)
+        self.assertEqual(response.data["count"], 3)
+        self.assertEqual(len(response.data["results"]), 3)
+        self.assertEqual(
+            [item["review_id"] for item in response.data["results"]],
+            [str(self.pending_review.id), str(self.approved_review.id), str(self.rejected_review.id)],
+        )
+        self.assertEqual(response.data["results"][0]["review_id"], str(self.pending_review.id))
+        self.assertEqual(response.data["results"][0]["user_id"], str(self.regular_user.id))
+        self.assertEqual(response.data["results"][0]["user_email"], self.regular_user.email)
+        self.assertEqual(response.data["results"][0]["course_id"], str(self.course.id))
+        self.assertEqual(response.data["results"][0]["course_title"], self.course.title)
+        self.assertEqual(response.data["results"][0]["comment"], self.pending_review.text)
+        self.assertEqual(response.data["results"][0]["status"], ReviewStatus.PENDING)
 
     def test_regular_user_cannot_get_review_list(self):
         self.client.force_authenticate(user=self.regular_user)
@@ -564,14 +581,15 @@ class AdminReviewModerationApiTests(APITestCase):
         response = self.client.get(self.get_admin_pending_list_url())
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
         self.assertEqual(
-            [item["review_id"] for item in response.data],
+            [item["review_id"] for item in response.data["results"]],
             [str(newer_pending_review.id), str(self.pending_review.id)],
         )
-        self.assertEqual({item["status"] for item in response.data}, {ReviewStatus.PENDING})
-        self.assertNotIn(str(self.approved_review.id), [item["review_id"] for item in response.data])
-        self.assertNotIn(str(self.rejected_review.id), [item["review_id"] for item in response.data])
+        self.assertEqual({item["status"] for item in response.data["results"]}, {ReviewStatus.PENDING})
+        self.assertNotIn(str(self.approved_review.id), [item["review_id"] for item in response.data["results"]])
+        self.assertNotIn(str(self.rejected_review.id), [item["review_id"] for item in response.data["results"]])
 
     def test_regular_user_cannot_get_pending_review_list(self):
         self.client.force_authenticate(user=self.regular_user)
@@ -618,9 +636,10 @@ class AdminReviewModerationApiTests(APITestCase):
         response = self.client.get(self.get_admin_list_url(), {"status": ReviewStatus.APPROVED})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["review_id"], str(self.approved_review.id))
-        self.assertEqual(response.data[0]["status"], ReviewStatus.APPROVED)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["review_id"], str(self.approved_review.id))
+        self.assertEqual(response.data["results"][0]["status"], ReviewStatus.APPROVED)
 
     def test_admin_can_change_status_to_approved(self):
         self.client.force_authenticate(user=self.admin_user)

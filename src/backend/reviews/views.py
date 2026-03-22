@@ -49,7 +49,7 @@ class CourseApprovedReviewListView(generics.ListAPIView):
         return Review.objects.filter(
             course_id=self.kwargs["course_id"],
             status=ReviewStatus.APPROVED,
-        ).select_related("user")
+        ).select_related("user").order_by("-created_at", "id")
 
 
 class MyReviewListView(generics.ListAPIView):
@@ -57,7 +57,7 @@ class MyReviewListView(generics.ListAPIView):
     serializer_class = ReviewMySerializer
 
     def get_queryset(self):
-        return Review.objects.filter(user=self.request.user).select_related("course")
+        return Review.objects.filter(user=self.request.user).select_related("course").order_by("-created_at", "id")
 
 
 class AdminReviewListView(generics.ListAPIView):
@@ -86,7 +86,7 @@ class AdminReviewListView(generics.ListAPIView):
             output_field=IntegerField(),
         )
 
-        return queryset.order_by(moderation_priority, "-created_at")
+        return queryset.order_by(moderation_priority, "-created_at", "id")
 
 
 class AdminPendingReviewListView(AdminReviewListView):

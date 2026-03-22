@@ -23,7 +23,7 @@ class CourseListView(generics.ListAPIView):
     serializer_class = CourseListSerializer
 
     def get_queryset(self):
-        return Course.objects.filter(status=CourseStatus.AVAILABLE)
+        return Course.objects.filter(status=CourseStatus.AVAILABLE).order_by("-created_at", "id")
 
 
 class MyCourseListView(generics.ListAPIView):
@@ -31,7 +31,7 @@ class MyCourseListView(generics.ListAPIView):
     serializer_class = MyCourseSerializer
 
     def get_queryset(self):
-        return CourseEnrollment.objects.filter(user=self.request.user).select_related("course")
+        return CourseEnrollment.objects.filter(user=self.request.user).select_related("course").order_by("-enrolled_at", "id")
 
 
 class CourseDetailView(generics.RetrieveAPIView):
@@ -82,7 +82,7 @@ class AdminCourseListCreateView(generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
 
     def get_queryset(self):
-        return Course.objects.all()
+        return Course.objects.all().order_by("-created_at", "id")
 
     def get_serializer_class(self):
         if self.request.method == "POST":
