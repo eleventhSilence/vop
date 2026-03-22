@@ -549,7 +549,7 @@ class AdminTestingApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_admin_can_delete_test_without_attempts(self):
+    def test_admin_can_delete_test_without_attempts_and_questions(self):
         deletable_test = CourseTest.objects.create(
             course=self.second_course,
             title="Deletable test",
@@ -581,10 +581,56 @@ class AdminTestingApiTests(APITestCase):
         self.assertEqual(response.data["detail"], "Test cannot be deleted because it already has attempts.")
         self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
 
+    def test_cannot_delete_test_with_questions(self):
+        question = TestQuestion.objects.create(
+            test=self.test,
+            text="Question blocks deletion",
+            order=1,
+        )
+        AnswerOption.objects.create(
+            question=question,
+            text="Option",
+            is_correct=True,
+        )
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.delete(self.get_admin_detail_url(self.test))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data["detail"],
+            "Test cannot be deleted because it still has questions. Delete questions first.",
+        )
+        self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
     def test_regular_user_cannot_delete_test(self):
         self.client.force_authenticate(user=self.regular_user)
 
         response = self.client.delete(self.get_admin_detail_url(self.test))
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
+    def test_unauthorized_user_gets_401_for_test_delete(self):
+        response = self.client.delete(self.get_admin_detail_url(self.test))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())
+
+    def test_blocked_admin_cannot_delete_test(self):
+        blocked_admin = Account.objects.create_user(
+            email="blocked-delete-admin@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="Delete",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.authenticate_with_jwt(blocked_admin)
+
+        response = self.client.delete(self.get_admin_detail_url(self.test))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
         self.assertTrue(CourseTest.objects.filter(id=self.test.id).exists())

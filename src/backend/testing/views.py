@@ -128,5 +128,8 @@ class AdminCourseTestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPI
         if instance.attempts.exists():
             raise ValidationError({"detail": "Test cannot be deleted because it already has attempts."})
 
+        if instance.questions.exists():
+            raise ValidationError({"detail": "Test cannot be deleted because it still has questions. Delete questions first."})
+
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
