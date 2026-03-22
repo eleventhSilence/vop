@@ -31,6 +31,10 @@ class CourseDetailSerializer(serializers.ModelSerializer):
 class AdminCourseBaseSerializer(serializers.ModelSerializer):
     course_id = serializers.UUIDField(source="id", read_only=True)
     description = serializers.CharField(source="content")
+    status = serializers.ChoiceField(
+        choices=Course._meta.get_field("status").choices,
+        help_text="Use status to manage course availability in admin API. Physical deletion is not supported.",
+    )
 
     class Meta:
         model = Course

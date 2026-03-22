@@ -354,11 +354,13 @@ class AdminCoursesApiTests(APITestCase):
         )
         self.client.force_authenticate(user=None)
         list_response = self.client.get(reverse("course-list"))
+        detail_response = self.client.get(reverse("course-detail", kwargs={"pk": self.course.id}))
 
         self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
         self.course.refresh_from_db()
         self.assertEqual(self.course.status, CourseStatus.UNAVAILABLE)
         self.assertEqual(len(list_response.data), 0)
+        self.assertEqual(detail_response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_regular_user_cannot_patch_course(self):
         self.client.force_authenticate(user=self.regular_user)
@@ -373,10 +375,20 @@ class AdminCoursesApiTests(APITestCase):
         self.course.refresh_from_db()
         self.assertEqual(self.course.status, CourseStatus.AVAILABLE)
 
-    def test_delete_endpoint_is_not_supported(self):
+    def test_delete_endpoint_is_not_supported_and_status_drives_course_lifecycle(self):
         self.client.force_authenticate(user=self.admin_user)
 
         response = self.client.delete(self.get_admin_detail_url(self.course))
 
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertIn("DELETE", str(response.data["detail"]))
+        self.assertEqual(response.headers["Allow"], "GET, PATCH, HEAD, OPTIONS")
         self.assertTrue(Course.objects.filter(id=self.course.id).exists())
+
+    def test_admin_course_detail_options_do_not_advertise_delete(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.options(self.get_admin_detail_url(self.course))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.headers["Allow"], "GET, PATCH, HEAD, OPTIONS")
