@@ -1,28 +1,32 @@
-# VOP Backend (Django + DRF)
+# VOP Backend + Frontend Foundation
 
 # TEST BRANCH
 
-Backend-часть проекта на Django.  
-Проект расположен в папке `src/backend`, виртуальное окружение — в корне (`venv`).
+Проект онлайн-платформы обучения для ВКР.
 
-### Описание модулей
+- Backend: Django + DRF в `src/backend`
+- Frontend foundation: React + TypeScript + Vite в `src/frontend`
 
-- `accounts/` — приложение для работы с аккаунтами (модели, views, urls, тесты).
-- `dto/` — слой сериализации (DTO, serializers).
-- `vop/` — конфигурация Django-проекта (settings, маршрутизация, ASGI/WSGI).
-- `manage.py` — точка входа для управления проектом.
+## Backend apps
+
+- `accounts/`
+- `courses/`
+- `testing/`
+- `reviews/`
+- `progress/`
 
 ---
 
 ## ⚙️ Требования
 
 - Python 3.10+
-- pip
+- Node.js 20+
+- npm
 - GNU Make (или альтернатива для Windows)
 
 ---
 
-## 🚀 Быстрый старт
+## 🚀 Backend quick start
 
 ### 1️⃣ Установка зависимостей
 
@@ -30,51 +34,74 @@ Backend-часть проекта на Django.
 make install
 ```
 
-Команда:
-- создаёт виртуальное окружение `venv`
-- устанавливает зависимости из `requirements.txt`
-
----
-
 ### 2️⃣ Миграции
-
-Создать миграции:
 
 ```bash
 make makemigrations
-```
-
-Применить миграции:
-
-```bash
 make migrate
 ```
 
----
-
-### 3️⃣ Запуск сервера разработки
+### 3️⃣ Запуск backend
 
 ```bash
 make run
 ```
 
-Сервер будет доступен по адресу:
+Backend будет доступен по адресу:
 
-```
+```text
 http://127.0.0.1:8000
 ```
 
 ---
 
-### 4️⃣ Миграции + запуск одной командой
+## ⚛️ Frontend quick start
+
+Frontend расположен в `src/frontend` и построен как foundation для дальнейшей пользовательской и административной части.
+
+### Установка frontend зависимостей
 
 ```bash
-make up
+cd src/frontend
+npm install
+```
+
+### Запуск frontend dev server
+
+```bash
+npm run dev
+```
+
+По умолчанию Vite использует proxy `/api` → `http://127.0.0.1:8000`.
+
+### Сборка frontend
+
+```bash
+npm run build
+```
+
+### Настройка API URL
+
+При необходимости можно переопределить базовый URL через переменную:
+
+```bash
+VITE_API_BASE_URL=/api
 ```
 
 ---
 
-## 🛠 Доступные команды Makefile
+## 🧱 Что уже заложено во frontend
+
+- базовая структура `app / pages / widgets / features / entities / shared`
+- маршруты для public, private и admin зон
+- auth flow на базе access/refresh token
+- восстановление сессии после reload
+- API layer с общим `baseURL`, auth headers и refresh flow
+- страницы foundation для курсов, кабинета, обучения, тестирования и admin UI
+
+---
+
+## 🛠 Доступные backend команды Makefile
 
 Посмотреть список команд:
 
@@ -102,32 +129,8 @@ make test
 
 ---
 
-## 🪟 Windows: если не работает make
-
-На Windows команда `make` может быть недоступна.
-
-### Варианты решения:
-
-- Установить Git Bash + make
-- Использовать WSL (рекомендуется)
-- Запускать команды вручную:
-
-```bash
-python -m venv venv
-venv\Scripts\python.exe -m pip install -r requirements.txt
-
-venv\Scripts\python.exe src\backend\manage.py makemigrations
-venv\Scripts\python.exe src\backend\manage.py migrate
-venv\Scripts\python.exe src\backend\manage.py runserver 127.0.0.1:8000
-```
-
----
-
 ## ⚠️ Важно
 
-Makefile ожидает следующую структуру:
-
-- виртуальное окружение в папке `venv`
-- `manage.py` по пути `src/backend/manage.py`
-
-Если структура меняется — необходимо обновить переменные `VENV`, `PYTHON`, `MANAGE` в `Makefile`.
+- Frontend опирается на существующие backend endpoint-ы из `/api/...`
+- Course lifecycle в admin UI должен использовать `status`, а не delete
+- В backend включена пагинация DRF (`PAGE_SIZE = 10`), поэтому frontend учитывает paginated responses
