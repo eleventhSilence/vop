@@ -97,6 +97,7 @@ class CoursesApiTests(APITestCase):
             user=self.user,
             course=self.available_course,
             is_theory_completed=True,
+            progress_status="theory_completed",
         )
         other_enrollment = CourseEnrollment.objects.create(
             user=self.other_user,
@@ -132,6 +133,8 @@ class CoursesApiTests(APITestCase):
         self.assertEqual(response.data[0]["progress_percent"], 100)
         self.assertEqual(response.data[0]["progress_status"], "completed")
         self.assertTrue(response.data[0]["is_test_passed"])
+        my_enrollment.refresh_from_db()
+        self.assertEqual(my_enrollment.progress_status, "theory_completed")
         self.assertFalse(any(item["course_id"] == str(other_enrollment.course_id) for item in response.data))
 
     def test_get_my_courses_returns_blocked_user_unauthorized(self):

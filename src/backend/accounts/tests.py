@@ -390,7 +390,7 @@ class AccountDashboardApiTests(APITestCase):
         self.assertEqual(response.data["user"]["email"], self.user.email)
         self.assertNotEqual(response.data["user"]["user_id"], str(self.other_user.id))
 
-    def test_dashboard_stats_are_calculated_correctly(self):
+    def test_dashboard_stats_are_calculated_correctly_without_syncing_progress_status(self):
         self.client.force_authenticate(user=self.user)
 
         response = self.client.get(self.dashboard_url)
@@ -408,10 +408,10 @@ class AccountDashboardApiTests(APITestCase):
         self.enrollment_2.refresh_from_db()
         self.enrollment_3.refresh_from_db()
         self.enrollment_4.refresh_from_db()
-        self.assertEqual(self.enrollment_1.progress_status, "completed")
-        self.assertEqual(self.enrollment_2.progress_status, "testing_in_progress")
-        self.assertEqual(self.enrollment_3.progress_status, "theory_completed")
-        self.assertEqual(self.enrollment_4.progress_status, "enrolled")
+        self.assertEqual(self.enrollment_1.progress_status, "enrolled")
+        self.assertEqual(self.enrollment_2.progress_status, "enrolled")
+        self.assertEqual(self.enrollment_3.progress_status, "completed")
+        self.assertEqual(self.enrollment_4.progress_status, "completed")
 
     def test_recent_courses_contains_only_user_courses(self):
         self.client.force_authenticate(user=self.user)

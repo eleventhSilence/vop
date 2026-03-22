@@ -7,7 +7,7 @@ from django.db.models import Count, Q
 
 from accounts.models import Account, AccountRole, AccountStatus
 from courses.models import Course, CourseEnrollment, CourseStatus
-from progress.utils import build_progress_payload, sync_enrollment_progress_status
+from progress.utils import build_progress_payload
 from reviews.models import Review, ReviewStatus
 from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion
 
@@ -53,25 +53,27 @@ def _get_user_enrollments(*, user) -> list[CourseEnrollment]:
 def build_account_dashboard(*, user) -> dict:
     enrollments = _get_user_enrollments(user=user)
     attempt_ids_map = _build_attempt_ids_map(user=user, enrollments=enrollments)
-
-    for enrollment in enrollments:
-        sync_enrollment_progress_status(
-            enrollment=enrollment,
-            attempts=_get_attempts_queryset(course_id=enrollment.course_id, attempt_ids_map=attempt_ids_map),
-        )
-
-    stats = {
-        "enrolled_courses_count": len(enrollments),
-        "completed_courses_count": sum(enrollment.progress_status == "completed" for enrollment in enrollments),
-        "in_progress_courses_count": sum(enrollment.progress_status != "completed" for enrollment in enrollments),
-    }
-
-    recent_enrollments = enrollments[:RECENT_DASHBOARD_ITEMS_LIMIT]
-    recent_course_progress_payloads = {
+    progress_payloads = {
         enrollment.pk: build_progress_payload(
             enrollment=enrollment,
             attempts=_get_attempts_queryset(course_id=enrollment.course_id, attempt_ids_map=attempt_ids_map),
         )
+        for enrollment in enrollments
+    }
+
+    stats = {
+        "enrolled_courses_count": len(enrollments),
+        "completed_courses_count": sum(
+            payload["progress_status"] == "completed" for payload in progress_payloads.values()
+        ),
+        "in_progress_courses_count": sum(
+            payload["progress_status"] != "completed" for payload in progress_payloads.values()
+        ),
+    }
+
+    recent_enrollments = enrollments[:RECENT_DASHBOARD_ITEMS_LIMIT]
+    recent_course_progress_payloads = {
+        enrollment.pk: progress_payloads[enrollment.pk]
         for enrollment in recent_enrollments
     }
 
