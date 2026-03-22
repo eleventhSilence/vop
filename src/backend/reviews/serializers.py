@@ -31,6 +31,53 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
         )
 
 
+class ReviewUpdateSerializer(serializers.ModelSerializer):
+    comment = serializers.CharField(source="text", required=False)
+
+    forbidden_fields = {"user", "course", "status", "created_at", "updated_at", "id"}
+    allowed_fields = {"comment", "rating"}
+
+    class Meta:
+        model = Review
+        fields = ("comment", "rating")
+
+    def validate(self, attrs):
+        errors = {}
+
+        for field in self.forbidden_fields:
+            if field in self.initial_data:
+                errors[field] = "This field cannot be updated."
+
+        for field in self.initial_data:
+            if field not in self.allowed_fields and field not in self.forbidden_fields:
+                errors[field] = "This field cannot be updated."
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        text = validated_data.get("text", serializers.empty)
+        rating = validated_data.get("rating", serializers.empty)
+
+        content_changed = False
+
+        if text is not serializers.empty and text != instance.text:
+            instance.text = text
+            content_changed = True
+
+        if rating is not serializers.empty and rating != instance.rating:
+            instance.rating = rating
+            content_changed = True
+
+        if content_changed:
+            instance.status = ReviewStatus.PENDING
+
+        instance.save()
+        return instance
+
+
 class ReviewPublicSerializer(serializers.ModelSerializer):
     user = serializers.EmailField(source="user.email", read_only=True)
 
