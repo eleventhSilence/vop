@@ -6,9 +6,11 @@ from testing.models import TestAttempt
 
 
 class ProgressAttemptSerializer(serializers.ModelSerializer):
+    attempt_id = serializers.UUIDField(source="id", read_only=True)
+
     class Meta:
         model = TestAttempt
-        fields = ("score", "is_passed", "attempt_number", "created_at")
+        fields = ("attempt_id", "score", "is_passed", "attempt_number", "created_at")
 
 
 class CompleteTheorySerializer(serializers.ModelSerializer):

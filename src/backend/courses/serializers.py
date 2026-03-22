@@ -7,17 +7,22 @@ from progress.utils import build_progress_payload
 class CourseListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields = ("id", "title", "short_description")
+        fields = ("course_id", "title", "short_description")
+
+    course_id = serializers.UUIDField(source="id", read_only=True)
 
 
 class CourseDetailSerializer(serializers.ModelSerializer):
+    course_id = serializers.UUIDField(source="id", read_only=True)
+    description = serializers.CharField(source="content", read_only=True)
+
     class Meta:
         model = Course
         fields = (
-            "id",
+            "course_id",
             "title",
             "short_description",
-            "content",
+            "description",
             "status",
             "created_at",
             "updated_at",
@@ -56,12 +61,13 @@ class AdminCourseWriteSerializer(AdminCourseBaseSerializer):
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    course_id = serializers.UUIDField(source="course.id", read_only=True)
 
     class Meta:
         model = CourseEnrollment
-        fields = ("id", "user", "course", "progress_status", "enrolled_at")
-        read_only_fields = ("id", "user", "enrolled_at")
+        fields = ("user_id", "course_id", "progress_status", "is_theory_completed", "enrolled_at")
+        read_only_fields = fields
 
 
 class MyCourseSerializer(serializers.ModelSerializer):

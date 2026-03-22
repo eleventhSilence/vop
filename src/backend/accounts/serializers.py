@@ -10,28 +10,23 @@ from reviews.serializers import AdminReviewListSerializer
 
 
 class AccountMeSerializer(serializers.ModelSerializer):
-    created_at = serializers.SerializerMethodField()
-    updated_at = serializers.SerializerMethodField()
-
     class Meta:
         model = Account
         fields = (
-            "id",
+            "user_id",
             "email",
             "first_name",
             "last_name",
             "role",
             "status",
-            "created_at",
-            "updated_at",
+            "registered_at",
+            "last_login_at",
         )
         read_only_fields = fields
 
-    def get_created_at(self, obj):
-        return getattr(obj, "created_at", None)
-
-    def get_updated_at(self, obj):
-        return getattr(obj, "updated_at", None)
+    user_id = serializers.UUIDField(source="id", read_only=True)
+    registered_at = serializers.DateTimeField(read_only=True)
+    last_login_at = serializers.DateTimeField(read_only=True)
 
 
 class AccountMeUpdateSerializer(serializers.ModelSerializer):
@@ -84,8 +79,10 @@ class ChangePasswordSerializer(serializers.Serializer):
 class AccountDashboardUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
-        fields = ("id", "email", "first_name", "last_name", "role", "status")
+        fields = ("user_id", "email", "first_name", "last_name", "role", "status")
         read_only_fields = fields
+
+    user_id = serializers.UUIDField(source="id", read_only=True)
 
 
 class AccountDashboardStatsSerializer(serializers.Serializer):
@@ -155,8 +152,8 @@ class AccountDashboardSerializer(serializers.Serializer):
 
 class AdminAccountBaseSerializer(serializers.ModelSerializer):
     user_id = serializers.UUIDField(source="id", read_only=True)
-    created_at = serializers.DateTimeField(source="registered_at", read_only=True)
-    updated_at = serializers.DateTimeField(source="last_login_at", read_only=True)
+    registered_at = serializers.DateTimeField(read_only=True)
+    last_login_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Account
@@ -167,8 +164,8 @@ class AdminAccountBaseSerializer(serializers.ModelSerializer):
             "last_name",
             "role",
             "status",
-            "created_at",
-            "updated_at",
+            "registered_at",
+            "last_login_at",
         )
         read_only_fields = fields
 
@@ -225,7 +222,7 @@ class AdminDashboardRecentUserSerializer(AdminAccountBaseSerializer):
             "last_name",
             "role",
             "status",
-            "created_at",
+            "registered_at",
         )
         read_only_fields = fields
 

@@ -103,6 +103,7 @@ class ProgressApiTests(APITestCase):
         self.assertEqual(response.data["course_id"], str(self.course.id))
         self.assertEqual(response.data["total_attempts"], 1)
         self.assertEqual(len(response.data["attempts"]), 1)
+        self.assertIn("attempt_id", response.data["attempts"][0])
 
     def test_progress_is_25_when_theory_not_completed(self):
         self.client.force_authenticate(user=self.user)

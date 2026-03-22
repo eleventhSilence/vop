@@ -40,14 +40,17 @@ class CoursesApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], str(self.available_course.id))
+        self.assertEqual(response.data[0]["course_id"], str(self.available_course.id))
+        self.assertNotIn("id", response.data[0])
 
     def test_get_course_detail(self):
         response = self.client.get(reverse("course-detail", kwargs={"pk": self.available_course.id}))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["id"], str(self.available_course.id))
-        self.assertIn("content", response.data)
+        self.assertEqual(response.data["course_id"], str(self.available_course.id))
+        self.assertIn("description", response.data)
+        self.assertNotIn("content", response.data)
+        self.assertNotIn("id", response.data)
 
     def test_get_unavailable_course_detail_returns_404(self):
         response = self.client.get(reverse("course-detail", kwargs={"pk": self.unavailable_course.id}))
@@ -63,6 +66,9 @@ class CoursesApiTests(APITestCase):
         self.assertEqual(CourseEnrollment.objects.filter(user=self.user, course=self.available_course).count(), 1)
         enrollment = CourseEnrollment.objects.get(user=self.user, course=self.available_course)
         self.assertEqual(enrollment.progress_status, "enrolled")
+        self.assertEqual(response.data["user_id"], str(self.user.id))
+        self.assertEqual(response.data["course_id"], str(self.available_course.id))
+        self.assertNotIn("id", response.data)
 
     def test_enroll_unavailable_course_returns_404(self):
         self.client.force_authenticate(user=self.user)

@@ -81,6 +81,58 @@ class LogoutTestCase(APITestCase):
         self.assertEqual(response.data["detail"], "User account is blocked.")
 
 
+class AuthApiTests(APITestCase):
+    def setUp(self):
+        self.password = "StrongPass123"
+        self.user = Account.objects.create_user(
+            email="auth@example.com",
+            password=self.password,
+            first_name="Auth",
+            last_name="User",
+        )
+        self.login_url = reverse("auth-login")
+        self.register_url = reverse("auth-register")
+
+    def test_login_returns_normalized_user_identifier(self):
+        response = self.client.post(
+            self.login_url,
+            {"email": self.user.email, "password": self.password},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user"]["user_id"], str(self.user.id))
+        self.assertNotIn("id", response.data["user"])
+        self.assertIn("tokens", response.data)
+
+    def test_login_returns_detail_error_for_invalid_credentials(self):
+        response = self.client.post(
+            self.login_url,
+            {"email": self.user.email, "password": "WrongPass123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "Invalid email or password.")
+
+    def test_register_returns_normalized_user_identifier(self):
+        response = self.client.post(
+            self.register_url,
+            {
+                "email": "new-user@example.com",
+                "password": "AnotherStrongPass123",
+                "first_name": "New",
+                "last_name": "User",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("user_id", response.data)
+        self.assertNotIn("id", response.data)
+        self.assertIn("tokens", response.data)
+
+
 class AccountMeApiTests(APITestCase):
     def setUp(self):
         self.user = Account.objects.create_user(
@@ -98,14 +150,14 @@ class AccountMeApiTests(APITestCase):
         response = self.client.get(self.me_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["id"], str(self.user.id))
+        self.assertEqual(response.data["user_id"], str(self.user.id))
         self.assertEqual(response.data["email"], self.user.email)
         self.assertEqual(response.data["first_name"], self.user.first_name)
         self.assertEqual(response.data["last_name"], self.user.last_name)
         self.assertEqual(response.data["role"], self.user.role)
         self.assertEqual(response.data["status"], self.user.status)
-        self.assertIn("created_at", response.data)
-        self.assertIn("updated_at", response.data)
+        self.assertIn("registered_at", response.data)
+        self.assertIn("last_login_at", response.data)
 
     def test_get_my_profile_requires_auth(self):
         response = self.client.get(self.me_url)
@@ -334,9 +386,9 @@ class AccountDashboardApiTests(APITestCase):
         response = self.client.get(self.dashboard_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["user"]["id"], str(self.user.id))
+        self.assertEqual(response.data["user"]["user_id"], str(self.user.id))
         self.assertEqual(response.data["user"]["email"], self.user.email)
-        self.assertNotEqual(response.data["user"]["id"], str(self.other_user.id))
+        self.assertNotEqual(response.data["user"]["user_id"], str(self.other_user.id))
 
     def test_dashboard_stats_are_calculated_correctly(self):
         self.client.force_authenticate(user=self.user)
@@ -477,8 +529,8 @@ class AdminUserApiTests(APITestCase):
         self.assertEqual(len(response.data), 4)
         self.assertEqual(response.data[0]["user_id"], str(self.second_target_user.id))
         self.assertEqual(response.data[0]["email"], self.second_target_user.email)
-        self.assertIn("created_at", response.data[0])
-        self.assertIn("updated_at", response.data[0])
+        self.assertIn("registered_at", response.data[0])
+        self.assertIn("last_login_at", response.data[0])
 
     def test_admin_can_filter_user_list(self):
         self.client.force_authenticate(user=self.admin_user)
@@ -950,8 +1002,8 @@ class AdminDashboardApiTests(APITestCase):
         )
         self.assertNotIn(str(excluded.id), {item["user_id"] for item in response.data["recent_users"]})
         self.assertEqual(response.data["recent_users"][0]["email"], latest.email)
-        self.assertIn("created_at", response.data["recent_users"][0])
-        self.assertNotIn("updated_at", response.data["recent_users"][0])
+        self.assertIn("registered_at", response.data["recent_users"][0])
+        self.assertNotIn("last_login_at", response.data["recent_users"][0])
 
     def test_pending_reviews_returns_latest_pending_reviews_only_in_descending_order(self):
         now = timezone.now()

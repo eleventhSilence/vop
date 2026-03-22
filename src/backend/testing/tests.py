@@ -130,6 +130,7 @@ class TestingApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["score"], 2)
         self.assertTrue(response.data["is_passed"])
+        self.assertIn("attempt_id", response.data)
         self.assertEqual(response.data["attempt_number"], 1)
         self.assertEqual(response.data["remaining_attempts"], 0)
         self.enrollment.refresh_from_db()
@@ -186,7 +187,7 @@ class TestingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data[0], "All test questions must be answered")
+        self.assertEqual(response.data["answers"], "All test questions must be answered.")
 
     def test_submit_preserves_duplicate_question_validation(self):
         self.client.force_authenticate(user=self.user)
@@ -209,7 +210,7 @@ class TestingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data[0], "Duplicate answers for the same question")
+        self.assertEqual(response.data["answers"], "Duplicate answers for the same question.")
 
     def test_submit_preserves_question_and_option_belonging_validation(self):
         self.client.force_authenticate(user=self.user)
@@ -232,7 +233,7 @@ class TestingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data[0], "Selected option does not belong to question")
+        self.assertEqual(response.data["selected_option_id"], "Selected option does not belong to question.")
 
     def test_submit_denied_when_max_attempts_exceeded(self):
         self.client.force_authenticate(user=self.user)
@@ -263,7 +264,7 @@ class TestingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data[0], "Max attempts exceeded")
+        self.assertEqual(response.data["detail"], "Max attempts exceeded.")
 
     def test_get_attempt_history_for_current_user(self):
         TestAttempt.objects.create(
@@ -286,6 +287,7 @@ class TestingApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
+        self.assertIn("attempt_id", response.data[0])
         self.assertEqual(response.data[0]["attempt_number"], 1)
 
     def test_submit_denied_without_enrollment(self):
@@ -340,6 +342,7 @@ class TestingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("attempt_id", response.data)
         self.assertEqual(response.data["score"], 2)
         self.assertEqual(UserAnswer.objects.filter(attempt__test=self.test, question=self.question).count(), 2)
 
@@ -402,7 +405,7 @@ class TestingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data[0], "Multiple choice question expects selected_option_ids")
+        self.assertEqual(response.data["selected_option_ids"], "Multiple choice question expects selected_option_ids.")
 
     def test_submit_rejects_wrong_payload_for_single_choice_question(self):
         self.client.force_authenticate(user=self.user)
@@ -425,7 +428,7 @@ class TestingApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data[0], "Single choice question expects selected_option_id")
+        self.assertEqual(response.data["selected_option_id"], "Single choice question expects selected_option_id.")
 
     def test_submit_denied_without_completed_theory(self):
         self.client.force_authenticate(user=self.user)
