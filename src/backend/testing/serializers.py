@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from courses.models import Course
 from progress.utils import sync_enrollment_progress_status
 from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion, UserAnswer
 
@@ -22,6 +23,79 @@ class EmptyCourseTestInfoSerializer(serializers.Serializer):
     description = serializers.CharField(allow_null=True)
     passing_score = serializers.IntegerField(allow_null=True)
     max_attempts = serializers.IntegerField(allow_null=True)
+
+
+class AdminCourseTestBaseSerializer(serializers.ModelSerializer):
+    test_id = serializers.UUIDField(source="id", read_only=True)
+    course_id = serializers.UUIDField(read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+
+    class Meta:
+        model = CourseTest
+        fields = (
+            "test_id",
+            "course_id",
+            "course_title",
+            "title",
+            "description",
+            "passing_score",
+            "max_attempts",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("test_id", "course_id", "course_title", "created_at", "updated_at")
+
+
+class AdminCourseTestListSerializer(AdminCourseTestBaseSerializer):
+    pass
+
+
+class AdminCourseTestDetailSerializer(AdminCourseTestBaseSerializer):
+    pass
+
+
+class AdminCourseTestWriteSerializer(serializers.ModelSerializer):
+    test_id = serializers.UUIDField(source="id", read_only=True)
+    course_id = serializers.PrimaryKeyRelatedField(source="course", queryset=Course.objects.all())
+    course_title = serializers.CharField(source="course.title", read_only=True)
+
+    class Meta:
+        model = CourseTest
+        fields = (
+            "test_id",
+            "course_id",
+            "course_title",
+            "title",
+            "description",
+            "passing_score",
+            "max_attempts",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("test_id", "course_title", "created_at", "updated_at")
+
+    def validate_course(self, value):
+        instance = getattr(self, "instance", None)
+        existing_test = CourseTest.objects.filter(course=value)
+        if instance is not None:
+            existing_test = existing_test.exclude(pk=instance.pk)
+
+        if existing_test.exists():
+            raise serializers.ValidationError("This course already has a test.")
+
+        return value
+
+    def validate_passing_score(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Passing score must be greater than zero.")
+        return value
+
+    def validate_max_attempts(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Max attempts must be greater than zero.")
+        return value
 
 
 class SubmitAnswerItemSerializer(serializers.Serializer):
