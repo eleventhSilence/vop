@@ -267,12 +267,19 @@ class TestingApiTests(APITestCase):
         self.assertEqual(response.data["detail"], "Max attempts exceeded.")
 
     def test_get_attempt_history_for_current_user(self):
-        TestAttempt.objects.create(
+        first_attempt = TestAttempt.objects.create(
             user=self.user,
             test=self.test,
             score=2,
             is_passed=True,
             attempt_number=1,
+        )
+        second_attempt = TestAttempt.objects.create(
+            user=self.user,
+            test=self.test,
+            score=1,
+            is_passed=False,
+            attempt_number=2,
         )
         TestAttempt.objects.create(
             user=self.other_user,
@@ -286,10 +293,12 @@ class TestingApiTests(APITestCase):
         response = self.client.get(reverse("test-attempts", kwargs={"test_id": self.test.id}))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(len(response.data["results"]), 1)
-        self.assertIn("attempt_id", response.data["results"][0])
-        self.assertEqual(response.data["results"][0]["attempt_number"], 1)
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["results"][0]["attempt_id"], str(second_attempt.id))
+        self.assertEqual(response.data["results"][0]["attempt_number"], 2)
+        self.assertEqual(response.data["results"][1]["attempt_id"], str(first_attempt.id))
+        self.assertEqual(response.data["results"][1]["attempt_number"], 1)
 
     def test_submit_denied_without_enrollment(self):
         self.client.force_authenticate(user=self.other_user)

@@ -85,7 +85,7 @@ class TestAttemptHistoryView(generics.ListAPIView):
 
     def get_queryset(self):
         test = get_object_or_404(CourseTest, id=self.kwargs["test_id"])
-        return TestAttempt.objects.filter(user=self.request.user, test=test)
+        return TestAttempt.objects.filter(user=self.request.user, test=test).order_by("-created_at", "id")
 
 
 class AdminCourseTestListCreateView(generics.ListCreateAPIView):
@@ -93,7 +93,7 @@ class AdminCourseTestListCreateView(generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
 
     def get_queryset(self):
-        return CourseTest.objects.select_related("course").order_by("-created_at")
+        return CourseTest.objects.select_related("course").order_by("-created_at", "id")
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -154,7 +154,7 @@ class AdminTestQuestionListCreateView(generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
 
     def get_queryset(self):
-        return TestQuestion.objects.select_related("test").order_by("test__created_at", "order", "created_at")
+        return TestQuestion.objects.select_related("test").order_by("test__created_at", "test_id", "order", "created_at", "id")
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -210,7 +210,7 @@ class AdminAnswerOptionListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return AnswerOption.objects.select_related("question").order_by(
-            "question__test__created_at", "question__order", "created_at"
+            "question__test__created_at", "question__test_id", "question__order", "question_id", "created_at", "id"
         )
 
     def get_serializer_class(self):

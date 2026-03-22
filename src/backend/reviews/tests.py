@@ -213,6 +213,8 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 2)
         self.assertEqual(len(response.data["results"]), 2)
+        self.assertEqual(response.data["results"][0]["course_id"], str(self.second_course.id))
+        self.assertEqual(response.data["results"][1]["course_id"], str(self.course.id))
         self.assertEqual(
             {item["status"] for item in response.data["results"]},
             {ReviewStatus.PENDING, ReviewStatus.REJECTED},
