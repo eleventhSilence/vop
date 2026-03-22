@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Account, AccountStatus
+from accounts.models import Account, AccountRole, AccountStatus
 from courses.models import Course, CourseEnrollment, CourseStatus
 from reviews.models import Review, ReviewStatus
 
@@ -425,3 +425,210 @@ class ReviewsApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Review.objects.count(), reviews_before)
         self.assertTrue(Review.objects.filter(id=review.id, user=self.user, course=self.course).exists())
+
+
+class AdminReviewModerationApiTests(APITestCase):
+    def setUp(self):
+        self.admin_user = Account.objects.create_user(
+            email="admin@example.com",
+            password="StrongPass123",
+            first_name="Admin",
+            last_name="User",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+        )
+        self.regular_user = Account.objects.create_user(
+            email="user@example.com",
+            password="StrongPass123",
+            first_name="Regular",
+            last_name="User",
+        )
+        self.other_user = Account.objects.create_user(
+            email="other@example.com",
+            password="StrongPass123",
+            first_name="Other",
+            last_name="User",
+        )
+        self.course = Course.objects.create(
+            title="Moderated course",
+            short_description="desc",
+            content="# content",
+            status=CourseStatus.AVAILABLE,
+        )
+        self.second_course = Course.objects.create(
+            title="Second course",
+            short_description="desc 2",
+            content="# content 2",
+            status=CourseStatus.AVAILABLE,
+        )
+        self.pending_review = Review.objects.create(
+            user=self.regular_user,
+            course=self.course,
+            text="Needs review",
+            rating=4,
+            status=ReviewStatus.PENDING,
+        )
+        self.approved_review = Review.objects.create(
+            user=self.other_user,
+            course=self.second_course,
+            text="Already approved",
+            rating=5,
+            status=ReviewStatus.APPROVED,
+        )
+        self.rejected_review = Review.objects.create(
+            user=self.other_user,
+            course=self.course,
+            text="Rejected review",
+            rating=2,
+            status=ReviewStatus.REJECTED,
+        )
+
+    def authenticate_with_jwt(self, user):
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+
+    def get_admin_list_url(self):
+        return reverse("admin-review-list")
+
+    def get_admin_detail_url(self, review):
+        return reverse("admin-review-moderate", kwargs={"pk": review.id})
+
+    def test_admin_can_get_review_list(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+        self.assertEqual([item["review_id"] for item in response.data], [str(self.pending_review.id), str(self.approved_review.id), str(self.rejected_review.id)])
+        self.assertEqual(response.data[0]["review_id"], str(self.pending_review.id))
+        self.assertEqual(response.data[0]["user_id"], str(self.regular_user.id))
+        self.assertEqual(response.data[0]["user_email"], self.regular_user.email)
+        self.assertEqual(response.data[0]["course_id"], str(self.course.id))
+        self.assertEqual(response.data[0]["course_title"], self.course.title)
+        self.assertEqual(response.data[0]["comment"], self.pending_review.text)
+        self.assertEqual(response.data[0]["status"], ReviewStatus.PENDING)
+
+    def test_regular_user_cannot_get_review_list(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.get(self.get_admin_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthorized_user_cannot_get_review_list(self):
+        response = self.client.get(self.get_admin_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_blocked_admin_cannot_get_review_list(self):
+        blocked_admin = Account.objects.create_user(
+            email="blocked-admin@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="Admin",
+            role=AccountRole.ADMIN,
+            is_staff=True,
+            status=AccountStatus.BLOCKED,
+        )
+        self.authenticate_with_jwt(blocked_admin)
+
+        response = self.client.get(self.get_admin_list_url())
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")
+
+    def test_admin_can_filter_reviews_by_status(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_list_url(), {"status": ReviewStatus.APPROVED})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["review_id"], str(self.approved_review.id))
+        self.assertEqual(response.data[0]["status"], ReviewStatus.APPROVED)
+
+    def test_admin_can_change_status_to_approved(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_detail_url(self.pending_review),
+            {"status": ReviewStatus.APPROVED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.pending_review.refresh_from_db()
+        self.assertEqual(self.pending_review.status, ReviewStatus.APPROVED)
+        self.assertEqual(response.data["status"], ReviewStatus.APPROVED)
+
+    def test_admin_can_change_status_to_rejected(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_detail_url(self.pending_review),
+            {"status": ReviewStatus.REJECTED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.pending_review.refresh_from_db()
+        self.assertEqual(self.pending_review.status, ReviewStatus.REJECTED)
+        self.assertEqual(response.data["status"], ReviewStatus.REJECTED)
+
+    def test_admin_cannot_set_invalid_status(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_detail_url(self.pending_review),
+            {"status": "invalid"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.pending_review.refresh_from_db()
+        self.assertEqual(self.pending_review.status, ReviewStatus.PENDING)
+
+    def test_regular_user_cannot_change_status(self):
+        self.client.force_authenticate(user=self.regular_user)
+
+        response = self.client.patch(
+            self.get_admin_detail_url(self.pending_review),
+            {"status": ReviewStatus.APPROVED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.pending_review.refresh_from_db()
+        self.assertEqual(self.pending_review.status, ReviewStatus.PENDING)
+
+    def test_admin_patch_cannot_change_comment_rating_user_or_course(self):
+        self.client.force_authenticate(user=self.admin_user)
+        original_text = self.pending_review.text
+        original_rating = self.pending_review.rating
+        original_user = self.pending_review.user
+        original_course = self.pending_review.course
+
+        response = self.client.patch(
+            self.get_admin_detail_url(self.pending_review),
+            {
+                "status": ReviewStatus.APPROVED,
+                "comment": "Tampered comment",
+                "rating": 1,
+                "user": str(self.other_user.id),
+                "course": str(self.second_course.id),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.pending_review.refresh_from_db()
+        self.assertEqual(self.pending_review.status, ReviewStatus.PENDING)
+        self.assertEqual(self.pending_review.text, original_text)
+        self.assertEqual(self.pending_review.rating, original_rating)
+        self.assertEqual(self.pending_review.user, original_user)
+        self.assertEqual(self.pending_review.course, original_course)
+        self.assertEqual(response.data["comment"][0], "This field cannot be updated.")
+        self.assertEqual(response.data["rating"][0], "This field cannot be updated.")
+        self.assertEqual(response.data["user"][0], "This field cannot be updated.")
+        self.assertEqual(response.data["course"][0], "This field cannot be updated.")
