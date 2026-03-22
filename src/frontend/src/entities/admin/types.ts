@@ -1,0 +1,68 @@
+export type AdminDashboard = {
+  users: {
+    total_users: number;
+    active_users_count: number;
+    blocked_users_count: number;
+    admins_count: number;
+    regular_users_count: number;
+  };
+  courses: {
+    total_courses: number;
+    available_courses_count: number;
+    unavailable_courses_count: number;
+  };
+  reviews: {
+    total_reviews: number;
+    pending_reviews_count: number;
+    approved_reviews_count: number;
+    rejected_reviews_count: number;
+  };
+  testing: {
+    total_tests: number;
+    total_questions: number;
+    total_answer_options: number;
+  };
+  recent_users: Array<{
+    user_id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    role: string;
+    status: string;
+    registered_at: string;
+  }>;
+  pending_reviews: Array<{
+    review_id: string;
+    user_email: string;
+    course_title: string;
+    rating: number;
+    comment: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+  }>;
+};
+
+export type AdminUser = {
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  status: string;
+  registered_at: string;
+  last_login_at: string | null;
+};
+
+export type AdminTest = {
+  test_id: string;
+  course_id: string;
+  course_title: string;
+  title: string;
+  description: string;
+  passing_score: number;
+  max_attempts: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
