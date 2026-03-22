@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from rest_framework import serializers
 
@@ -6,12 +7,31 @@ from progress.utils import sync_enrollment_progress_status
 from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion, UserAnswer
 
 
+class PublicAnswerOptionSerializer(serializers.ModelSerializer):
+    option_id = serializers.UUIDField(source="id", read_only=True)
+
+    class Meta:
+        model = AnswerOption
+        fields = ("option_id", "text")
+
+
+class PublicTestQuestionSerializer(serializers.ModelSerializer):
+    question_id = serializers.UUIDField(source="id", read_only=True)
+    options = PublicAnswerOptionSerializer(source="answer_options", many=True, read_only=True)
+
+    class Meta:
+        model = TestQuestion
+        fields = ("question_id", "text", "order", "question_type", "options")
+
+
 class CourseTestInfoSerializer(serializers.ModelSerializer):
     has_test = serializers.SerializerMethodField()
+    test_id = serializers.UUIDField(source="id", read_only=True)
+    questions = PublicTestQuestionSerializer(many=True, read_only=True)
 
     class Meta:
         model = CourseTest
-        fields = ("has_test", "title", "description", "passing_score", "max_attempts")
+        fields = ("has_test", "test_id", "title", "description", "passing_score", "max_attempts", "questions")
 
     def get_has_test(self, obj):
         return obj is not None
@@ -19,10 +39,12 @@ class CourseTestInfoSerializer(serializers.ModelSerializer):
 
 class EmptyCourseTestInfoSerializer(serializers.Serializer):
     has_test = serializers.BooleanField(default=False)
+    test_id = serializers.UUIDField(allow_null=True)
     title = serializers.CharField(allow_null=True)
     description = serializers.CharField(allow_null=True)
     passing_score = serializers.IntegerField(allow_null=True)
     max_attempts = serializers.IntegerField(allow_null=True)
+    questions = serializers.ListField(child=serializers.DictField(), allow_empty=True, default=list)
 
 
 class AdminCourseTestBaseSerializer(serializers.ModelSerializer):
@@ -111,6 +133,7 @@ class AdminTestQuestionBaseSerializer(serializers.ModelSerializer):
             "test_title",
             "text",
             "order",
+            "question_type",
             "created_at",
             "updated_at",
         )
@@ -144,6 +167,7 @@ class AdminTestQuestionWriteSerializer(serializers.ModelSerializer):
             "test_title",
             "text",
             "order",
+            "question_type",
             "created_at",
             "updated_at",
         )
@@ -152,6 +176,7 @@ class AdminTestQuestionWriteSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         test = attrs.get("test", getattr(self.instance, "test", None))
         order = attrs.get("order", getattr(self.instance, "order", None))
+        question_type = attrs.get("question_type", getattr(self.instance, "question_type", TestQuestion.QuestionType.SINGLE_CHOICE))
 
         if test is not None and order is not None:
             existing_question = TestQuestion.objects.filter(test=test, order=order)
@@ -160,6 +185,16 @@ class AdminTestQuestionWriteSerializer(serializers.ModelSerializer):
 
             if existing_question.exists():
                 raise serializers.ValidationError({"order": "Question order must be unique within the test."})
+
+        if self.instance is not None:
+            correct_options = self.instance.answer_options.filter(is_correct=True).count()
+            total_options = self.instance.answer_options.count()
+            error = TestQuestion(question_type=question_type).get_answer_configuration_error(
+                total_options=total_options,
+                correct_options=correct_options,
+            )
+            if error is not None:
+                raise serializers.ValidationError({"question_type": error})
 
         return attrs
 
@@ -215,10 +250,70 @@ class AdminAnswerOptionWriteSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("option_id", "question_text", "created_at", "updated_at")
 
+    def validate(self, attrs):
+        question = attrs.get("question", getattr(self.instance, "question", None))
+        is_correct = attrs.get("is_correct", getattr(self.instance, "is_correct", False))
+
+        if question is None:
+            return attrs
+
+        existing_options = question.answer_options.all()
+        if self.instance is not None:
+            existing_options = existing_options.exclude(pk=self.instance.pk)
+
+        total_options = existing_options.count() + 1
+        correct_options = existing_options.filter(is_correct=True).count() + int(is_correct)
+        error = question.get_answer_configuration_error(total_options=total_options, correct_options=correct_options)
+
+        if error is not None and not (total_options == 1 and correct_options == 0):
+            raise serializers.ValidationError({"is_correct": error})
+
+        return attrs
+
+    def create(self, validated_data):
+        try:
+            return super().create(validated_data)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict or exc.messages)
+
+    def update(self, instance, validated_data):
+        try:
+            return super().update(instance, validated_data)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict or exc.messages)
+
 
 class SubmitAnswerItemSerializer(serializers.Serializer):
-    question = serializers.UUIDField()
-    selected_option = serializers.UUIDField()
+    question_id = serializers.UUIDField(source="question", required=False)
+    question = serializers.UUIDField(write_only=True, required=False)
+    selected_option_id = serializers.UUIDField(source="selected_option", required=False)
+    selected_option = serializers.UUIDField(write_only=True, required=False)
+    selected_option_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        allow_empty=False,
+    )
+
+    def validate(self, attrs):
+        if "question" not in attrs:
+            raise serializers.ValidationError({"question_id": "This field is required."})
+
+        has_single = "selected_option" in attrs
+        has_multiple = "selected_option_ids" in attrs
+
+        if has_single == has_multiple:
+            raise serializers.ValidationError(
+                "Provide either selected_option_id or selected_option_ids according to question_type"
+            )
+
+        return attrs
+
+    def to_internal_value(self, data):
+        if "question_id" not in data and "question" in data:
+            data = {**data, "question_id": data["question"]}
+        if "selected_option_id" not in data and "selected_option" in data:
+            data = {**data, "selected_option_id": data["selected_option"]}
+        return super().to_internal_value(data)
 
 
 class TestSubmitSerializer(serializers.Serializer):
@@ -238,6 +333,21 @@ class TestAttemptSerializer(serializers.ModelSerializer):
         fields = ("id", "score", "is_passed", "attempt_number", "created_at")
 
 
+def _normalize_selected_option_ids(item: dict, *, question: TestQuestion) -> list:
+    if question.question_type == TestQuestion.QuestionType.SINGLE_CHOICE:
+        if "selected_option" not in item or "selected_option_ids" in item:
+            raise serializers.ValidationError("Single choice question expects selected_option_id")
+        return [item["selected_option"]]
+
+    if "selected_option_ids" not in item or "selected_option" in item:
+        raise serializers.ValidationError("Multiple choice question expects selected_option_ids")
+
+    selected_option_ids = item["selected_option_ids"]
+    if len(selected_option_ids) != len(set(selected_option_ids)):
+        raise serializers.ValidationError("Duplicate selected options are not allowed")
+    return selected_option_ids
+
+
 def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[dict]):
     existing_attempts = TestAttempt.objects.filter(user=user, test=test).count()
     if existing_attempts >= test.max_attempts:
@@ -251,29 +361,48 @@ def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[di
     if len(question_ids) != test.questions.count():
         raise serializers.ValidationError("All test questions must be answered")
 
-    option_ids = [item["selected_option"] for item in answers_data]
-
     questions = {
         question.id: question
-        for question in TestQuestion.objects.filter(test=test, id__in=question_ids)
+        for question in TestQuestion.objects.filter(test=test, id__in=question_ids).prefetch_related("answer_options")
     }
-    options = {option.id: option for option in AnswerOption.objects.filter(id__in=option_ids)}
+
+    all_option_ids = []
+    normalized_answers = []
+    for item in answers_data:
+        question = questions.get(item["question"])
+        if question is None:
+            raise serializers.ValidationError("Question does not belong to test")
+
+        selected_option_ids = _normalize_selected_option_ids(item, question=question)
+        all_option_ids.extend(selected_option_ids)
+        normalized_answers.append((question, selected_option_ids))
+
+    options = {option.id: option for option in AnswerOption.objects.filter(id__in=all_option_ids)}
 
     score = 0
     user_answers_payload = []
-    for item in answers_data:
-        question = questions.get(item["question"])
-        option = options.get(item["selected_option"])
+    for question, selected_option_ids in normalized_answers:
+        selected_options = []
+        for option_id in selected_option_ids:
+            option = options.get(option_id)
+            if option is None or option.question_id != question.id:
+                raise serializers.ValidationError("Selected option does not belong to question")
+            selected_options.append(option)
 
-        if question is None:
-            raise serializers.ValidationError("Question does not belong to test")
-        if option is None or option.question_id != question.id:
-            raise serializers.ValidationError("Selected option does not belong to question")
+        correct_option_ids = set(question.answer_options.filter(is_correct=True).values_list("id", flat=True))
+        question.validate_answer_configuration(
+            total_options=question.answer_options.count(),
+            correct_options=len(correct_option_ids),
+        )
 
-        if option.is_correct:
+        selected_option_id_set = {option.id for option in selected_options}
+        if selected_option_id_set == correct_option_ids:
             score += 1
 
-        user_answers_payload.append((question, option))
+        user_answers_payload.extend(
+            UserAnswer(attempt=None, question=question, selected_option=option)
+            for option in selected_options
+        )
 
     is_passed = score >= test.passing_score
 
@@ -285,12 +414,9 @@ def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[di
             is_passed=is_passed,
             attempt_number=attempt_number,
         )
-        UserAnswer.objects.bulk_create(
-            [
-                UserAnswer(attempt=attempt, question=question, selected_option=option)
-                for question, option in user_answers_payload
-            ]
-        )
+        for user_answer in user_answers_payload:
+            user_answer.attempt = attempt
+        UserAnswer.objects.bulk_create(user_answers_payload)
 
     enrollment = user.course_enrollments.filter(course=test.course).first()
     if enrollment is not None:

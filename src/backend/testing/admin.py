@@ -12,7 +12,7 @@ class CourseTestAdmin(admin.ModelAdmin):
 
 @admin.register(TestQuestion)
 class TestQuestionAdmin(admin.ModelAdmin):
-    list_display = ("id", "test", "order")
+    list_display = ("id", "test", "order", "question_type")
     list_filter = ("test",)
     search_fields = ("text",)
 

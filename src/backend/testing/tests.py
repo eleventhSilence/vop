@@ -5,7 +5,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Account, AccountRole, AccountStatus
 from courses.models import Course, CourseEnrollment, CourseStatus
-from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion
+from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion, UserAnswer
 
 
 class TestingApiTests(APITestCase):
@@ -96,6 +96,10 @@ class TestingApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data["has_test"])
         self.assertEqual(response.data["title"], self.test.title)
+        self.assertEqual(response.data["test_id"], str(self.test.id))
+        self.assertEqual(len(response.data["questions"]), 2)
+        self.assertEqual(response.data["questions"][0]["question_type"], TestQuestion.QuestionType.SINGLE_CHOICE)
+        self.assertNotIn("is_correct", response.data["questions"][0]["options"][0])
 
     def test_get_course_test_info_returns_404_for_unavailable_course(self):
         response = self.client.get(reverse("course-test-info", kwargs={"course_id": self.unavailable_course.id}))
@@ -307,6 +311,121 @@ class TestingApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "User is not enrolled in this course.")
+
+    def test_submit_multiple_choice_success(self):
+        self.client.force_authenticate(user=self.user)
+        self.question.question_type = TestQuestion.QuestionType.MULTIPLE_CHOICE
+        self.question.save(update_fields=("question_type",))
+        second_correct_option = AnswerOption.objects.create(
+            question=self.question,
+            text="Also 4",
+            is_correct=True,
+        )
+
+        response = self.client.post(
+            reverse("test-submit", kwargs={"test_id": self.test.id}),
+            {
+                "answers": [
+                    {
+                        "question_id": str(self.question.id),
+                        "selected_option_ids": [str(self.correct_option.id), str(second_correct_option.id)],
+                    },
+                    {
+                        "question_id": str(self.second_question.id),
+                        "selected_option_id": str(self.second_correct_option.id),
+                    },
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["score"], 2)
+        self.assertEqual(UserAnswer.objects.filter(attempt__test=self.test, question=self.question).count(), 2)
+
+    def test_submit_multiple_choice_partial_match_is_incorrect(self):
+        self.client.force_authenticate(user=self.user)
+        self.question.question_type = TestQuestion.QuestionType.MULTIPLE_CHOICE
+        self.question.save(update_fields=("question_type",))
+        second_correct_option = AnswerOption.objects.create(
+            question=self.question,
+            text="Also 4",
+            is_correct=True,
+        )
+
+        response = self.client.post(
+            reverse("test-submit", kwargs={"test_id": self.test.id}),
+            {
+                "answers": [
+                    {
+                        "question_id": str(self.question.id),
+                        "selected_option_ids": [str(self.correct_option.id)],
+                    },
+                    {
+                        "question_id": str(self.second_question.id),
+                        "selected_option_id": str(self.second_correct_option.id),
+                    },
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["score"], 1)
+        self.assertFalse(response.data["is_passed"])
+
+    def test_submit_rejects_wrong_payload_for_multiple_choice_question(self):
+        self.client.force_authenticate(user=self.user)
+        self.question.question_type = TestQuestion.QuestionType.MULTIPLE_CHOICE
+        self.question.save(update_fields=("question_type",))
+        second_correct_option = AnswerOption.objects.create(
+            question=self.question,
+            text="Also 4",
+            is_correct=True,
+        )
+
+        response = self.client.post(
+            reverse("test-submit", kwargs={"test_id": self.test.id}),
+            {
+                "answers": [
+                    {
+                        "question_id": str(self.question.id),
+                        "selected_option_id": str(self.correct_option.id),
+                    },
+                    {
+                        "question_id": str(self.second_question.id),
+                        "selected_option_id": str(self.second_correct_option.id),
+                    },
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data[0], "Multiple choice question expects selected_option_ids")
+
+    def test_submit_rejects_wrong_payload_for_single_choice_question(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse("test-submit", kwargs={"test_id": self.test.id}),
+            {
+                "answers": [
+                    {
+                        "question_id": str(self.question.id),
+                        "selected_option_ids": [str(self.correct_option.id)],
+                    },
+                    {
+                        "question_id": str(self.second_question.id),
+                        "selected_option_id": str(self.second_correct_option.id),
+                    },
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data[0], "Single choice question expects selected_option_id")
 
     def test_submit_denied_without_completed_theory(self):
         self.client.force_authenticate(user=self.user)
@@ -712,6 +831,24 @@ class AdminTestingApiTests(APITestCase):
         self.assertEqual(response.data["question_id"], str(created_question.id))
         self.assertEqual(response.data["test_id"], str(self.test.id))
         self.assertEqual(response.data["test_title"], self.test.title)
+        self.assertEqual(response.data["question_type"], TestQuestion.QuestionType.SINGLE_CHOICE)
+
+    def test_admin_can_create_multiple_choice_question(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_question_list_url(),
+            {
+                "test_id": str(self.test.id),
+                "text": "Select all correct answers",
+                "order": 1,
+                "question_type": TestQuestion.QuestionType.MULTIPLE_CHOICE,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["question_type"], TestQuestion.QuestionType.MULTIPLE_CHOICE)
 
     def test_invalid_data_returns_400_on_question_create(self):
         self.client.force_authenticate(user=self.admin_user)
@@ -967,6 +1104,46 @@ class AdminTestingApiTests(APITestCase):
         self.assertEqual(response.data["option_id"], str(option.id))
         self.assertEqual(response.data["question_id"], str(question.id))
         self.assertEqual(response.data["text"], option.text)
+
+    def test_single_choice_question_cannot_have_multiple_correct_answers(self):
+        question = self.create_question(text="Single choice question", order=1)
+        AnswerOption.objects.create(question=question, text="Correct A", is_correct=True)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_answer_option_list_url(),
+            {
+                "question_id": str(question.id),
+                "text": "Correct B",
+                "is_correct": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["is_correct"][0], "Single choice question must have exactly one correct answer")
+
+    def test_multiple_choice_question_must_have_correct_answer(self):
+        question = self.create_question(
+            text="Multiple choice question",
+            order=1,
+            question_type=TestQuestion.QuestionType.MULTIPLE_CHOICE,
+        )
+        AnswerOption.objects.create(question=question, text="Incorrect", is_correct=False)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_answer_option_list_url(),
+            {
+                "question_id": str(question.id),
+                "text": "Still incorrect",
+                "is_correct": False,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["is_correct"][0], "Multiple choice question must have at least one correct answer")
 
     def test_admin_can_patch_answer_option(self):
         question = self.create_question(text="Original option question", order=1)
