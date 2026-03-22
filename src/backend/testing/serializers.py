@@ -164,6 +164,58 @@ class AdminTestQuestionWriteSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class AdminAnswerOptionBaseSerializer(serializers.ModelSerializer):
+    option_id = serializers.UUIDField(source="id", read_only=True)
+    question_id = serializers.UUIDField(read_only=True)
+    question_text = serializers.CharField(source="question.text", read_only=True)
+
+    class Meta:
+        model = AnswerOption
+        fields = (
+            "option_id",
+            "question_id",
+            "question_text",
+            "text",
+            "is_correct",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "option_id",
+            "question_id",
+            "question_text",
+            "created_at",
+            "updated_at",
+        )
+
+
+class AdminAnswerOptionListSerializer(AdminAnswerOptionBaseSerializer):
+    pass
+
+
+class AdminAnswerOptionDetailSerializer(AdminAnswerOptionBaseSerializer):
+    pass
+
+
+class AdminAnswerOptionWriteSerializer(serializers.ModelSerializer):
+    option_id = serializers.UUIDField(source="id", read_only=True)
+    question_id = serializers.PrimaryKeyRelatedField(source="question", queryset=TestQuestion.objects.all())
+    question_text = serializers.CharField(source="question.text", read_only=True)
+
+    class Meta:
+        model = AnswerOption
+        fields = (
+            "option_id",
+            "question_id",
+            "question_text",
+            "text",
+            "is_correct",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("option_id", "question_text", "created_at", "updated_at")
+
+
 class SubmitAnswerItemSerializer(serializers.Serializer):
     question = serializers.UUIDField()
     selected_option = serializers.UUIDField()
