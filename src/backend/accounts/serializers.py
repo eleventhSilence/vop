@@ -4,6 +4,8 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from accounts.models import Account
+from courses.models import CourseEnrollment
+from reviews.models import Review
 
 
 class AccountMeSerializer(serializers.ModelSerializer):
@@ -76,3 +78,78 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data["new_password"])
         user.save(update_fields=("password",))
         return user
+
+
+class AccountDashboardUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ("id", "email", "first_name", "last_name", "role", "status")
+        read_only_fields = fields
+
+
+class AccountDashboardStatsSerializer(serializers.Serializer):
+    enrolled_courses_count = serializers.IntegerField(read_only=True)
+    completed_courses_count = serializers.IntegerField(read_only=True)
+    in_progress_courses_count = serializers.IntegerField(read_only=True)
+
+
+class AccountDashboardRecentCourseSerializer(serializers.ModelSerializer):
+    course_id = serializers.UUIDField(source="course.id", read_only=True)
+    title = serializers.CharField(source="course.title", read_only=True)
+    short_description = serializers.CharField(source="course.short_description", read_only=True)
+    progress_percent = serializers.IntegerField(read_only=True)
+    progress_status = serializers.CharField(read_only=True)
+    is_test_passed = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = CourseEnrollment
+        fields = (
+            "course_id",
+            "title",
+            "short_description",
+            "enrolled_at",
+            "progress_percent",
+            "progress_status",
+            "is_theory_completed",
+            "is_test_passed",
+        )
+        read_only_fields = fields
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        progress_payload = self.context["recent_course_progress_payloads"][instance.pk]
+        data["progress_percent"] = progress_payload["progress_percent"]
+        data["progress_status"] = progress_payload["progress_status"]
+        data["is_test_passed"] = progress_payload["is_test_passed"]
+        return data
+
+
+class AccountDashboardRecentReviewSerializer(serializers.ModelSerializer):
+    review_id = serializers.UUIDField(source="id", read_only=True)
+    course_id = serializers.UUIDField(source="course.id", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    rating = serializers.SerializerMethodField()
+    comment = serializers.CharField(source="text", read_only=True)
+
+    class Meta:
+        model = Review
+        fields = (
+            "review_id",
+            "course_id",
+            "course_title",
+            "rating",
+            "comment",
+            "status",
+            "created_at",
+        )
+        read_only_fields = fields
+
+    def get_rating(self, obj):
+        return None
+
+
+class AccountDashboardSerializer(serializers.Serializer):
+    user = AccountDashboardUserSerializer(read_only=True)
+    stats = AccountDashboardStatsSerializer(read_only=True)
+    recent_courses = AccountDashboardRecentCourseSerializer(many=True, read_only=True)
+    recent_reviews = AccountDashboardRecentReviewSerializer(many=True, read_only=True)

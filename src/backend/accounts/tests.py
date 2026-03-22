@@ -1,10 +1,15 @@
+from datetime import timedelta
+
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Account, AccountStatus
-from courses.models import Course, CourseStatus
+from courses.models import Course, CourseEnrollment, CourseStatus
+from reviews.models import Review, ReviewStatus
+from testing.models import CourseTest, TestAttempt
 
 
 class LogoutTestCase(APITestCase):
@@ -175,3 +180,245 @@ class AccountMeApiTests(APITestCase):
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("StrongPass123"))
         self.assertEqual(response.data["current_password"][0], "Current password is incorrect.")
+
+
+class AccountDashboardApiTests(APITestCase):
+    def setUp(self):
+        self.user = Account.objects.create_user(
+            email="dashboard@example.com",
+            password="StrongPass123",
+            first_name="Dash",
+            last_name="Board",
+        )
+        self.other_user = Account.objects.create_user(
+            email="other-dashboard@example.com",
+            password="StrongPass123",
+            first_name="Other",
+            last_name="User",
+        )
+        self.dashboard_url = reverse("account-dashboard")
+
+        self.course_1 = Course.objects.create(
+            title="Course 1",
+            short_description="Description 1",
+            content="# content 1",
+            status=CourseStatus.AVAILABLE,
+        )
+        self.course_2 = Course.objects.create(
+            title="Course 2",
+            short_description="Description 2",
+            content="# content 2",
+            status=CourseStatus.AVAILABLE,
+        )
+        self.course_3 = Course.objects.create(
+            title="Course 3",
+            short_description="Description 3",
+            content="# content 3",
+            status=CourseStatus.AVAILABLE,
+        )
+        self.course_4 = Course.objects.create(
+            title="Course 4",
+            short_description="Description 4",
+            content="# content 4",
+            status=CourseStatus.AVAILABLE,
+        )
+        self.other_course = Course.objects.create(
+            title="Other course",
+            short_description="Other description",
+            content="# other",
+            status=CourseStatus.AVAILABLE,
+        )
+
+        self.enrollment_1 = CourseEnrollment.objects.create(
+            user=self.user,
+            course=self.course_1,
+            is_theory_completed=True,
+            progress_status="enrolled",
+        )
+        self.enrollment_2 = CourseEnrollment.objects.create(
+            user=self.user,
+            course=self.course_2,
+            is_theory_completed=True,
+            progress_status="enrolled",
+        )
+        self.enrollment_3 = CourseEnrollment.objects.create(
+            user=self.user,
+            course=self.course_3,
+            is_theory_completed=True,
+            progress_status="completed",
+        )
+        self.enrollment_4 = CourseEnrollment.objects.create(
+            user=self.user,
+            course=self.course_4,
+            progress_status="completed",
+        )
+        self.other_enrollment = CourseEnrollment.objects.create(user=self.other_user, course=self.other_course)
+
+        now = timezone.now()
+        CourseEnrollment.objects.filter(pk=self.enrollment_1.pk).update(enrolled_at=now - timedelta(days=4))
+        CourseEnrollment.objects.filter(pk=self.enrollment_2.pk).update(enrolled_at=now - timedelta(days=3))
+        CourseEnrollment.objects.filter(pk=self.enrollment_3.pk).update(enrolled_at=now - timedelta(days=2))
+        CourseEnrollment.objects.filter(pk=self.enrollment_4.pk).update(enrolled_at=now - timedelta(days=1))
+        CourseEnrollment.objects.filter(pk=self.other_enrollment.pk).update(enrolled_at=now)
+
+        self.test_1 = CourseTest.objects.create(
+            course=self.course_1,
+            title="Test 1",
+            description="Desc 1",
+            passing_score=2,
+            max_attempts=3,
+            is_active=True,
+        )
+        self.test_2 = CourseTest.objects.create(
+            course=self.course_2,
+            title="Test 2",
+            description="Desc 2",
+            passing_score=2,
+            max_attempts=3,
+            is_active=True,
+        )
+
+        TestAttempt.objects.create(user=self.user, test=self.test_1, score=2, is_passed=True, attempt_number=1)
+        TestAttempt.objects.create(user=self.user, test=self.test_2, score=1, is_passed=False, attempt_number=1)
+
+        self.review_1 = Review.objects.create(
+            user=self.user,
+            course=self.course_1,
+            text="Review 1",
+            status=ReviewStatus.PENDING,
+        )
+        self.review_2 = Review.objects.create(
+            user=self.user,
+            course=self.course_2,
+            text="Review 2",
+            status=ReviewStatus.APPROVED,
+        )
+        self.review_3 = Review.objects.create(
+            user=self.user,
+            course=self.course_3,
+            text="Review 3",
+            status=ReviewStatus.REJECTED,
+        )
+        self.review_4 = Review.objects.create(
+            user=self.user,
+            course=self.course_4,
+            text="Review 4",
+            status=ReviewStatus.PENDING,
+        )
+        self.other_review = Review.objects.create(
+            user=self.other_user,
+            course=self.other_course,
+            text="Other review",
+            status=ReviewStatus.APPROVED,
+        )
+
+        Review.objects.filter(pk=self.review_1.pk).update(created_at=now - timedelta(days=4))
+        Review.objects.filter(pk=self.review_2.pk).update(created_at=now - timedelta(days=3))
+        Review.objects.filter(pk=self.review_3.pk).update(created_at=now - timedelta(days=2))
+        Review.objects.filter(pk=self.review_4.pk).update(created_at=now - timedelta(days=1))
+        Review.objects.filter(pk=self.other_review.pk).update(created_at=now)
+
+    def test_dashboard_requires_auth(self):
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_dashboard_returns_only_authenticated_user_data(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user"]["id"], str(self.user.id))
+        self.assertEqual(response.data["user"]["email"], self.user.email)
+        self.assertNotEqual(response.data["user"]["id"], str(self.other_user.id))
+
+    def test_dashboard_stats_are_calculated_correctly(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["stats"],
+            {
+                "enrolled_courses_count": 4,
+                "completed_courses_count": 1,
+                "in_progress_courses_count": 3,
+            },
+        )
+        self.enrollment_1.refresh_from_db()
+        self.enrollment_2.refresh_from_db()
+        self.enrollment_3.refresh_from_db()
+        self.enrollment_4.refresh_from_db()
+        self.assertEqual(self.enrollment_1.progress_status, "completed")
+        self.assertEqual(self.enrollment_2.progress_status, "testing_in_progress")
+        self.assertEqual(self.enrollment_3.progress_status, "theory_completed")
+        self.assertEqual(self.enrollment_4.progress_status, "enrolled")
+
+    def test_recent_courses_contains_only_user_courses(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["recent_courses"]), 3)
+        self.assertEqual(
+            [item["course_id"] for item in response.data["recent_courses"]],
+            [str(self.course_4.id), str(self.course_3.id), str(self.course_2.id)],
+        )
+        self.assertNotIn(str(self.other_course.id), {item["course_id"] for item in response.data["recent_courses"]})
+
+    def test_recent_reviews_contains_only_user_reviews(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["recent_reviews"]), 3)
+        self.assertEqual(
+            [item["review_id"] for item in response.data["recent_reviews"]],
+            [str(self.review_4.id), str(self.review_3.id), str(self.review_2.id)],
+        )
+        self.assertNotIn(str(self.other_review.id), {item["review_id"] for item in response.data["recent_reviews"]})
+        self.assertEqual(response.data["recent_reviews"][0]["comment"], "Review 4")
+        self.assertIsNone(response.data["recent_reviews"][0]["rating"])
+
+    def test_recent_courses_progress_fields_are_returned_correctly(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        recent_courses = {item["course_id"]: item for item in response.data["recent_courses"]}
+
+        self.assertEqual(recent_courses[str(self.course_4.id)]["progress_percent"], 25)
+        self.assertEqual(recent_courses[str(self.course_4.id)]["progress_status"], "enrolled")
+        self.assertFalse(recent_courses[str(self.course_4.id)]["is_theory_completed"])
+        self.assertFalse(recent_courses[str(self.course_4.id)]["is_test_passed"])
+
+        self.assertEqual(recent_courses[str(self.course_3.id)]["progress_percent"], 50)
+        self.assertEqual(recent_courses[str(self.course_3.id)]["progress_status"], "theory_completed")
+        self.assertTrue(recent_courses[str(self.course_3.id)]["is_theory_completed"])
+        self.assertFalse(recent_courses[str(self.course_3.id)]["is_test_passed"])
+
+        self.assertEqual(recent_courses[str(self.course_2.id)]["progress_percent"], 75)
+        self.assertEqual(recent_courses[str(self.course_2.id)]["progress_status"], "testing_in_progress")
+        self.assertTrue(recent_courses[str(self.course_2.id)]["is_theory_completed"])
+        self.assertFalse(recent_courses[str(self.course_2.id)]["is_test_passed"])
+
+    def test_blocked_user_cannot_access_dashboard(self):
+        blocked_user = Account.objects.create_user(
+            email="blocked-dashboard@example.com",
+            password="StrongPass123",
+            first_name="Blocked",
+            last_name="User",
+            status=AccountStatus.BLOCKED,
+        )
+        refresh = RefreshToken.for_user(blocked_user)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+        response = self.client.get(self.dashboard_url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["detail"], "User account is blocked.")

@@ -8,7 +8,13 @@ from dto.serializers import RegisterSerializer, LoginSerializer, LogoutSerialize
 
 from drf_yasg.utils import swagger_auto_schema
 
-from accounts.serializers import AccountMeSerializer, AccountMeUpdateSerializer, ChangePasswordSerializer
+from accounts.serializers import (
+    AccountDashboardSerializer,
+    AccountMeSerializer,
+    AccountMeUpdateSerializer,
+    ChangePasswordSerializer,
+)
+from accounts.services import build_account_dashboard
 
 
 class RegisterView(generics.CreateAPIView):
@@ -68,3 +74,19 @@ class ChangePasswordView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
+
+
+class AccountDashboardView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = AccountDashboardSerializer
+    http_method_names = ["get", "head", "options"]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["recent_course_progress_payloads"] = self.dashboard_payload["recent_course_progress_payloads"]
+        return context
+
+    def get(self, request, *args, **kwargs):
+        self.dashboard_payload = build_account_dashboard(user=request.user)
+        serializer = self.get_serializer(self.dashboard_payload)
+        return Response(serializer.data, status=status.HTTP_200_OK)
