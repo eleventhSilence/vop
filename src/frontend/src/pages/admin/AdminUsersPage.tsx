@@ -208,7 +208,7 @@ export const AdminUsersPage = () => {
       {updateUserMutation.isError ? <ErrorState message={extractApiError(updateUserMutation.error)} /> : null}
       {!usersQuery.isLoading && !users.length ? <EmptyState message="Пользователи не найдены." /> : null}
       <div className="details-layout admin-users-layout">
-        <div className="table-card">
+        <div className="table-card admin-users-table-panel">
           <div className="table-card__header">
             <div>
               <strong>Всего пользователей: {paginatedUsers.count}</strong>
@@ -234,148 +234,150 @@ export const AdminUsersPage = () => {
               </Button>
             </div>
           </div>
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>Имя</th>
-                <th>Email</th>
-                <th>Роль</th>
-                <th>Статус</th>
-                <th>Дата регистрации</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.user_id}>
-                  <td>
-                    {editingUserId === user.user_id ? (
-                      <div className="inline-edit">
-                        <input
-                          className="field__control"
-                          value={nameDrafts[user.user_id]?.first_name ?? ''}
-                          onChange={(event) => updateDraft(user.user_id, 'first_name', event.target.value)}
-                          placeholder="Имя"
-                          disabled={pendingUserId === user.user_id}
-                        />
-                        <input
-                          className="field__control"
-                          value={nameDrafts[user.user_id]?.last_name ?? ''}
-                          onChange={(event) => updateDraft(user.user_id, 'last_name', event.target.value)}
-                          placeholder="Фамилия"
-                          disabled={pendingUserId === user.user_id}
-                        />
-                      </div>
-                    ) : (
-                      <div>
-                        <strong>{[user.first_name, user.last_name].filter(Boolean).join(' ') || 'Без имени'}</strong>
-                        {getSelfLocked(user.user_id) ? <p className="muted">Ваш аккаунт недоступен для редактирования.</p> : null}
-                      </div>
-                    )}
-                  </td>
-                  <td>{user.email}</td>
-                  <td>
-                    <StatusBadge
-                      status={user.role}
-                      label={formatRole(user.role)}
-                      tone={getRoleTone(user.role)}
-                    />
-                  </td>
-                  <td>
-                    <StatusBadge
-                      status={user.status}
-                      label={formatStatus(user.status)}
-                      tone={getStatusTone(user.status)}
-                    />
-                  </td>
-                  <td>{formatDateTime(user.registered_at)}</td>
-                  <td>
-                    <div className="users-actions">
-                      <label className="users-actions__field">
-                        <span>Роль</span>
-                        <select
-                          className="field__control"
-                          value={user.role}
-                          disabled={getSelfLocked(user.user_id) || pendingUserId === user.user_id}
-                          onChange={(event) =>
-                            updateUserMutation.mutate({
-                              userId: user.user_id,
-                              payload: { role: event.target.value as AdminUser['role'] },
-                            })
-                          }
-                        >
-                          {ROLE_OPTIONS.map((role) => (
-                            <option key={role} value={role}>
-                              {formatRole(role)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+          <div className="admin-users-table-wrap">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>Имя</th>
+                  <th>Email</th>
+                  <th>Роль</th>
+                  <th>Статус</th>
+                  <th>Дата регистрации</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.user_id}>
+                    <td>
+                      {editingUserId === user.user_id ? (
+                        <div className="inline-edit">
+                          <input
+                            className="field__control"
+                            value={nameDrafts[user.user_id]?.first_name ?? ''}
+                            onChange={(event) => updateDraft(user.user_id, 'first_name', event.target.value)}
+                            placeholder="Имя"
+                            disabled={pendingUserId === user.user_id}
+                          />
+                          <input
+                            className="field__control"
+                            value={nameDrafts[user.user_id]?.last_name ?? ''}
+                            onChange={(event) => updateDraft(user.user_id, 'last_name', event.target.value)}
+                            placeholder="Фамилия"
+                            disabled={pendingUserId === user.user_id}
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <strong>{[user.first_name, user.last_name].filter(Boolean).join(' ') || 'Без имени'}</strong>
+                          {getSelfLocked(user.user_id) ? <p className="muted">Ваш аккаунт недоступен для редактирования.</p> : null}
+                        </div>
+                      )}
+                    </td>
+                    <td>{user.email}</td>
+                    <td>
+                      <StatusBadge
+                        status={user.role}
+                        label={formatRole(user.role)}
+                        tone={getRoleTone(user.role)}
+                      />
+                    </td>
+                    <td>
+                      <StatusBadge
+                        status={user.status}
+                        label={formatStatus(user.status)}
+                        tone={getStatusTone(user.status)}
+                      />
+                    </td>
+                    <td>{formatDateTime(user.registered_at)}</td>
+                    <td>
+                      <div className="users-actions">
+                        <label className="users-actions__field">
+                          <span>Роль</span>
+                          <select
+                            className="field__control"
+                            value={user.role}
+                            disabled={getSelfLocked(user.user_id) || pendingUserId === user.user_id}
+                            onChange={(event) =>
+                              updateUserMutation.mutate({
+                                userId: user.user_id,
+                                payload: { role: event.target.value as AdminUser['role'] },
+                              })
+                            }
+                          >
+                            {ROLE_OPTIONS.map((role) => (
+                              <option key={role} value={role}>
+                                {formatRole(role)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
 
-                      <label className="users-actions__field">
-                        <span>Статус</span>
-                        <select
-                          className="field__control"
-                          value={user.status}
-                          disabled={getSelfLocked(user.user_id) || pendingUserId === user.user_id}
-                          onChange={(event) =>
-                            updateUserMutation.mutate({
-                              userId: user.user_id,
-                              payload: { status: event.target.value as AdminUser['status'] },
-                            })
-                          }
-                        >
-                          {STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status}>
-                              {formatStatus(status)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                        <label className="users-actions__field">
+                          <span>Статус</span>
+                          <select
+                            className="field__control"
+                            value={user.status}
+                            disabled={getSelfLocked(user.user_id) || pendingUserId === user.user_id}
+                            onChange={(event) =>
+                              updateUserMutation.mutate({
+                                userId: user.user_id,
+                                payload: { status: event.target.value as AdminUser['status'] },
+                              })
+                            }
+                          >
+                            {STATUS_OPTIONS.map((status) => (
+                              <option key={status} value={status}>
+                                {formatStatus(status)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
 
-                      <div className="users-actions__buttons">
-                        {editingUserId === user.user_id ? (
-                          <>
-                            <Button
-                              variant="secondary"
-                              onClick={() => handleNameSave(user)}
-                              disabled={pendingUserId === user.user_id}
-                            >
-                              Сохранить имя
-                            </Button>
+                        <div className="users-actions__buttons">
+                          {editingUserId === user.user_id ? (
+                            <>
+                              <Button
+                                variant="secondary"
+                                onClick={() => handleNameSave(user)}
+                                disabled={pendingUserId === user.user_id}
+                              >
+                                Сохранить имя
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() => cancelEditing(user)}
+                                disabled={pendingUserId === user.user_id}
+                              >
+                                Отмена
+                              </Button>
+                            </>
+                          ) : (
                             <Button
                               variant="ghost"
-                              onClick={() => cancelEditing(user)}
-                              disabled={pendingUserId === user.user_id}
+                              onClick={() => startEditing(user)}
+                              disabled={getSelfLocked(user.user_id) || pendingUserId === user.user_id}
                             >
-                              Отмена
+                              Редактировать имя
                             </Button>
-                          </>
-                        ) : (
+                          )}
                           <Button
-                            variant="ghost"
-                            onClick={() => startEditing(user)}
-                            disabled={getSelfLocked(user.user_id) || pendingUserId === user.user_id}
+                            variant={selectedUserId === user.user_id ? 'secondary' : 'ghost'}
+                            onClick={() => setSelectedUserId(user.user_id)}
                           >
-                            Редактировать имя
+                            Подробнее
                           </Button>
-                        )}
-                        <Button
-                          variant={selectedUserId === user.user_id ? 'secondary' : 'ghost'}
-                          onClick={() => setSelectedUserId(user.user_id)}
-                        >
-                          Подробнее
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div className="card admin-users-details">
+        <aside className="card admin-users-details" aria-label="Карточка выбранного пользователя">
           {selectedUser ? (
             <>
               <div className="card__row">
@@ -420,7 +422,7 @@ export const AdminUsersPage = () => {
           ) : (
             <EmptyState message="Выберите пользователя в таблице, чтобы посмотреть подробности." />
           )}
-        </div>
+        </aside>
       </div>
     </PageSection>
   );
