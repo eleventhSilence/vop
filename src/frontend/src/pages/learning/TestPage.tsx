@@ -14,7 +14,7 @@ export const TestPage = () => {
 
   const testQuery = useQuery({
     queryKey: ['testing', 'course', courseId],
-    queryFn: () => testingApi.courseTest(courseId),
+    queryFn: () => testingApi.myCourseTest(courseId),
     enabled: Boolean(courseId),
   });
 

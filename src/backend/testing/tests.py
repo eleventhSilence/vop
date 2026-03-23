@@ -106,6 +106,35 @@ class TestingApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+
+    def test_get_my_course_test_info_returns_unavailable_course_test_for_enrolled_user(self):
+        hidden_enrollment = CourseEnrollment.objects.create(
+            user=self.user,
+            course=self.unavailable_course,
+            is_theory_completed=True,
+        )
+        hidden_test = CourseTest.objects.get(course=self.unavailable_course)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(reverse("my-course-test-info", kwargs={"course_id": self.unavailable_course.id}))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["has_test"])
+        self.assertEqual(response.data["test_id"], str(hidden_test.id))
+        self.assertEqual(hidden_enrollment.course.status, CourseStatus.UNAVAILABLE)
+
+    def test_get_my_course_test_info_returns_404_for_foreign_course(self):
+        CourseEnrollment.objects.create(
+            user=self.other_user,
+            course=self.unavailable_course,
+            is_theory_completed=True,
+        )
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(reverse("my-course-test-info", kwargs={"course_id": self.unavailable_course.id}))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_submit_test_success(self):
         self.client.force_authenticate(user=self.user)
         payload = {

@@ -189,6 +189,26 @@ class CoursesApiTests(APITestCase):
         self.assertEqual(response.data["detail"], "User account is blocked.")
 
 
+    def test_get_my_course_detail_returns_unavailable_course_for_enrolled_user(self):
+        CourseEnrollment.objects.create(user=self.user, course=self.unavailable_course)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(reverse("course-my-detail", kwargs={"course_id": self.unavailable_course.id}))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["course_id"], str(self.unavailable_course.id))
+        self.assertEqual(response.data["status"], CourseStatus.UNAVAILABLE)
+        self.assertEqual(response.data["content"], self.unavailable_course.content)
+
+    def test_get_my_course_detail_returns_404_for_foreign_course(self):
+        CourseEnrollment.objects.create(user=self.other_user, course=self.unavailable_course)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(reverse("course-my-detail", kwargs={"course_id": self.unavailable_course.id}))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
 
 class AdminCoursesApiTests(APITestCase):
     def setUp(self):
