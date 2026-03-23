@@ -1,28 +1,29 @@
-.PHONY: help install makemigrations migrate run up superuser shell test
+.PHONY: help install makemigrations migrate run up superuser shell test frontend-install frontend-dev frontend-build
 
-# Пути
 VENV = venv
 PYTHON = $(VENV)/bin/python
 MANAGE = $(PYTHON) src/backend/manage.py
-OS_PYTHON = python3
+FRONTEND_DIR = src/frontend
+NPM = npm
 
-# Для Windows автоматически
 ifeq ($(OS),Windows_NT)
-	OS_PYTHON = python
-    PYTHON = $(VENV)/Scripts/python.exe
-    MANAGE = $(PYTHON) src/backend/manage.py
+	PYTHON = $(VENV)/Scripts/python.exe
+	MANAGE = $(PYTHON) src/backend/manage.py
 endif
 
 help:
-	@echo "Available commands:"
-	@echo "  install        - install dependencies"
-	@echo "  makemigrations - create migrations"
-	@echo "  migrate        - apply migrations"
-	@echo "  run            - run development server"
-	@echo "  up             - migrate + run"
-	@echo "  superuser      - create superuser"
-	@echo "  shell          - django shell"
-	@echo "  test           - run tests"
+	@echo "Available commands (run make from the repository root):"
+	@echo "  install          - create ./venv and install backend Python dependencies"
+	@echo "  makemigrations   - run Django makemigrations for backend"
+	@echo "  migrate          - run Django migrate for backend"
+	@echo "  run              - run backend development server on 127.0.0.1:8000"
+	@echo "  up               - run backend migrations and then start backend server"
+	@echo "  superuser        - create backend Django superuser"
+	@echo "  shell            - open backend Django shell"
+	@echo "  test             - run backend Django tests"
+	@echo "  frontend-install - install frontend npm dependencies in src/frontend"
+	@echo "  frontend-dev     - run frontend Vite dev server from src/frontend"
+	@echo "  frontend-build   - build frontend from src/frontend"
 
 install:
 	python -m venv $(VENV)
@@ -47,3 +48,12 @@ shell:
 
 test:
 	$(MANAGE) test
+
+frontend-install:
+	cd $(FRONTEND_DIR) && $(NPM) install
+
+frontend-dev:
+	cd $(FRONTEND_DIR) && $(NPM) run dev
+
+frontend-build:
+	cd $(FRONTEND_DIR) && $(NPM) run build
