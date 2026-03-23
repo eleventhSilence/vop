@@ -134,7 +134,7 @@ class TestingApiTests(APITestCase):
         self.assertEqual(response.data["attempt_number"], 1)
         self.assertEqual(response.data["remaining_attempts"], 0)
         self.enrollment.refresh_from_db()
-        self.assertEqual(self.enrollment.progress_status, "completed")
+        self.assertEqual(self.enrollment.progress_status, "enrolled")
 
     def test_submit_requires_auth(self):
         payload = {

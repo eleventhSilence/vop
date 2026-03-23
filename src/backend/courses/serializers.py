@@ -66,11 +66,15 @@ class AdminCourseWriteSerializer(AdminCourseBaseSerializer):
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
     user_id = serializers.UUIDField(source="user.id", read_only=True)
     course_id = serializers.UUIDField(source="course.id", read_only=True)
+    progress_status = serializers.SerializerMethodField()
 
     class Meta:
         model = CourseEnrollment
         fields = ("user_id", "course_id", "progress_status", "is_theory_completed", "enrolled_at")
         read_only_fields = fields
+
+    def get_progress_status(self, obj):
+        return build_progress_payload(enrollment=obj)["progress_status"]
 
 
 class MyCourseSerializer(serializers.ModelSerializer):

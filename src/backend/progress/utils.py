@@ -45,19 +45,6 @@ def calculate_progress_status(
     return PROGRESS_STATUS_TESTING_IN_PROGRESS
 
 
-def sync_enrollment_progress_status(
-    *, enrollment: CourseEnrollment, attempts: QuerySet[TestAttempt] | None = None, save: bool = True
-) -> str:
-    progress_status = calculate_progress_status(enrollment=enrollment, attempts=attempts)
-
-    if enrollment.progress_status != progress_status:
-        enrollment.progress_status = progress_status
-        if save and enrollment.pk:
-            enrollment.save(update_fields=("progress_status",))
-
-    return progress_status
-
-
 def build_progress_payload(*, enrollment: CourseEnrollment, attempts: QuerySet[TestAttempt] | None = None) -> dict:
     if attempts is None:
         attempts = get_course_attempts(enrollment=enrollment)
