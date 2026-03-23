@@ -1,11 +1,26 @@
 # VOP Backend + Frontend Foundation
 
-# TEST BRANCH
-
 Проект онлайн-платформы обучения для ВКР.
 
-- Backend: Django + DRF в `src/backend`
-- Frontend foundation: React + TypeScript + Vite в `src/frontend`
+- Backend: Django + Django REST Framework в `src/backend`
+- Frontend: React + TypeScript + Vite в `src/frontend`
+
+## Структура проекта
+
+```text
+.
+├── Makefile              # необязательные команды-ярлыки из корня репозитория
+├── requirements.txt      # Python-зависимости backend
+└── src/
+    ├── backend/          # Django project (`manage.py` находится здесь)
+    └── frontend/         # Vite application (`package.json` находится здесь)
+```
+
+Ключевой момент developer workflow:
+
+- backend-команды через `manage.py` запускаются из директории `src/backend`
+- frontend-команды `npm` запускаются из директории `src/frontend`
+- `Makefile` находится в корне репозитория и является только удобной обёрткой для backend-команд и нескольких frontend-ярлыков
 
 ## Backend apps
 
@@ -15,82 +30,174 @@
 - `reviews/`
 - `progress/`
 
----
-
-## ⚙️ Требования
+## Требования
 
 - Python 3.10+
 - Node.js 20+
 - npm
-- GNU Make (или альтернатива для Windows)
+- GNU Make — опционально, если хотите использовать команды из `Makefile`
 
----
+## Локальный workflow: backend
 
-## 🚀 Backend quick start
+### 1. Установка Python-зависимостей
 
-### 1️⃣ Установка зависимостей
+Из корня репозитория:
+
+```bash
+python -m venv venv
+./venv/bin/pip install -r requirements.txt
+```
+
+На Windows вместо `./venv/bin/...` используйте `venv\Scripts\...`.
+
+Альтернатива через `make` из корня репозитория:
 
 ```bash
 make install
 ```
 
-### 2️⃣ Миграции
+### 2. Миграции backend
+
+Прямой вариант из `src/backend`:
+
+```bash
+cd src/backend
+../../venv/bin/python manage.py makemigrations
+../../venv/bin/python manage.py migrate
+```
+
+Альтернатива через `make` из корня репозитория:
 
 ```bash
 make makemigrations
 make migrate
 ```
 
-### 3️⃣ Запуск backend
+### 3. Запуск backend
+
+Рекомендуемый прямой вариант:
+
+```bash
+cd src/backend
+../../venv/bin/python manage.py runserver 127.0.0.1:8000
+```
+
+Backend будет доступен по адресу `http://127.0.0.1:8000`.
+
+Альтернатива через `make` из корня репозитория:
 
 ```bash
 make run
 ```
 
-Backend будет доступен по адресу:
+### 4. Backend тесты
 
-```text
-http://127.0.0.1:8000
+Подтверждённый рабочий запуск тестов:
+
+```bash
+cd src/backend
+python manage.py test
 ```
 
----
+Если используется локальное виртуальное окружение из корня репозитория, эквивалентная команда выглядит так:
 
-## ⚛️ Frontend quick start
+```bash
+cd src/backend
+../../venv/bin/python manage.py test
+```
 
-Frontend расположен в `src/frontend` и построен как foundation для дальнейшей пользовательской и административной части.
+Короткая альтернатива через `make` из корня репозитория:
 
-### Установка frontend зависимостей
+```bash
+make test
+```
+
+## Локальный workflow: frontend
+
+### 1. Установка frontend-зависимостей
 
 ```bash
 cd src/frontend
 npm install
 ```
 
-### Запуск frontend dev server
+Или через `make` из корня репозитория:
 
 ```bash
+make frontend-install
+```
+
+### 2. Запуск frontend dev server
+
+Подтверждённый рабочий сценарий:
+
+```bash
+cd src/frontend
 npm run dev
 ```
 
 По умолчанию Vite использует proxy `/api` → `http://127.0.0.1:8000`.
 
-### Сборка frontend
+Или через `make` из корня репозитория:
 
 ```bash
+make frontend-dev
+```
+
+### 3. Frontend build
+
+Подтверждённый рабочий сценарий:
+
+```bash
+cd src/frontend
 npm run build
 ```
 
-### Настройка API URL
+Или через `make` из корня репозитория:
 
-При необходимости можно переопределить базовый URL через переменную:
+```bash
+make frontend-build
+```
+
+### 4. Настройка API URL
+
+При необходимости можно переопределить базовый URL через переменную окружения:
 
 ```bash
 VITE_API_BASE_URL=/api
 ```
 
----
+## Команды через Makefile
 
-## 🧱 Что уже заложено во frontend
+`Makefile` запускается из корня репозитория и не заменяет понимание рабочих директорий. Он просто фиксирует те же команды в явном виде.
+
+Посмотреть доступные команды:
+
+```bash
+make help
+```
+
+Backend-команды:
+
+```bash
+make install
+make makemigrations
+make migrate
+make run
+make superuser
+make shell
+make test
+```
+
+Frontend-команды:
+
+```bash
+make frontend-install
+make frontend-dev
+make frontend-build
+```
+
+## Что уже заложено во frontend
 
 - базовая структура `app / pages / widgets / features / entities / shared`
 - маршруты для public, private и admin зон
@@ -99,37 +206,7 @@ VITE_API_BASE_URL=/api
 - API layer с общим `baseURL`, auth headers и refresh flow
 - страницы foundation для курсов, кабинета, обучения, тестирования и admin UI
 
----
-
-## 🛠 Доступные backend команды Makefile
-
-Посмотреть список команд:
-
-```bash
-make help
-```
-
-Создать суперпользователя:
-
-```bash
-make superuser
-```
-
-Открыть Django shell:
-
-```bash
-make shell
-```
-
-Запустить тесты:
-
-```bash
-make test
-```
-
----
-
-## ⚠️ Важно
+## Важно
 
 - Frontend опирается на существующие backend endpoint-ы из `/api/...`
 - Course lifecycle в admin UI должен использовать `status`, а не delete
