@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { reviewsApi } from '@/entities/review/api';
+import type { ReviewStatus } from '@/entities/review/types';
 import { extractApiError } from '@/shared/api/client';
 import { formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
@@ -15,7 +16,7 @@ export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolea
   });
 
   const moderateMutation = useMutation({
-    mutationFn: ({ reviewId, status }: { reviewId: string; status: 'APPROVED' | 'REJECTED' }) => reviewsApi.adminModerate(reviewId, status),
+    mutationFn: ({ reviewId, status }: { reviewId: string; status: Extract<ReviewStatus, 'approved' | 'rejected'> }) => reviewsApi.adminModerate(reviewId, status),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'reviews'], exact: true }),
@@ -45,25 +46,21 @@ export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolea
       {moderateMutation.isError ? <ErrorState message={extractApiError(moderateMutation.error)} /> : null}
       {!reviewsQuery.isLoading && !reviews.length ? <EmptyState message="Отзывы не найдены." /> : null}
       <div className="stack-list">
-        {reviews.map((review) => {
-          const reviewStatus = review.status.toUpperCase();
-
-          return (
-            <div className="card" key={review.review_id}>
-              <div className="card__row"><h3>{review.course_title}</h3><span>{formatStatus(review.status)}</span></div>
-              <p><strong>{review.user_email}</strong></p>
-              <p>{review.comment}</p>
-              {reviewStatus === 'PENDING' ? (
-                <div className="card__row">
-                  <Button variant="secondary" onClick={() => moderateMutation.mutate({ reviewId: review.review_id, status: 'APPROVED' })} disabled={moderateMutation.isPending}>Одобрить</Button>
-                  <Button variant="ghost" onClick={() => moderateMutation.mutate({ reviewId: review.review_id, status: 'REJECTED' })} disabled={moderateMutation.isPending}>Отклонить</Button>
-                </div>
-              ) : (
-                <p className="muted">Для этого отзыва модерация уже завершена.</p>
-              )}
-            </div>
-          );
-        })}
+        {reviews.map((review) => (
+          <div className="card" key={review.review_id}>
+            <div className="card__row"><h3>{review.course_title}</h3><span>{formatStatus(review.status)}</span></div>
+            <p><strong>{review.user_email}</strong></p>
+            <p>{review.comment}</p>
+            {review.status === 'pending' ? (
+              <div className="card__row">
+                <Button variant="secondary" onClick={() => moderateMutation.mutate({ reviewId: review.review_id, status: 'approved' })} disabled={moderateMutation.isPending}>Одобрить</Button>
+                <Button variant="ghost" onClick={() => moderateMutation.mutate({ reviewId: review.review_id, status: 'rejected' })} disabled={moderateMutation.isPending}>Отклонить</Button>
+              </div>
+            ) : (
+              <p className="muted">Для этого отзыва модерация уже завершена.</p>
+            )}
+          </div>
+        ))}
       </div>
     </PageSection>
   );

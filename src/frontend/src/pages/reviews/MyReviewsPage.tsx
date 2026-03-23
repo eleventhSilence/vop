@@ -77,7 +77,7 @@ export const MyReviewsPage = () => {
                 reviewId={review.review_id}
                 comment={review.comment}
                 rating={review.rating}
-                status={review.status ?? 'PENDING'}
+                status={review.status ?? 'pending'}
                 onSave={(payload) => updateMutation.mutate(payload)}
                 isSaving={updateMutation.isPending}
               />

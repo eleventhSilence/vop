@@ -1,3 +1,5 @@
+import type { ProgressStatus } from '@/entities/course/types';
+
 export type ProgressAttempt = {
   attempt_id: string;
   score: number;
@@ -10,7 +12,7 @@ export type CourseProgress = {
   course_id: string;
   course_title: string;
   progress_percent: number;
-  progress_status: string;
+  progress_status: ProgressStatus;
   is_theory_completed: boolean;
   total_attempts: number;
   best_score: number | null;

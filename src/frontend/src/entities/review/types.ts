@@ -1,8 +1,10 @@
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
 export type Review = {
   review_id: string;
   comment: string;
   rating: number;
-  status?: string;
+  status?: ReviewStatus;
   created_at: string;
   updated_at?: string;
   course_id?: string;
@@ -17,7 +19,7 @@ export type AdminReview = {
   course_title: string;
   rating: number;
   comment: string;
-  status: string;
+  status: ReviewStatus;
   created_at: string;
   updated_at: string;
 };
