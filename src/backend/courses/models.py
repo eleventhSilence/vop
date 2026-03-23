@@ -37,6 +37,7 @@ class CourseEnrollment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="course_enrollments")
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="enrollments")
+    # Legacy field kept for backward compatibility. Business logic and API responses use computed progress.
     progress_status = models.CharField(max_length=50, default="enrolled")
     is_theory_completed = models.BooleanField(default=False)
     theory_completed_at = models.DateTimeField(null=True, blank=True)

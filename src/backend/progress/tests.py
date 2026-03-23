@@ -62,7 +62,7 @@ class ProgressApiTests(APITestCase):
         self.enrollment.refresh_from_db()
         self.assertTrue(self.enrollment.is_theory_completed)
         self.assertIsNotNone(self.enrollment.theory_completed_at)
-        self.assertEqual(self.enrollment.progress_status, "theory_completed")
+        self.assertEqual(self.enrollment.progress_status, "enrolled")
         self.assertEqual(response.data["progress_percent"], 50)
         self.assertEqual(response.data["progress_status"], "theory_completed")
 
@@ -82,7 +82,7 @@ class ProgressApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_get_my_progress_list_does_not_sync_progress_status(self):
+    def test_get_my_progress_list_uses_computed_progress_status(self):
         self.client.force_authenticate(user=self.user)
         self.second_enrollment.progress_status = "completed"
         self.second_enrollment.save(update_fields=("progress_status",))

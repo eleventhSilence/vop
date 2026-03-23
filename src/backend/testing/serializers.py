@@ -3,7 +3,6 @@ from django.db import transaction
 from rest_framework import serializers
 
 from courses.models import Course
-from progress.utils import sync_enrollment_progress_status
 from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion, UserAnswer
 
 
@@ -427,9 +426,6 @@ def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[di
             user_answer.attempt = attempt
         UserAnswer.objects.bulk_create(user_answers_payload)
 
-    enrollment = user.course_enrollments.filter(course=test.course).first()
-    if enrollment is not None:
-        sync_enrollment_progress_status(enrollment=enrollment)
 
     return {
         "attempt_id": attempt.id,
