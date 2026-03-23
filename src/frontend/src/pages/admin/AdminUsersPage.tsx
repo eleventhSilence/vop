@@ -55,8 +55,10 @@ export const AdminUsersPage = () => {
     () => users.find((user) => user.user_id === selectedUserId) ?? null,
     [selectedUserId, users],
   );
-  const nextPage = getPageFromUrl(paginatedUsers.next);
-  const previousPage = getPageFromUrl(paginatedUsers.previous);
+  const hasNextPage = Boolean(paginatedUsers.next);
+  const hasPreviousPage = Boolean(paginatedUsers.previous);
+  const nextPage = getPageFromUrl(paginatedUsers.next) ?? (hasNextPage ? page + 1 : null);
+  const previousPage = getPageFromUrl(paginatedUsers.previous) ?? (hasPreviousPage ? Math.max(1, page - 1) : null);
   const pageSize = knownPageSize ?? (users.length || 1);
   const totalPages = Math.max(1, Math.ceil(paginatedUsers.count / pageSize));
 
@@ -230,16 +232,16 @@ export const AdminUsersPage = () => {
             <div className="pagination-controls" aria-label="Пагинация пользователей">
               <Button
                 variant="ghost"
-                onClick={() => previousPage && setPage(previousPage)}
-                disabled={!previousPage || usersQuery.isLoading}
+                onClick={() => previousPage !== null && setPage(previousPage)}
+                disabled={!hasPreviousPage || usersQuery.isLoading}
               >
                 Назад
               </Button>
               <span className="pagination-controls__status">Страница {page}</span>
               <Button
                 variant="ghost"
-                onClick={() => nextPage && setPage(nextPage)}
-                disabled={!nextPage || usersQuery.isLoading}
+                onClick={() => nextPage !== null && setPage(nextPage)}
+                disabled={!hasNextPage || usersQuery.isLoading}
               >
                 Вперёд
               </Button>
