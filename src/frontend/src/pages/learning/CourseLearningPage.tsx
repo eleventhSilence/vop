@@ -11,8 +11,8 @@ import { PageSection } from '@/shared/ui/PageSection';
 export const CourseLearningPage = () => {
   const { courseId = '' } = useParams();
   const courseQuery = useQuery({
-    queryKey: ['courses', 'detail', courseId],
-    queryFn: () => coursesApi.detail(courseId),
+    queryKey: ['courses', 'my-detail', courseId],
+    queryFn: () => coursesApi.myDetail(courseId),
     enabled: Boolean(courseId),
   });
   const progressQuery = useQuery({

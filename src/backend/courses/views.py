@@ -15,6 +15,7 @@ from courses.serializers import (
     CourseListSerializer,
     MyCourseSerializer,
 )
+from accounts.models import AccountRole
 from reviews.permissions import IsAdminUserRole
 
 
@@ -38,6 +39,21 @@ class CourseDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = CourseDetailSerializer
     queryset = Course.objects.filter(status=CourseStatus.AVAILABLE)
+
+
+class MyCourseDetailView(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CourseDetailSerializer
+    lookup_url_kwarg = "course_id"
+
+    def get_queryset(self):
+        queryset = Course.objects.all()
+        if self.request.user.role == AccountRole.ADMIN:
+            return queryset
+        return queryset.filter(enrollments__user=self.request.user).distinct()
+
+    def get_object(self):
+        return get_object_or_404(self.get_queryset(), id=self.kwargs["course_id"])
 
 
 class CourseEnrollView(generics.CreateAPIView):

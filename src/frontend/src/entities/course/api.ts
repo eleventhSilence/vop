@@ -9,6 +9,9 @@ export const coursesApi = {
   detail(courseId: string) {
     return http.get<CourseDetail>(`/courses/${courseId}/`).then((response) => response.data);
   },
+  myDetail(courseId: string) {
+    return http.get<CourseDetail>(`/courses/my/${courseId}/`).then((response) => response.data);
+  },
   enroll(courseId: string) {
     return http.post<CourseEnrollment>(`/courses/${courseId}/enroll/`).then((response) => response.data);
   },

@@ -7,6 +7,9 @@ export const testingApi = {
   courseTest(courseId: string) {
     return http.get<CourseTestInfo>(`/testing/course/${courseId}/`).then((response) => response.data);
   },
+  myCourseTest(courseId: string) {
+    return http.get<CourseTestInfo>(`/testing/my/course/${courseId}/`).then((response) => response.data);
+  },
   submit(testId: string, answers: unknown[]) {
     return http.post<TestSubmitResult>(`/testing/${testId}/submit/`, { answers }).then((response) => response.data);
   },

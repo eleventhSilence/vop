@@ -4,6 +4,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
 from courses.models import Course, CourseEnrollment, CourseStatus
+from accounts.models import AccountRole
 from reviews.permissions import IsAdminUserRole
 from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion
 from testing.serializers import (
@@ -30,6 +31,35 @@ class CourseTestInfoView(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         course = get_object_or_404(Course, id=self.kwargs["course_id"], status=CourseStatus.AVAILABLE)
+        test = CourseTest.objects.filter(course=course, is_active=True).prefetch_related("questions__answer_options").first()
+
+        if test is None:
+            serializer = EmptyCourseTestInfoSerializer(
+                {
+                    "has_test": False,
+                    "test_id": None,
+                    "title": None,
+                    "description": None,
+                    "passing_score": None,
+                    "max_attempts": None,
+                    "questions": [],
+                }
+            )
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        serializer = CourseTestInfoSerializer(test)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MyCourseTestInfoView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        courses = Course.objects.all()
+        if request.user.role != AccountRole.ADMIN:
+            courses = courses.filter(enrollments__user=request.user).distinct()
+
+        course = get_object_or_404(courses, id=self.kwargs["course_id"])
         test = CourseTest.objects.filter(course=course, is_active=True).prefetch_related("questions__answer_options").first()
 
         if test is None:
