@@ -1,3 +1,18 @@
+const statusLabels: Record<string, string> = {
+  ACTIVE: 'Активен',
+  BLOCKED: 'Заблокирован',
+  available: 'Доступен',
+  unavailable: 'Скрыт',
+  pending: 'На модерации',
+  approved: 'Одобрен',
+  rejected: 'Отклонён',
+  not_enrolled: 'Не записан',
+  enrolled: 'Записан',
+  theory_completed: 'Теория завершена',
+  testing_in_progress: 'Тестирование начато',
+  completed: 'Завершён',
+};
+
 export const formatDateTime = (value: string | null | undefined) => {
   if (!value) {
     return '—';
@@ -15,16 +30,4 @@ export const formatRole = (role: string) => {
   return role;
 };
 
-export const formatStatus = (status: string) => {
-  if (status === 'ACTIVE') return 'Активен';
-  if (status === 'BLOCKED') return 'Заблокирован';
-  if (status === 'AVAILABLE') return 'Доступен';
-  if (status === 'UNAVAILABLE') return 'Скрыт';
-  if (status === 'PENDING') return 'На модерации';
-  if (status === 'APPROVED') return 'Одобрен';
-  if (status === 'REJECTED') return 'Отклонён';
-  if (status === 'NOT_STARTED') return 'Не начат';
-  if (status === 'IN_PROGRESS') return 'В процессе';
-  if (status === 'COMPLETED') return 'Завершён';
-  return status;
-};
+export const formatStatus = (status: string) => statusLabels[status] ?? status;

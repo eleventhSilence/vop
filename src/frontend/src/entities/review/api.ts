@@ -1,5 +1,5 @@
 import { http } from '@/shared/api/http';
-import type { AdminReview, Review, ReviewWritePayload } from '@/entities/review/types';
+import type { AdminReview, Review, ReviewStatus, ReviewWritePayload } from '@/entities/review/types';
 import type { PaginatedResponse } from '@/shared/lib/pagination';
 
 export const reviewsApi = {
@@ -21,7 +21,7 @@ export const reviewsApi = {
   adminPending() {
     return http.get<PaginatedResponse<AdminReview>>('/admin/reviews/pending/').then((response) => response.data);
   },
-  adminModerate(reviewId: string, status: 'APPROVED' | 'REJECTED') {
+  adminModerate(reviewId: string, status: Extract<ReviewStatus, 'approved' | 'rejected'>) {
     return http.patch<AdminReview>(`/admin/reviews/${reviewId}/`, { status }).then((response) => response.data);
   },
 };

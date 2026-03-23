@@ -38,7 +38,7 @@ export const TestPage = () => {
   const submitPayload = useMemo(() => {
     return testQuery.data?.questions.map((question) => {
       const selected = answers[question.question_id] ?? [];
-      if (question.question_type === 'SINGLE_CHOICE') {
+      if (question.question_type === 'single_choice') {
         return { question_id: question.question_id, selected_option_id: selected[0] };
       }
       return { question_id: question.question_id, selected_option_ids: selected };
@@ -69,7 +69,7 @@ export const TestPage = () => {
                 <legend>{question.order}. {question.text}</legend>
                 {question.options.map((option) => {
                   const selected = answers[question.question_id] ?? [];
-                  const type = question.question_type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox';
+                  const type = question.question_type === 'single_choice' ? 'radio' : 'checkbox';
                   const checked = selected.includes(option.option_id);
                   return (
                     <label key={option.option_id} className="option-row">
@@ -79,7 +79,7 @@ export const TestPage = () => {
                         checked={checked}
                         onChange={(event) => {
                           setAnswers((current) => {
-                            if (question.question_type === 'SINGLE_CHOICE') {
+                            if (question.question_type === 'single_choice') {
                               return { ...current, [question.question_id]: [option.option_id] };
                             }
 
