@@ -34,12 +34,6 @@ export const TopNavigation = () => {
             <strong className="brand-link__title">Онлайн-платформа обучения</strong>
           </span>
         </NavLink>
-
-        <nav className="topbar__nav" aria-label="Публичная навигация">
-          <NavLink to="/courses" className="nav-pill">
-            Курсы
-          </NavLink>
-        </nav>
       </div>
 
       <div className="topbar__actions">

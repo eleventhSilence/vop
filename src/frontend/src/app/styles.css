@@ -264,6 +264,11 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   font-size: 0.82rem;
   font-weight: 600;
 }
+.badge--default { background: #edf2ff; color: #2548f0; }
+.badge--success { background: #e7f7ee; color: #1f7a3f; }
+.badge--danger { background: #fdecec; color: #b32828; }
+.badge--accent { background: #efe7ff; color: #6b35d6; }
+.badge--neutral { background: #f2f4f7; color: #425166; }
 .state-box {
   padding: 1rem;
   margin-bottom: 1rem;
@@ -306,17 +311,49 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   margin-top: 0.5rem;
 }
 .table-card table { width: 100%; border-collapse: collapse; }
+.table-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
 .table-card th,
 .table-card td {
   padding: 0.85rem;
   border-bottom: 1px solid #e4ebf5;
   text-align: left;
+  vertical-align: top;
+}
+.users-table th:last-child,
+.users-table td:last-child { min-width: 260px; }
+.inline-edit,
+.users-actions,
+.users-actions__buttons {
+  display: grid;
+  gap: 0.6rem;
+}
+.users-actions__field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  color: #586779;
+}
+.users-actions__field span { font-weight: 600; color: #25364d; }
+.user-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 @media (max-width: 960px) {
   .shell-grid,
   .details-layout { grid-template-columns: 1fr; }
   .sidebar { border-right: 0; border-bottom: 1px solid #dde7f2; }
+  .topbar { padding: 1rem; }
+  .content { padding: 1rem; }
+  .table-card { overflow-x: auto; }
+  .users-table th:last-child,
+  .users-table td:last-child { min-width: 320px; }
 }
 
 @media (max-width: 720px) {

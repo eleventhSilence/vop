@@ -1,5 +1,11 @@
 import { formatStatus } from '@/shared/lib/format';
 
-export const StatusBadge = ({ status }: { status: string }) => {
-  return <span className="badge">{formatStatus(status)}</span>;
+type StatusBadgeProps = {
+  status: string;
+  label?: string;
+  tone?: 'default' | 'success' | 'danger' | 'accent' | 'neutral';
+};
+
+export const StatusBadge = ({ status, label, tone = 'default' }: StatusBadgeProps) => {
+  return <span className={`badge badge--${tone}`}>{label ?? formatStatus(status)}</span>;
 };

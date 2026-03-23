@@ -14,7 +14,7 @@ export const HomePage = () => {
         </div>
 
         <div className="hero-card__actions">
-          <Link to="/courses" className="nav-pill nav-pill--action">Перейти в каталог курсов</Link>
+          <Link to="/courses" className="nav-pill nav-pill--action">Перейти к курсам</Link>
           <Link to="/register" className="nav-pill">Создать аккаунт</Link>
         </div>
       </div>
