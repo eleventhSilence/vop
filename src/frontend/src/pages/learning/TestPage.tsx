@@ -13,7 +13,7 @@ export const TestPage = () => {
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
 
   const testQuery = useQuery({
-    queryKey: ['testing', 'course', courseId],
+    queryKey: ['testing', 'my-course', courseId],
     queryFn: () => testingApi.myCourseTest(courseId),
     enabled: Boolean(courseId),
   });
