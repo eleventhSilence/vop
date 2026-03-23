@@ -311,11 +311,29 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   margin-top: 0.5rem;
 }
 .table-card table { width: 100%; border-collapse: collapse; }
+.admin-users-layout {
+  grid-template-columns: minmax(0, 2.3fr) minmax(320px, 1fr);
+  align-items: start;
+}
+.admin-users-details {
+  position: sticky;
+  top: 6.5rem;
+}
 .table-card__header {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
+}
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.pagination-controls__status {
+  font-weight: 600;
+  color: #25364d;
 }
 .table-card th,
 .table-card td {
@@ -351,6 +369,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   .sidebar { border-right: 0; border-bottom: 1px solid #dde7f2; }
   .topbar { padding: 1rem; }
   .content { padding: 1rem; }
+  .admin-users-details { position: static; }
   .table-card { overflow-x: auto; }
   .users-table th:last-child,
   .users-table td:last-child { min-width: 320px; }
