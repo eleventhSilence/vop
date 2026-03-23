@@ -54,6 +54,13 @@ export type AdminUser = {
   last_login_at: string | null;
 };
 
+export type AdminUserDetail = AdminUser & {
+  enrolled_courses_count: number;
+  reviews_count: number;
+};
+
+export type AdminUserUpdatePayload = Partial<Pick<AdminUser, 'first_name' | 'last_name' | 'role' | 'status'>>;
+
 export type AdminTest = {
   test_id: string;
   course_id: string;

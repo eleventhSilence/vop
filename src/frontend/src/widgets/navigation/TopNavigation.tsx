@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/features/auth/model/AuthContext';
 import { Button } from '@/shared/ui/Button';
 
@@ -19,10 +20,24 @@ const adminMenuItems = [
 ];
 
 export const TopNavigation = () => {
+  const location = useLocation();
   const { isAuthenticated, isAdmin, logout, user } = useAuth();
+  const menuRef = useRef<HTMLDetailsElement | null>(null);
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim();
   const initials = [user?.first_name?.[0], user?.last_name?.[0]].filter(Boolean).join('').toUpperCase();
+
+  useEffect(() => {
+    if (menuRef.current?.open) {
+      menuRef.current.open = false;
+    }
+  }, [location.pathname]);
+
+  const closeMenu = () => {
+    if (menuRef.current?.open) {
+      menuRef.current.open = false;
+    }
+  };
 
   return (
     <header className="topbar">
@@ -34,17 +49,11 @@ export const TopNavigation = () => {
             <strong className="brand-link__title">Онлайн-платформа обучения</strong>
           </span>
         </NavLink>
-
-        <nav className="topbar__nav" aria-label="Публичная навигация">
-          <NavLink to="/courses" className="nav-pill">
-            Курсы
-          </NavLink>
-        </nav>
       </div>
 
       <div className="topbar__actions">
         {isAuthenticated && user ? (
-          <details className="user-menu">
+          <details className="user-menu" ref={menuRef}>
             <summary className="user-menu__trigger">
               <span className="user-menu__avatar" aria-hidden="true">{initials || 'U'}</span>
               <span className="user-menu__meta">
@@ -55,11 +64,11 @@ export const TopNavigation = () => {
 
             <div className="user-menu__dropdown">
               {menuItems.map((item) => (
-                <NavLink key={item.to} to={item.to} className="user-menu__link">
+                <Link key={item.to} to={item.to} className="user-menu__link" onClick={closeMenu}>
                   {item.label}
-                </NavLink>
+                </Link>
               ))}
-              <Button variant="ghost" className="user-menu__logout" onClick={() => void logout()}>
+              <Button variant="ghost" className="user-menu__logout" onClick={() => { closeMenu(); void logout(); }}>
                 Выйти
               </Button>
             </div>

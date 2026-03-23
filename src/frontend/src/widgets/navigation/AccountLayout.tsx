@@ -3,8 +3,8 @@ import { SectionSidebar } from '@/widgets/navigation/SectionSidebar';
 import { TopNavigation } from '@/widgets/navigation/TopNavigation';
 
 const accountNavItems = [
-  { to: '/account/dashboard', label: 'Дашборд' },
-  { to: '/account/profile', label: 'Профиль' },
+  { to: '/account/dashboard', label: 'Дашборд', end: true },
+  { to: '/account/profile', label: 'Профиль', end: true },
   { to: '/account/courses', label: 'Мои курсы' },
   { to: '/account/reviews', label: 'Мои отзывы' },
 ];
