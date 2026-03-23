@@ -1,3 +1,5 @@
+export type TestQuestionType = 'single_choice' | 'multiple_choice';
+
 export type TestOption = {
   option_id: string;
   text: string;
@@ -7,7 +9,7 @@ export type TestQuestion = {
   question_id: string;
   text: string;
   order: number;
-  question_type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE';
+  question_type: TestQuestionType;
   options: TestOption[];
 };
 

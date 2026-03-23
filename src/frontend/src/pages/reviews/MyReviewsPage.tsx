@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
 import { reviewsApi } from '@/entities/review/api';
+import type { ReviewStatus } from '@/entities/review/types';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
@@ -77,7 +78,7 @@ export const MyReviewsPage = () => {
                 reviewId={review.review_id}
                 comment={review.comment}
                 rating={review.rating}
-                status={review.status ?? 'PENDING'}
+                status={review.status ?? 'pending'}
                 onSave={(payload) => updateMutation.mutate(payload)}
                 isSaving={updateMutation.isPending}
               />
@@ -100,7 +101,7 @@ const ReviewEditor = ({
   reviewId: string;
   comment: string;
   rating: number;
-  status: string;
+  status: ReviewStatus;
   onSave: (payload: { reviewId: string; comment: string; rating: number }) => void;
   isSaving: boolean;
 }) => {
