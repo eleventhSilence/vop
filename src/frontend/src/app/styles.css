@@ -313,7 +313,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .table-card table { width: 100%; border-collapse: collapse; }
 .admin-users-layout {
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   align-items: start;
 }
 .admin-users-table-panel,
@@ -391,10 +391,25 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   text-align: left;
   vertical-align: top;
 }
-.users-table th:last-child,
-.users-table td:last-child {
-  width: 110px;
-  min-width: 110px;
+.users-table__row {
+  cursor: pointer;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+}
+.users-table__row:hover td,
+.users-table__row:focus-visible td {
+  background: #f7faff;
+}
+.users-table__row:focus-visible {
+  outline: 0;
+}
+.users-table__row--selected td {
+  background: #edf2ff;
+}
+.users-table__row td:first-child {
+  border-left: 3px solid transparent;
+}
+.users-table__row--selected td:first-child {
+  border-left-color: #2b59ff;
 }
 .inline-edit,
 .users-actions,
@@ -417,9 +432,6 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .inline-edit .field__control {
   padding: 0.65rem 0.75rem;
 }
-.users-table .button {
-  width: 100%;
-}
 .users-actions__field span { font-weight: 600; color: #25364d; }
 .user-badges {
   display: flex;
@@ -428,7 +440,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 
 @media (max-width: 1180px) {
-  .admin-users-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+  .admin-users-layout { grid-template-columns: minmax(0, 1fr) 360px; }
   .admin-users-details {
     position: static;
     top: auto;
@@ -449,8 +461,6 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     align-items: stretch;
   }
   .users-table { min-width: 760px; }
-  .users-table th:last-child,
-  .users-table td:last-child { width: 120px; min-width: 120px; }
 }
 
 @media (max-width: 720px) {

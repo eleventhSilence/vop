@@ -225,6 +225,7 @@ export const AdminUsersPage = () => {
               <p className="muted">
                 Страница {page} из {totalPages}. Сейчас показано {users.length} записей.
               </p>
+              <p className="muted">Выберите строку в таблице, чтобы открыть данные пользователя справа.</p>
             </div>
             <div className="pagination-controls" aria-label="Пагинация пользователей">
               <Button
@@ -253,12 +254,23 @@ export const AdminUsersPage = () => {
                   <th>Роль</th>
                   <th>Статус</th>
                   <th>Дата регистрации</th>
-                  <th>Выбор</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.user_id}>
+                  <tr
+                    key={user.user_id}
+                    className={selectedUserId === user.user_id ? 'users-table__row users-table__row--selected' : 'users-table__row'}
+                    onClick={() => setSelectedUserId(user.user_id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedUserId(user.user_id);
+                      }
+                    }}
+                    tabIndex={0}
+                    aria-selected={selectedUserId === user.user_id}
+                  >
                     <td><strong>{[user.first_name, user.last_name].filter(Boolean).join(' ') || 'Без имени'}</strong></td>
                     <td>{user.email}</td>
                     <td>
@@ -276,14 +288,6 @@ export const AdminUsersPage = () => {
                       />
                     </td>
                     <td>{formatDateTime(user.registered_at)}</td>
-                    <td>
-                      <Button
-                        variant={selectedUserId === user.user_id ? 'secondary' : 'ghost'}
-                        onClick={() => setSelectedUserId(user.user_id)}
-                      >
-                        {selectedUserId === user.user_id ? 'Выбран' : 'Открыть'}
-                      </Button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
