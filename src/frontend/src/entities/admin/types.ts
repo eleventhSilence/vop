@@ -77,3 +77,19 @@ export type AdminTest = {
 export type AdminTestUpdatePayload = Partial<Pick<AdminTest, 'title' | 'description' | 'passing_score' | 'max_attempts' | 'is_active'>>;
 
 export type AdminTestCreatePayload = Pick<AdminTest, 'course_id' | 'title' | 'description' | 'passing_score' | 'max_attempts' | 'is_active'>;
+
+export type AdminQuestionType = 'single_choice' | 'multiple_choice';
+
+export type AdminTestQuestion = {
+  question_id: string;
+  test_id: string;
+  test_title: string;
+  text: string;
+  order: number;
+  question_type: AdminQuestionType;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminTestQuestionCreatePayload = Pick<AdminTestQuestion, 'test_id' | 'text' | 'order' | 'question_type'>;
+export type AdminTestQuestionUpdatePayload = Partial<Pick<AdminTestQuestion, 'text' | 'order' | 'question_type'>>;

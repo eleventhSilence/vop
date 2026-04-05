@@ -1,6 +1,9 @@
 import { http } from '@/shared/api/http';
 import type {
   AdminDashboard,
+  AdminTestQuestion,
+  AdminTestQuestionCreatePayload,
+  AdminTestQuestionUpdatePayload,
   AdminTestCreatePayload,
   AdminTest,
   AdminTestUpdatePayload,
@@ -34,5 +37,17 @@ export const adminApi = {
   },
   createTest(payload: AdminTestCreatePayload) {
     return http.post<AdminTest>('/admin/tests/', payload).then((response) => response.data);
+  },
+  questions(params?: Record<string, string | number>) {
+    return http.get<PaginatedResponse<AdminTestQuestion>>('/admin/questions/', { params }).then((response) => response.data);
+  },
+  createQuestion(payload: AdminTestQuestionCreatePayload) {
+    return http.post<AdminTestQuestion>('/admin/questions/', payload).then((response) => response.data);
+  },
+  updateQuestion(questionId: string, payload: AdminTestQuestionUpdatePayload) {
+    return http.patch<AdminTestQuestion>(`/admin/questions/${questionId}/`, payload).then((response) => response.data);
+  },
+  deleteQuestion(questionId: string) {
+    return http.delete(`/admin/questions/${questionId}/`);
   },
 };
