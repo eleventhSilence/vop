@@ -7,7 +7,7 @@ import type { ReviewStatus } from '@/entities/review/types';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
@@ -91,14 +91,15 @@ export const MyReviewsPage = () => {
             disabled={!canCreateReview || createMutation.isPending}
           />
           <Button type="submit" disabled={!canCreateReview || createMutation.isPending}>Сохранить отзыв</Button>
-          {createMutation.isError ? <div className="form-error">{extractApiError(createMutation.error)}</div> : null}
+          {createMutation.isError ? <ErrorState message={extractApiError(createMutation.error)} /> : null}
+          {createMutation.isSuccess ? <SuccessState message="Отзыв сохранён. После модерации он появится на странице курса." /> : null}
         </form>
 
         <div className="card card--wide">
           <h3>Мои отзывы</h3>
           {reviewsQuery.isLoading ? <LoadingState /> : null}
           {reviewsQuery.isError ? <ErrorState message={extractApiError(reviewsQuery.error)} /> : null}
-          {!reviewsQuery.isLoading && !reviews.length ? <EmptyState message="Вы ещё не оставляли отзывы." /> : null}
+          {!reviewsQuery.isLoading && !reviewsQuery.isError && !reviews.length ? <EmptyState message="Вы ещё не оставляли отзывы." /> : null}
           <div className="stack-list">
             {reviews.map((review) => (
               <ReviewEditor
@@ -168,9 +169,10 @@ const ReviewEditor = ({
         required
         disabled={updateMutation.isPending}
       />
-      {updateMutation.isError ? <div className="form-error">{extractApiError(updateMutation.error)}</div> : null}
+      {updateMutation.isError ? <ErrorState message={extractApiError(updateMutation.error)} /> : null}
+      {updateMutation.isSuccess ? <SuccessState message="Изменения сохранены." /> : null}
       <div className="card__row">
-        <Button type="submit" variant="secondary" disabled={updateMutation.isPending}>Обновить</Button>
+        <Button type="submit" variant="secondary" disabled={updateMutation.isPending}>Сохранить изменения</Button>
         <Link to={`/account/reviews/${reviewId}/edit`} className="text-link">Открыть отдельную страницу →</Link>
       </div>
     </form>

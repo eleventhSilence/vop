@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { authApi } from '@/shared/api/auth';
 import { extractApiError } from '@/shared/api/client';
 import { formatStatus } from '@/shared/lib/format';
-import { ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 
 export const DashboardPage = () => {
@@ -17,7 +17,7 @@ export const DashboardPage = () => {
       <div className="section-header">
         <div>
           <p className="eyebrow">Личный кабинет</p>
-          <h2>Dashboard</h2>
+          <h2>Дашборд</h2>
           <p>Страница построена вокруг endpoint <code>/api/account/dashboard/</code>.</p>
         </div>
       </div>
@@ -36,32 +36,38 @@ export const DashboardPage = () => {
           <div className="details-layout">
             <article className="card card--wide">
               <h3>Последние курсы</h3>
-              <div className="stack-list">
-                {dashboardQuery.data.recent_courses.map((course) => (
-                  <div key={course.course_id} className="list-item">
-                    <div className="card__row">
-                      <strong>{course.title}</strong>
-                      <span>{course.progress_percent}%</span>
+              {!dashboardQuery.data.recent_courses.length ? <EmptyState message="Пока нет курсов с активным прогрессом." /> : null}
+              {dashboardQuery.data.recent_courses.length ? (
+                <div className="stack-list">
+                  {dashboardQuery.data.recent_courses.map((course) => (
+                    <div key={course.course_id} className="list-item">
+                      <div className="card__row">
+                        <strong>{course.title}</strong>
+                        <span>{course.progress_percent}%</span>
+                      </div>
+                      <p>{course.short_description}</p>
+                      <p className="muted">Статус: {formatStatus(course.progress_status)}</p>
+                      <Link to={`/account/courses/${course.course_id}`} className="text-link">Перейти к обучению →</Link>
                     </div>
-                    <p>{course.short_description}</p>
-                    <p className="muted">Статус: {formatStatus(course.progress_status)}</p>
-                    <Link to={`/account/courses/${course.course_id}`} className="text-link">Перейти к обучению →</Link>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : null}
             </article>
 
             <article className="card">
               <h3>Последние отзывы</h3>
-              <div className="stack-list">
-                {dashboardQuery.data.recent_reviews.map((review) => (
-                  <div key={review.review_id} className="list-item">
-                    <strong>{review.course_title}</strong>
-                    <p>{review.comment}</p>
-                    <p className="muted">Статус: {formatStatus(review.status)}</p>
-                  </div>
-                ))}
-              </div>
+              {!dashboardQuery.data.recent_reviews.length ? <EmptyState message="Пока нет отзывов для отображения." /> : null}
+              {dashboardQuery.data.recent_reviews.length ? (
+                <div className="stack-list">
+                  {dashboardQuery.data.recent_reviews.map((review) => (
+                    <div key={review.review_id} className="list-item">
+                      <strong>{review.course_title}</strong>
+                      <p>{review.comment}</p>
+                      <p className="muted">Статус: {formatStatus(review.status)}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </article>
           </div>
         </>

@@ -17,9 +17,9 @@ export const MyCoursesPage = () => {
   return (
     <PageSection>
       <div className="section-header"><div><p className="eyebrow">Обучение</p><h2>Мои курсы</h2></div></div>
-      {coursesQuery.isLoading ? <LoadingState /> : null}
+      {coursesQuery.isLoading ? <LoadingState message="Загружаем ваши курсы..." /> : null}
       {coursesQuery.isError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
-      {!coursesQuery.isLoading && !courses.length ? <EmptyState message="У вас пока нет записанных курсов." /> : null}
+      {!coursesQuery.isLoading && !coursesQuery.isError && !courses.length ? <EmptyState message="У вас пока нет записанных курсов." /> : null}
       <div className="stack-list">
         {courses.map((course) => (
           <div className="card" key={course.course_id}>

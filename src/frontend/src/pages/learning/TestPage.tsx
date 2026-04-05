@@ -5,7 +5,7 @@ import { testingApi } from '@/entities/testing/api';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 
 export const TestPage = () => {
@@ -52,7 +52,7 @@ export const TestPage = () => {
 
   return (
     <PageSection>
-      {testQuery.isLoading ? <LoadingState /> : null}
+      {testQuery.isLoading ? <LoadingState message="Загружаем тест..." /> : null}
       {testQuery.isError ? <ErrorState message={extractApiError(testQuery.error)} /> : null}
       {testQuery.data && !testQuery.data.has_test ? <EmptyState message="Для этого курса тест пока не настроен." /> : null}
 
@@ -97,11 +97,9 @@ export const TestPage = () => {
               </fieldset>
             ))}
             <Button type="submit" disabled={submitMutation.isPending}>Отправить попытку</Button>
-            {submitMutation.isError ? <div className="form-error">{extractApiError(submitMutation.error)}</div> : null}
+            {submitMutation.isError ? <ErrorState message={extractApiError(submitMutation.error)} /> : null}
             {submitMutation.isSuccess ? (
-              <div className="form-success">
-                Попытка #{submitMutation.data.attempt_number}: {submitMutation.data.score} баллов.
-              </div>
+              <SuccessState message={`Попытка #${submitMutation.data.attempt_number}: ${submitMutation.data.score} баллов.`} />
             ) : null}
           </form>
 
@@ -109,6 +107,7 @@ export const TestPage = () => {
             <h3>История попыток</h3>
             {attemptsQuery.isLoading ? <LoadingState message="Загружаем попытки..." /> : null}
             {attemptsQuery.isError ? <ErrorState message={extractApiError(attemptsQuery.error)} /> : null}
+            {!attemptsQuery.isLoading && !attemptsQuery.isError && !attempts.length ? <EmptyState message="Вы ещё не отправляли попытки по этому тесту." /> : null}
             <div className="stack-list">
               {attempts.map((attempt) => (
                 <div key={attempt.attempt_id} className="list-item">
