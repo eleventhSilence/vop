@@ -3,6 +3,9 @@ import type {
   AdminAnswerOption,
   AdminAnswerOptionCreatePayload,
   AdminAnswerOptionUpdatePayload,
+  AdminCourse,
+  AdminCourseCreatePayload,
+  AdminCourseUpdatePayload,
   AdminDashboard,
   AdminTest,
   AdminTestCreatePayload,
@@ -19,6 +22,21 @@ import type { PaginatedResponse } from '@/shared/lib/pagination';
 export const adminApi = {
   dashboard() {
     return http.get<AdminDashboard>('/admin/dashboard/').then((response) => response.data);
+  },
+  courses(params?: Record<string, string | number>) {
+    return http.get<PaginatedResponse<AdminCourse>>('/admin/courses/', { params }).then((response) => response.data);
+  },
+  courseDetail(courseId: string) {
+    return http.get<AdminCourse>(`/admin/courses/${courseId}/`).then((response) => response.data);
+  },
+  createCourse(payload: AdminCourseCreatePayload) {
+    return http.post<AdminCourse>('/admin/courses/', payload).then((response) => response.data);
+  },
+  updateCourse(courseId: string, payload: AdminCourseUpdatePayload) {
+    return http.patch<AdminCourse>(`/admin/courses/${courseId}/`, payload).then((response) => response.data);
+  },
+  deleteCourse(courseId: string) {
+    return http.delete(`/admin/courses/${courseId}/`);
   },
   users(params?: Record<string, string | number>) {
     return http.get<PaginatedResponse<AdminUser>>('/admin/users/', { params }).then((response) => response.data);

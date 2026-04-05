@@ -38,7 +38,7 @@ export type AdminCourse = {
   course_id: string;
   title: string;
   short_description: string;
-  description: string;
+  content: string;
   status: CourseStatus;
   created_at: string;
   updated_at: string;
