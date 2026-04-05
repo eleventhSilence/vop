@@ -1,11 +1,15 @@
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
+import { reviewsApi } from '@/entities/review/api';
 import { progressApi } from '@/entities/progress/api';
 import { extractApiError } from '@/shared/api/client';
 import { formatDateTime, formatStatus } from '@/shared/lib/format';
+import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
 
 export const CourseLearningPage = () => {
@@ -20,12 +24,62 @@ export const CourseLearningPage = () => {
     queryFn: () => progressApi.courseProgress(courseId),
     enabled: Boolean(courseId),
   });
+  const myReviewsQuery = useQuery({
+    queryKey: ['reviews', 'my'],
+    queryFn: reviewsApi.myReviews,
+    enabled: Boolean(courseId),
+  });
+
+  const myCourseReview = useMemo(() => {
+    if (!myReviewsQuery.data) {
+      return undefined;
+    }
+    return ensurePaginated(myReviewsQuery.data).results.find((review) => review.course_id === courseId);
+  }, [courseId, myReviewsQuery.data]);
+
+  const [reviewDraft, setReviewDraft] = useState({ comment: '', rating: 5 });
+
+  useEffect(() => {
+    if (myCourseReview) {
+      setReviewDraft({ comment: myCourseReview.comment, rating: myCourseReview.rating });
+      return;
+    }
+    setReviewDraft({ comment: '', rating: 5 });
+  }, [myCourseReview]);
+
   const completeTheoryMutation = useMutation({
     mutationFn: () => progressApi.completeTheory(courseId),
     onSuccess: async () => {
       await progressQuery.refetch();
     },
   });
+
+  const reviewMutation = useMutation({
+    mutationFn: () => {
+      if (!courseId) {
+        throw new Error('Не удалось определить курс для отзыва.');
+      }
+
+      if (myCourseReview) {
+        return reviewsApi.update(myCourseReview.review_id, reviewDraft);
+      }
+
+      return reviewsApi.create({
+        course_id: courseId,
+        comment: reviewDraft.comment,
+        rating: reviewDraft.rating,
+      });
+    },
+    onSuccess: async (updatedReview) => {
+      setReviewDraft({ comment: updatedReview.comment, rating: updatedReview.rating });
+      await myReviewsQuery.refetch();
+    },
+  });
+
+  const handleReviewSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    reviewMutation.mutate();
+  };
 
   return (
     <PageSection>
@@ -39,7 +93,7 @@ export const CourseLearningPage = () => {
             <p className="lead">{courseQuery.data.short_description}</p>
             <div className="prose-block">{courseQuery.data.content}</div>
           </article>
-          <aside className="card">
+          <aside className="card form-stack">
             <h3>Прогресс</h3>
             <p>Статус: {formatStatus(progressQuery.data.progress_status)}</p>
             <p>Выполнено: {progressQuery.data.progress_percent}%</p>
@@ -50,6 +104,46 @@ export const CourseLearningPage = () => {
               {progressQuery.data.is_theory_completed ? 'Теория отмечена как завершённая' : 'Завершить теорию'}
             </Button>
             <Link to={`/account/courses/${courseId}/test`} className="text-link">Перейти к тестированию →</Link>
+
+            <hr />
+            <div>
+              <h3>{myCourseReview ? 'Ваш отзыв по курсу' : 'Оставить отзыв по курсу'}</h3>
+              <p className="muted">Напишите отзыв сразу после прохождения теории или завершения курса.</p>
+            </div>
+
+            {myReviewsQuery.isLoading ? <LoadingState message="Загружаем ваш отзыв..." /> : null}
+            {myReviewsQuery.isError ? <ErrorState message={extractApiError(myReviewsQuery.error)} /> : null}
+
+            {!myReviewsQuery.isLoading && !myReviewsQuery.isError ? (
+              <form className="form-stack" onSubmit={handleReviewSubmit}>
+                <Input
+                  id="course-review-comment"
+                  label="Комментарий"
+                  value={reviewDraft.comment}
+                  onChange={(event) => setReviewDraft((current) => ({ ...current, comment: event.target.value }))}
+                  required
+                  disabled={reviewMutation.isPending}
+                />
+                <Input
+                  id="course-review-rating"
+                  label="Оценка"
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={reviewDraft.rating}
+                  onChange={(event) => setReviewDraft((current) => ({ ...current, rating: Number(event.target.value) }))}
+                  required
+                  disabled={reviewMutation.isPending}
+                />
+                <Button type="submit" disabled={reviewMutation.isPending} fullWidth>
+                  {myCourseReview ? 'Обновить отзыв' : 'Оставить отзыв'}
+                </Button>
+                {reviewMutation.isError ? <ErrorState message={extractApiError(reviewMutation.error)} /> : null}
+                {reviewMutation.isSuccess ? <div className="state-box">Отзыв сохранён. После модерации он появится на публичной странице курса.</div> : null}
+                {!myCourseReview ? <EmptyState message="Вы ещё не оставляли отзыв по этому курсу." /> : null}
+                {myCourseReview ? <Link to={`/account/reviews/${myCourseReview.review_id}/edit`} className="text-link">Открыть отдельную страницу редактирования →</Link> : null}
+              </form>
+            ) : null}
           </aside>
         </div>
       ) : null}
