@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
-import type { AdminTestUpdatePayload } from '@/entities/admin/types';
+import type { AdminTestCreatePayload, AdminTestUpdatePayload } from '@/entities/admin/types';
 import { extractApiError } from '@/shared/api/client';
 import { Button } from '@/shared/ui/Button';
 import { ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
@@ -10,6 +10,7 @@ import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
 
 type TestFormValues = {
+  course_id: string;
   title: string;
   description: string;
   passing_score: string;
@@ -23,7 +24,9 @@ export const AdminTestDetailPage = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { testId } = useParams();
+  const isCreateMode = testId === 'new';
   const [formValues, setFormValues] = useState<TestFormValues>({
+    course_id: '',
     title: '',
     description: '',
     passing_score: '',
@@ -36,7 +39,7 @@ export const AdminTestDetailPage = () => {
   const testQuery = useQuery({
     queryKey: ['admin', 'test-detail', testId],
     queryFn: () => adminApi.testDetail(testId!),
-    enabled: Boolean(testId),
+    enabled: Boolean(testId) && !isCreateMode,
   });
 
   useEffect(() => {
@@ -45,6 +48,7 @@ export const AdminTestDetailPage = () => {
     }
 
     setFormValues({
+      course_id: testQuery.data.course_id,
       title: testQuery.data.title,
       description: testQuery.data.description ?? '',
       passing_score: String(testQuery.data.passing_score),
@@ -71,13 +75,18 @@ export const AdminTestDetailPage = () => {
       nextErrors.title = 'Введите название теста.';
     }
 
+    if (isCreateMode && !formValues.course_id.trim()) {
+      nextErrors.course_id = 'Укажите course_id для создания теста.';
+    }
+
     setValidationErrors(nextErrors);
 
     if (Object.keys(nextErrors).length) {
       return null;
     }
 
-    const payload: AdminTestUpdatePayload = {
+    const payload = {
+      ...(isCreateMode ? { course_id: formValues.course_id.trim() } : {}),
       title: formValues.title.trim(),
       description: formValues.description.trim(),
       passing_score: passingScore,
@@ -87,6 +96,14 @@ export const AdminTestDetailPage = () => {
 
     return payload;
   };
+
+  const createTestMutation = useMutation({
+    mutationFn: (payload: AdminTestCreatePayload) => adminApi.createTest(payload),
+    onSuccess: async (createdTest) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'tests'] });
+      navigate(`/admin/tests/${createdTest.test_id}`);
+    },
+  });
 
   const updateTestMutation = useMutation({
     mutationFn: (payload: AdminTestUpdatePayload) => adminApi.updateTest(testId!, payload),
@@ -124,7 +141,12 @@ export const AdminTestDetailPage = () => {
       return;
     }
 
-    updateTestMutation.mutate(payload);
+    if (isCreateMode) {
+      createTestMutation.mutate(payload as AdminTestCreatePayload);
+      return;
+    }
+
+    updateTestMutation.mutate(payload as AdminTestUpdatePayload);
   };
 
   const handleDelete = () => {
@@ -153,17 +175,28 @@ export const AdminTestDetailPage = () => {
     <PageSection>
       <div className="card">
         <p className="eyebrow">Администрирование</p>
-        <h2>Карточка теста</h2>
-        <p className="muted">ID теста: {testId}</p>
+        <h2>{isCreateMode ? 'Создание теста' : 'Карточка теста'}</h2>
+        <p className="muted">{isCreateMode ? 'Заполните поля для нового теста.' : `ID теста: ${testId}`}</p>
       </div>
-      {testQuery.isLoading ? <LoadingState /> : null}
-      {testQuery.isError ? <ErrorState message={extractApiError(testQuery.error)} /> : null}
+      {!isCreateMode && testQuery.isLoading ? <LoadingState /> : null}
+      {!isCreateMode && testQuery.isError ? <ErrorState message={extractApiError(testQuery.error)} /> : null}
       {formErrorMessage ? <ErrorState message={formErrorMessage} /> : null}
+      {createTestMutation.isError ? <ErrorState message={extractApiError(createTestMutation.error)} /> : null}
       {updateTestMutation.isError ? <ErrorState message={extractApiError(updateTestMutation.error)} /> : null}
       {deleteTestMutation.isError ? <ErrorState message={extractApiError(deleteTestMutation.error)} /> : null}
       {successMessage ? <SuccessState message={successMessage} /> : null}
-      {testQuery.isSuccess ? (
+      {isCreateMode || testQuery.isSuccess ? (
         <form className="card stack-list" onSubmit={handleSubmit}>
+          {isCreateMode ? (
+            <Input
+              id="test-course-id"
+              label="Course ID"
+              value={formValues.course_id}
+              onChange={(event) => setFormValues((current) => ({ ...current, course_id: event.target.value }))}
+              error={validationErrors.course_id}
+              required
+            />
+          ) : null}
           <Input
             id="test-title"
             label="Название"
@@ -212,25 +245,27 @@ export const AdminTestDetailPage = () => {
             />
           </label>
           <div className="actions-row">
-            <Button type="submit" disabled={updateTestMutation.isPending || deleteTestMutation.isPending}>
-              {updateTestMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+            <Button type="submit" disabled={createTestMutation.isPending || updateTestMutation.isPending || deleteTestMutation.isPending}>
+              {createTestMutation.isPending ? 'Создание...' : updateTestMutation.isPending ? 'Сохранение...' : isCreateMode ? 'Создать' : 'Сохранить'}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={() => navigate('/admin/tests')}
-              disabled={updateTestMutation.isPending || deleteTestMutation.isPending}
+              disabled={createTestMutation.isPending || updateTestMutation.isPending || deleteTestMutation.isPending}
             >
               К списку тестов
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleDelete}
-              disabled={updateTestMutation.isPending || deleteTestMutation.isPending}
-            >
-              {deleteTestMutation.isPending ? 'Удаление...' : 'Удалить тест'}
-            </Button>
+            {!isCreateMode ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleDelete}
+                disabled={createTestMutation.isPending || updateTestMutation.isPending || deleteTestMutation.isPending}
+              >
+                {deleteTestMutation.isPending ? 'Удаление...' : 'Удалить тест'}
+              </Button>
+            ) : null}
           </div>
         </form>
       ) : null}

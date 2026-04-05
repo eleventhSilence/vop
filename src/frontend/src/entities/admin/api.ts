@@ -1,6 +1,7 @@
 import { http } from '@/shared/api/http';
 import type {
   AdminDashboard,
+  AdminTestCreatePayload,
   AdminTest,
   AdminTestUpdatePayload,
   AdminUser,
@@ -30,5 +31,8 @@ export const adminApi = {
   },
   deleteTest(testId: string) {
     return http.delete(`/admin/tests/${testId}/`);
+  },
+  createTest(payload: AdminTestCreatePayload) {
+    return http.post<AdminTest>('/admin/tests/', payload).then((response) => response.data);
   },
 };

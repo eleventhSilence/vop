@@ -75,3 +75,5 @@ export type AdminTest = {
 };
 
 export type AdminTestUpdatePayload = Partial<Pick<AdminTest, 'title' | 'description' | 'passing_score' | 'max_attempts' | 'is_active'>>;
+
+export type AdminTestCreatePayload = Pick<AdminTest, 'course_id' | 'title' | 'description' | 'passing_score' | 'max_attempts' | 'is_active'>;
