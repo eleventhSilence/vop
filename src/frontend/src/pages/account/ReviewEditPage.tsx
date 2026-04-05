@@ -5,7 +5,7 @@ import { reviewsApi } from '@/entities/review/api';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
 
@@ -113,7 +113,7 @@ export const ReviewEditPage = () => {
             <Link to="/account/reviews" className="text-link">← К списку отзывов</Link>
           </div>
           {updateMutation.isError ? <ErrorState message={extractApiError(updateMutation.error)} /> : null}
-          {updateMutation.isSuccess ? <div className="state-box">Изменения сохранены.</div> : null}
+          {updateMutation.isSuccess ? <SuccessState message="Изменения сохранены." /> : null}
         </form>
       </div>
     </PageSection>

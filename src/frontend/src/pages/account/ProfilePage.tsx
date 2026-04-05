@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { authApi } from '@/shared/api/auth';
 import { extractApiError } from '@/shared/api/client';
 import { formatDateTime, formatRole, formatStatus } from '@/shared/lib/format';
-import { ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 
 export const ProfilePage = () => {
@@ -22,6 +22,7 @@ export const ProfilePage = () => {
 
       {meQuery.isLoading ? <LoadingState /> : null}
       {meQuery.isError ? <ErrorState message={extractApiError(meQuery.error)} /> : null}
+      {!meQuery.isLoading && !meQuery.isError && !meQuery.data ? <EmptyState message="Профиль временно недоступен. Попробуйте обновить страницу." /> : null}
 
       {meQuery.data ? (
         <div className="card card--wide">

@@ -8,7 +8,7 @@ import { extractApiError } from '@/shared/api/client';
 import { formatDateTime, formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
 
@@ -81,11 +81,12 @@ export const CourseLearningPage = () => {
     reviewMutation.mutate();
   };
 
+  const pageError = courseQuery.isError ? courseQuery.error : progressQuery.isError ? progressQuery.error : null;
+
   return (
     <PageSection>
-      {(courseQuery.isLoading || progressQuery.isLoading) ? <LoadingState /> : null}
-      {courseQuery.isError ? <ErrorState message={extractApiError(courseQuery.error)} /> : null}
-      {progressQuery.isError ? <ErrorState message={extractApiError(progressQuery.error)} /> : null}
+      {(courseQuery.isLoading || progressQuery.isLoading) ? <LoadingState message="Загружаем учебные материалы..." /> : null}
+      {pageError ? <ErrorState message={extractApiError(pageError)} /> : null}
       {courseQuery.data && progressQuery.data ? (
         <div className="details-layout">
           <article className="card card--wide">
@@ -103,6 +104,8 @@ export const CourseLearningPage = () => {
             <Button onClick={() => completeTheoryMutation.mutate()} disabled={completeTheoryMutation.isPending || progressQuery.data.is_theory_completed} fullWidth>
               {progressQuery.data.is_theory_completed ? 'Теория отмечена как завершённая' : 'Завершить теорию'}
             </Button>
+            {completeTheoryMutation.isError ? <ErrorState message={extractApiError(completeTheoryMutation.error)} /> : null}
+            {completeTheoryMutation.isSuccess ? <SuccessState message="Теория отмечена как завершённая. Прогресс курса обновлён." /> : null}
             <Link to={`/account/courses/${courseId}/test`} className="text-link">Перейти к тестированию →</Link>
 
             <hr />
@@ -139,7 +142,7 @@ export const CourseLearningPage = () => {
                   {myCourseReview ? 'Обновить отзыв' : 'Оставить отзыв'}
                 </Button>
                 {reviewMutation.isError ? <ErrorState message={extractApiError(reviewMutation.error)} /> : null}
-                {reviewMutation.isSuccess ? <div className="state-box">Отзыв сохранён. После модерации он появится на публичной странице курса.</div> : null}
+                {reviewMutation.isSuccess ? <SuccessState message="Отзыв сохранён. После модерации он появится на публичной странице курса." /> : null}
                 {!myCourseReview ? <EmptyState message="Вы ещё не оставляли отзыв по этому курсу." /> : null}
                 {myCourseReview ? <Link to={`/account/reviews/${myCourseReview.review_id}/edit`} className="text-link">Открыть отдельную страницу редактирования →</Link> : null}
               </form>

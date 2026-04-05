@@ -278,6 +278,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   border: 1px dashed #cbd7e7;
 }
 .state-box--error { border-style: solid; border-color: #f0c3c3; color: #a52828; }
+.state-box--success { border-style: solid; border-color: #bde5c8; color: #1f7a3f; background: #f6fffa; }
 .prose-block { white-space: pre-wrap; padding: 1rem 0; color: #1d2d40; }
 .description-list {
   display: grid;

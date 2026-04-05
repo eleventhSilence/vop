@@ -8,7 +8,7 @@ import { extractApiError } from '@/shared/api/client';
 import { formatDateTime, formatStatus } from '@/shared/lib/format';
 import { ensurePaginated, type PaginatedResponse } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
 
@@ -175,8 +175,8 @@ export const CourseDetailPage = () => {
                 )}
               </div>
 
-              {enrollMutation.isError ? <div className="form-error">Не удалось оформить запись: {extractApiError(enrollMutation.error)}</div> : null}
-              {enrollMutation.isSuccess ? <div className="form-success">{ENROLL_SUCCESS_TEXT}</div> : null}
+              {enrollMutation.isError ? <ErrorState message={`Не удалось оформить запись: ${extractApiError(enrollMutation.error)}`} /> : null}
+              {enrollMutation.isSuccess ? <SuccessState message={ENROLL_SUCCESS_TEXT} /> : null}
             </div>
 
             <section className="public-course-content">
@@ -231,7 +231,7 @@ export const CourseDetailPage = () => {
               </div>
               {reviewsQuery.isLoading ? <LoadingState message="Загружаем отзывы..." /> : null}
               {reviewsQuery.isError ? <ErrorState message={extractApiError(reviewsQuery.error)} /> : null}
-              {!reviewsQuery.isLoading && !reviews.length ? <EmptyState message="Пока нет одобренных отзывов по этому курсу." /> : null}
+              {!reviewsQuery.isLoading && !reviewsQuery.isError && !reviews.length ? <EmptyState message="Пока нет одобренных отзывов по этому курсу." /> : null}
               <div className="stack-list">
                 {reviews.map((review) => (
                   <div key={review.review_id} className="list-item public-review-item">
