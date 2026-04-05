@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 
@@ -92,11 +93,16 @@ class AnswerOption(models.Model):
     question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE, related_name="answer_options")
     text = models.TextField()
     is_correct = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "answer_options"
+        ordering = ("order", "created_at", "id")
+        constraints = [
+            models.UniqueConstraint(fields=("question", "order"), name="unique_option_order_per_question"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.question_id}:{self.id}"

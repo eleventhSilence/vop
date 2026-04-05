@@ -240,7 +240,7 @@ class AdminAnswerOptionListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return AnswerOption.objects.select_related("question").order_by(
-            "question__test__created_at", "question__test_id", "question__order", "question_id", "created_at", "id"
+            "question__test__created_at", "question__test_id", "question__order", "question_id", "order", "created_at", "id"
         )
 
     def get_serializer_class(self):
