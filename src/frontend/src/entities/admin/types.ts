@@ -93,3 +93,17 @@ export type AdminTestQuestion = {
 
 export type AdminTestQuestionCreatePayload = Pick<AdminTestQuestion, 'test_id' | 'text' | 'order' | 'question_type'>;
 export type AdminTestQuestionUpdatePayload = Partial<Pick<AdminTestQuestion, 'text' | 'order' | 'question_type'>>;
+
+export type AdminAnswerOption = {
+  option_id: string;
+  question_id: string;
+  question_text: string;
+  text: string;
+  is_correct: boolean;
+  order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminAnswerOptionCreatePayload = Pick<AdminAnswerOption, 'question_id' | 'text' | 'is_correct' | 'order'>;
+export type AdminAnswerOptionUpdatePayload = Partial<Pick<AdminAnswerOption, 'text' | 'is_correct' | 'order'>>;

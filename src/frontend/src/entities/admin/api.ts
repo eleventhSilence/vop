@@ -1,11 +1,14 @@
 import { http } from '@/shared/api/http';
 import type {
+  AdminAnswerOption,
+  AdminAnswerOptionCreatePayload,
+  AdminAnswerOptionUpdatePayload,
   AdminDashboard,
+  AdminTest,
+  AdminTestCreatePayload,
   AdminTestQuestion,
   AdminTestQuestionCreatePayload,
   AdminTestQuestionUpdatePayload,
-  AdminTestCreatePayload,
-  AdminTest,
   AdminTestUpdatePayload,
   AdminUser,
   AdminUserDetail,
@@ -41,6 +44,9 @@ export const adminApi = {
   questions(params?: Record<string, string | number>) {
     return http.get<PaginatedResponse<AdminTestQuestion>>('/admin/questions/', { params }).then((response) => response.data);
   },
+  questionDetail(questionId: string) {
+    return http.get<AdminTestQuestion>(`/admin/questions/${questionId}/`).then((response) => response.data);
+  },
   createQuestion(payload: AdminTestQuestionCreatePayload) {
     return http.post<AdminTestQuestion>('/admin/questions/', payload).then((response) => response.data);
   },
@@ -49,5 +55,17 @@ export const adminApi = {
   },
   deleteQuestion(questionId: string) {
     return http.delete(`/admin/questions/${questionId}/`);
+  },
+  answerOptions(params?: Record<string, string | number>) {
+    return http.get<PaginatedResponse<AdminAnswerOption>>('/admin/answer-options/', { params }).then((response) => response.data);
+  },
+  createAnswerOption(payload: AdminAnswerOptionCreatePayload) {
+    return http.post<AdminAnswerOption>('/admin/answer-options/', payload).then((response) => response.data);
+  },
+  updateAnswerOption(optionId: string, payload: AdminAnswerOptionUpdatePayload) {
+    return http.patch<AdminAnswerOption>(`/admin/answer-options/${optionId}/`, payload).then((response) => response.data);
+  },
+  deleteAnswerOption(optionId: string) {
+    return http.delete(`/admin/answer-options/${optionId}/`);
   },
 };

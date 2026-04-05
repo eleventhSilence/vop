@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 
@@ -54,25 +55,47 @@ class TestQuestion(models.Model):
     def __str__(self) -> str:
         return f"{self.test_id}#{self.order}"
 
-    def get_answer_configuration_error(self, *, total_options: int, correct_options: int) -> str | None:
+    def get_answer_configuration_error(
+        self, *, total_options: int, correct_options: int, allow_incomplete: bool = False
+    ) -> str | None:
         if total_options == 0:
             return None
 
-        if self.question_type == self.QuestionType.SINGLE_CHOICE and correct_options != 1:
-            return "Single choice question must have exactly one correct answer"
+        if self.question_type == self.QuestionType.SINGLE_CHOICE:
+            if allow_incomplete:
+                if correct_options > 1:
+                    return "Single choice question must have exactly one correct answer"
+                return None
 
-        if self.question_type == self.QuestionType.MULTIPLE_CHOICE and correct_options < 1:
-            return "Multiple choice question must have at least one correct answer"
+            if correct_options != 1:
+                return "Single choice question must have exactly one correct answer"
+
+        if self.question_type == self.QuestionType.MULTIPLE_CHOICE:
+            if allow_incomplete:
+                return None
+
+            if correct_options < 1:
+                return "Multiple choice question must have at least one correct answer"
 
         return None
 
-    def validate_answer_configuration(self, *, total_options: int | None = None, correct_options: int | None = None) -> None:
+    def validate_answer_configuration(
+        self,
+        *,
+        total_options: int | None = None,
+        correct_options: int | None = None,
+        allow_incomplete: bool = False,
+    ) -> None:
         if total_options is None or correct_options is None:
             answer_options = self.answer_options.all()
             total_options = answer_options.count()
             correct_options = answer_options.filter(is_correct=True).count()
 
-        error = self.get_answer_configuration_error(total_options=total_options, correct_options=correct_options)
+        error = self.get_answer_configuration_error(
+            total_options=total_options,
+            correct_options=correct_options,
+            allow_incomplete=allow_incomplete,
+        )
         if error is not None:
             raise ValidationError(error)
 
@@ -92,11 +115,16 @@ class AnswerOption(models.Model):
     question = models.ForeignKey(TestQuestion, on_delete=models.CASCADE, related_name="answer_options")
     text = models.TextField()
     is_correct = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "answer_options"
+        ordering = ("order", "created_at", "id")
+        constraints = [
+            models.UniqueConstraint(fields=("question", "order"), name="unique_option_order_per_question"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.question_id}:{self.id}"
@@ -117,6 +145,7 @@ class AnswerOption(models.Model):
         error = self.question.get_answer_configuration_error(
             total_options=total_options,
             correct_options=correct_options,
+            allow_incomplete=True,
         )
         if error is not None and not (total_options == 1 and correct_options == 0):
             raise ValidationError(error)
@@ -131,6 +160,7 @@ class AnswerOption(models.Model):
                 self.question.validate_answer_configuration(
                     total_options=total_options,
                     correct_options=correct_options,
+                    allow_incomplete=True,
                 )
 
         return instance
@@ -142,7 +172,11 @@ class AnswerOption(models.Model):
         correct_options = remaining_options.filter(is_correct=True).count()
 
         with transaction.atomic():
-            question.validate_answer_configuration(total_options=total_options, correct_options=correct_options)
+            question.validate_answer_configuration(
+                total_options=total_options,
+                correct_options=correct_options,
+                allow_incomplete=True,
+            )
             return super().delete(*args, **kwargs)
 
 

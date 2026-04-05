@@ -211,6 +211,7 @@ class AdminAnswerOptionBaseSerializer(serializers.ModelSerializer):
             "question_text",
             "text",
             "is_correct",
+            "order",
             "created_at",
             "updated_at",
         )
@@ -244,6 +245,7 @@ class AdminAnswerOptionWriteSerializer(serializers.ModelSerializer):
             "question_text",
             "text",
             "is_correct",
+            "order",
             "created_at",
             "updated_at",
         )
@@ -252,9 +254,13 @@ class AdminAnswerOptionWriteSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         question = attrs.get("question", getattr(self.instance, "question", None))
         is_correct = attrs.get("is_correct", getattr(self.instance, "is_correct", False))
+        order = attrs.get("order", getattr(self.instance, "order", None))
 
         if question is None:
             return attrs
+
+        if order is not None and order <= 0:
+            raise serializers.ValidationError({"order": "Order must be greater than 0"})
 
         existing_options = question.answer_options.all()
         if self.instance is not None:
@@ -262,9 +268,13 @@ class AdminAnswerOptionWriteSerializer(serializers.ModelSerializer):
 
         total_options = existing_options.count() + 1
         correct_options = existing_options.filter(is_correct=True).count() + int(is_correct)
-        error = question.get_answer_configuration_error(total_options=total_options, correct_options=correct_options)
+        error = question.get_answer_configuration_error(
+            total_options=total_options,
+            correct_options=correct_options,
+            allow_incomplete=True,
+        )
 
-        if error is not None and not (total_options == 1 and correct_options == 0):
+        if error is not None:
             raise serializers.ValidationError({"is_correct": error})
 
         return attrs
