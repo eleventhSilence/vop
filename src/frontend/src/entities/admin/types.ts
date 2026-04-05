@@ -107,3 +107,18 @@ export type AdminAnswerOption = {
 
 export type AdminAnswerOptionCreatePayload = Pick<AdminAnswerOption, 'question_id' | 'text' | 'is_correct' | 'order'>;
 export type AdminAnswerOptionUpdatePayload = Partial<Pick<AdminAnswerOption, 'text' | 'is_correct' | 'order'>>;
+
+export type AdminCourseStatus = 'available' | 'unavailable';
+
+export type AdminCourse = {
+  course_id: string;
+  title: string;
+  short_description: string;
+  content: string;
+  status: AdminCourseStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminCourseCreatePayload = Pick<AdminCourse, 'title' | 'short_description' | 'content' | 'status'>;
+export type AdminCourseUpdatePayload = Partial<Pick<AdminCourse, 'title' | 'short_description' | 'content' | 'status'>>;

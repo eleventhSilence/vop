@@ -3,6 +3,9 @@ import type {
   AdminAnswerOption,
   AdminAnswerOptionCreatePayload,
   AdminAnswerOptionUpdatePayload,
+  AdminCourse,
+  AdminCourseCreatePayload,
+  AdminCourseUpdatePayload,
   AdminDashboard,
   AdminTest,
   AdminTestCreatePayload,
@@ -16,9 +19,61 @@ import type {
 } from '@/entities/admin/types';
 import type { PaginatedResponse } from '@/shared/lib/pagination';
 
+type AdminCourseApiDto = {
+  course_id: string;
+  title: string;
+  short_description: string;
+  description: string;
+  status: AdminCourse['status'];
+  created_at: string;
+  updated_at: string;
+};
+
+const mapAdminCourseFromApi = (course: AdminCourseApiDto): AdminCourse => ({
+  course_id: course.course_id,
+  title: course.title,
+  short_description: course.short_description,
+  content: course.description,
+  status: course.status,
+  created_at: course.created_at,
+  updated_at: course.updated_at,
+});
+
 export const adminApi = {
   dashboard() {
     return http.get<AdminDashboard>('/admin/dashboard/').then((response) => response.data);
+  },
+  courses(params?: Record<string, string | number>) {
+    return http.get<PaginatedResponse<AdminCourseApiDto>>('/admin/courses/', { params }).then((response) => ({
+      ...response.data,
+      results: response.data.results.map(mapAdminCourseFromApi),
+    }));
+  },
+  courseDetail(courseId: string) {
+    return http.get<AdminCourseApiDto>(`/admin/courses/${courseId}/`).then((response) => mapAdminCourseFromApi(response.data));
+  },
+  createCourse(payload: AdminCourseCreatePayload) {
+    return http
+      .post<AdminCourseApiDto>('/admin/courses/', {
+        title: payload.title,
+        short_description: payload.short_description,
+        description: payload.content,
+        status: payload.status,
+      })
+      .then((response) => mapAdminCourseFromApi(response.data));
+  },
+  updateCourse(courseId: string, payload: AdminCourseUpdatePayload) {
+    return http
+      .patch<AdminCourseApiDto>(`/admin/courses/${courseId}/`, {
+        ...(payload.title !== undefined ? { title: payload.title } : {}),
+        ...(payload.short_description !== undefined ? { short_description: payload.short_description } : {}),
+        ...(payload.content !== undefined ? { description: payload.content } : {}),
+        ...(payload.status !== undefined ? { status: payload.status } : {}),
+      })
+      .then((response) => mapAdminCourseFromApi(response.data));
+  },
+  deleteCourse(courseId: string) {
+    return http.delete(`/admin/courses/${courseId}/`);
   },
   users(params?: Record<string, string | number>) {
     return http.get<PaginatedResponse<AdminUser>>('/admin/users/', { params }).then((response) => response.data);
