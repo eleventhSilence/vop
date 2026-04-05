@@ -73,3 +73,5 @@ export type AdminTest = {
   created_at: string;
   updated_at: string;
 };
+
+export type AdminTestUpdatePayload = Partial<Pick<AdminTest, 'title' | 'description' | 'passing_score' | 'max_attempts' | 'is_active'>>;
