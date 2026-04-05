@@ -13,6 +13,9 @@ export const AdminTestsPage = () => {
   return (
     <PageSection>
       <h2>Администратор: тесты</h2>
+      <p>
+        <Link to="/admin/tests/new" className="text-link">Создать тест →</Link>
+      </p>
       {testsQuery.isLoading ? <LoadingState /> : null}
       {testsQuery.isError ? <ErrorState message={extractApiError(testsQuery.error)} /> : null}
       <div className="stack-list">

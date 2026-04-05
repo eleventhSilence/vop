@@ -1,5 +1,13 @@
 import { http } from '@/shared/api/http';
-import type { AdminDashboard, AdminUser, AdminUserDetail, AdminUserUpdatePayload } from '@/entities/admin/types';
+import type {
+  AdminDashboard,
+  AdminTestCreatePayload,
+  AdminTest,
+  AdminTestUpdatePayload,
+  AdminUser,
+  AdminUserDetail,
+  AdminUserUpdatePayload,
+} from '@/entities/admin/types';
 import type { PaginatedResponse } from '@/shared/lib/pagination';
 
 export const adminApi = {
@@ -14,5 +22,17 @@ export const adminApi = {
   },
   updateUser(userId: string, payload: AdminUserUpdatePayload) {
     return http.patch<AdminUserDetail>(`/admin/users/${userId}/`, payload).then((response) => response.data);
+  },
+  testDetail(testId: string) {
+    return http.get<AdminTest>(`/admin/tests/${testId}/`).then((response) => response.data);
+  },
+  updateTest(testId: string, payload: AdminTestUpdatePayload) {
+    return http.patch<AdminTest>(`/admin/tests/${testId}/`, payload).then((response) => response.data);
+  },
+  deleteTest(testId: string) {
+    return http.delete(`/admin/tests/${testId}/`);
+  },
+  createTest(payload: AdminTestCreatePayload) {
+    return http.post<AdminTest>('/admin/tests/', payload).then((response) => response.data);
   },
 };
