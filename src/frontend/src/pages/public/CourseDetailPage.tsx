@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
+import type { CourseEnrollment, EnrolledCourse } from '@/entities/course/types';
 import { reviewsApi } from '@/entities/review/api';
 import { useAuth } from '@/features/auth/model/AuthContext';
 import { extractApiError } from '@/shared/api/client';
 import { formatDateTime, formatStatus } from '@/shared/lib/format';
-import { ensurePaginated } from '@/shared/lib/pagination';
+import { ensurePaginated, type PaginatedResponse } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
@@ -17,6 +18,23 @@ const getContentBlocks = (content: string) => {
     .map((block) => block.trim())
     .filter(Boolean);
 };
+
+const ENROLL_PENDING_TEXT = 'Оформляем запись...';
+const ENROLL_SUCCESS_TEXT = 'Запись оформлена. Курс уже доступен в личном кабинете.';
+
+const toEnrolledCourse = (
+  enrollment: CourseEnrollment,
+  fallback: { title: string; short_description: string },
+): EnrolledCourse => ({
+  course_id: enrollment.course_id,
+  title: fallback.title,
+  short_description: fallback.short_description,
+  enrolled_at: enrollment.enrolled_at,
+  is_theory_completed: enrollment.is_theory_completed,
+  progress_percent: 0,
+  progress_status: enrollment.progress_status,
+  is_test_passed: false,
+});
 
 export const CourseDetailPage = () => {
   const { courseId = '' } = useParams();
@@ -43,7 +61,44 @@ export const CourseDetailPage = () => {
 
   const enrollMutation = useMutation({
     mutationFn: () => coursesApi.enroll(courseId),
-    onSuccess: async () => {
+    onSuccess: async (enrollment) => {
+      const fallbackCourse = courseQuery.data;
+      queryClient.setQueryData<PaginatedResponse<EnrolledCourse> | EnrolledCourse[] | undefined>(
+        ['courses', 'my'],
+        (current) => {
+          const nextEnrolled = toEnrolledCourse(enrollment, {
+            title: fallbackCourse?.title ?? 'Курс',
+            short_description: fallbackCourse?.short_description ?? '',
+          });
+
+          if (!current) {
+            return {
+              count: 1,
+              next: null,
+              previous: null,
+              results: [nextEnrolled],
+            };
+          }
+
+          if (Array.isArray(current)) {
+            if (current.some((course) => course.course_id === nextEnrolled.course_id)) {
+              return current;
+            }
+            return [nextEnrolled, ...current];
+          }
+
+          if (current.results.some((course) => course.course_id === nextEnrolled.course_id)) {
+            return current;
+          }
+
+          return {
+            ...current,
+            count: current.count + 1,
+            results: [nextEnrolled, ...current.results],
+          };
+        },
+      );
+
       await queryClient.invalidateQueries({ queryKey: ['courses', 'my'] });
     },
   });
@@ -106,13 +161,25 @@ export const CourseDetailPage = () => {
                   </>
                 ) : (
                   <Button onClick={() => enrollMutation.mutate()} disabled={enrollMutation.isPending || !isCourseAvailable}>
-                    {enrollMutation.isPending ? 'Записываем...' : 'Записаться на курс'}
+                    {enrollMutation.isPending ? ENROLL_PENDING_TEXT : 'Записаться на курс'}
                   </Button>
                 )}
               </div>
 
-              {enrollMutation.isError ? <div className="form-error">{extractApiError(enrollMutation.error)}</div> : null}
-              {enrollMutation.isSuccess ? <div className="form-success">Вы записаны на курс. Теперь можно перейти к обучению из личного кабинета.</div> : null}
+              {enrollMutation.isError ? <div className="form-error">Не удалось оформить запись: {extractApiError(enrollMutation.error)}</div> : null}
+              {enrollMutation.isSuccess ? (
+                <div className="form-success">
+                  <p>{ENROLL_SUCCESS_TEXT}</p>
+                  <div className="hero-card__actions">
+                    <Link to={`/account/courses/${courseId}`} className="button button--primary">
+                      Перейти к обучению
+                    </Link>
+                    <Link to="/account/courses" className="button button--ghost">
+                      Перейти в мои курсы
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <section className="public-course-content">
