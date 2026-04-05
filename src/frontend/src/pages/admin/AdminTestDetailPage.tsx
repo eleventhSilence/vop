@@ -2,8 +2,10 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
+import { coursesApi } from '@/entities/course/api';
 import type { AdminTestCreatePayload, AdminTestUpdatePayload } from '@/entities/admin/types';
 import { extractApiError } from '@/shared/api/client';
+import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
@@ -41,6 +43,12 @@ export const AdminTestDetailPage = () => {
     queryFn: () => adminApi.testDetail(testId!),
     enabled: Boolean(testId) && !isCreateMode,
   });
+  const coursesQuery = useQuery({
+    queryKey: ['admin', 'courses', 'for-test-create'],
+    queryFn: () => coursesApi.adminList({ page_size: 100 }),
+    enabled: isCreateMode,
+  });
+  const createCourses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
 
   useEffect(() => {
     if (!testQuery.data) {
@@ -180,6 +188,8 @@ export const AdminTestDetailPage = () => {
       </div>
       {!isCreateMode && testQuery.isLoading ? <LoadingState /> : null}
       {!isCreateMode && testQuery.isError ? <ErrorState message={extractApiError(testQuery.error)} /> : null}
+      {isCreateMode && coursesQuery.isLoading ? <LoadingState message="Загрузка курсов..." /> : null}
+      {isCreateMode && coursesQuery.isError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
       {formErrorMessage ? <ErrorState message={formErrorMessage} /> : null}
       {createTestMutation.isError ? <ErrorState message={extractApiError(createTestMutation.error)} /> : null}
       {updateTestMutation.isError ? <ErrorState message={extractApiError(updateTestMutation.error)} /> : null}
@@ -188,14 +198,24 @@ export const AdminTestDetailPage = () => {
       {isCreateMode || testQuery.isSuccess ? (
         <form className="card stack-list" onSubmit={handleSubmit}>
           {isCreateMode ? (
-            <Input
-              id="test-course-id"
-              label="Course ID"
-              value={formValues.course_id}
-              onChange={(event) => setFormValues((current) => ({ ...current, course_id: event.target.value }))}
-              error={validationErrors.course_id}
-              required
-            />
+            <label className="field" htmlFor="test-course-id">
+              <span className="field__label">Курс</span>
+              <select
+                id="test-course-id"
+                className="field__control"
+                value={formValues.course_id}
+                onChange={(event) => setFormValues((current) => ({ ...current, course_id: event.target.value }))}
+                required
+              >
+                <option value="">Выберите курс</option>
+                {createCourses.map((course) => (
+                  <option key={course.course_id} value={course.course_id}>
+                    {course.title}
+                  </option>
+                ))}
+              </select>
+              {validationErrors.course_id ? <span className="field__error">{validationErrors.course_id}</span> : null}
+            </label>
           ) : null}
           <Input
             id="test-title"
