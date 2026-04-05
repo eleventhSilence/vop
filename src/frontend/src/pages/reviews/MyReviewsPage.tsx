@@ -27,19 +27,19 @@ export const MyReviewsPage = () => {
     mutationFn: () => reviewsApi.create(draft),
     onSuccess: async () => {
       setDraft({ course_id: '', comment: '', rating: 5 });
-      await reviewsQuery.refetch();
+      await Promise.all([reviewsQuery.refetch(), coursesQuery.refetch()]);
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ reviewId, comment, rating }: { reviewId: string; comment: string; rating: number }) => reviewsApi.update(reviewId, { comment, rating }),
-    onSuccess: async () => {
-      await reviewsQuery.refetch();
-    },
-  });
+  const isCoursesLoading = coursesQuery.isLoading;
+  const isCoursesError = coursesQuery.isError;
+  const canCreateReview = !isCoursesLoading && !isCoursesError && availableCourses.length > 0;
 
   const handleCreate = (event: FormEvent) => {
     event.preventDefault();
+    if (!canCreateReview) {
+      return;
+    }
     createMutation.mutate();
   };
 
@@ -51,18 +51,46 @@ export const MyReviewsPage = () => {
             <p className="eyebrow">Отзывы</p>
             <h2>Оставить отзыв</h2>
           </div>
+
+          {isCoursesLoading ? <LoadingState message="Загружаем доступные курсы..." /> : null}
+          {isCoursesError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
+          {!isCoursesLoading && !isCoursesError && !availableCourses.length ? <EmptyState message="Нет доступных курсов для нового отзыва." /> : null}
+
           <label className="field">
             <span className="field__label">Курс</span>
-            <select className="field__control" value={draft.course_id} onChange={(event) => setDraft((current) => ({ ...current, course_id: event.target.value }))} required>
+            <select
+              className="field__control"
+              value={draft.course_id}
+              onChange={(event) => setDraft((current) => ({ ...current, course_id: event.target.value }))}
+              required
+              disabled={!canCreateReview || createMutation.isPending}
+            >
               <option value="">Выберите курс</option>
               {availableCourses.map((course) => (
                 <option key={course.course_id} value={course.course_id}>{course.title}</option>
               ))}
             </select>
           </label>
-          <Input id="review-comment" label="Комментарий" value={draft.comment} onChange={(event) => setDraft((current) => ({ ...current, comment: event.target.value }))} required />
-          <Input id="review-rating" label="Оценка" type="number" min={1} max={5} value={draft.rating} onChange={(event) => setDraft((current) => ({ ...current, rating: Number(event.target.value) }))} required />
-          <Button type="submit" disabled={createMutation.isPending}>Сохранить отзыв</Button>
+          <Input
+            id="review-comment"
+            label="Комментарий"
+            value={draft.comment}
+            onChange={(event) => setDraft((current) => ({ ...current, comment: event.target.value }))}
+            required
+            disabled={!canCreateReview || createMutation.isPending}
+          />
+          <Input
+            id="review-rating"
+            label="Оценка"
+            type="number"
+            min={1}
+            max={5}
+            value={draft.rating}
+            onChange={(event) => setDraft((current) => ({ ...current, rating: Number(event.target.value) }))}
+            required
+            disabled={!canCreateReview || createMutation.isPending}
+          />
+          <Button type="submit" disabled={!canCreateReview || createMutation.isPending}>Сохранить отзыв</Button>
           {createMutation.isError ? <div className="form-error">{extractApiError(createMutation.error)}</div> : null}
         </form>
 
@@ -79,8 +107,7 @@ export const MyReviewsPage = () => {
                 comment={review.comment}
                 rating={review.rating}
                 status={review.status ?? 'pending'}
-                onSave={(payload) => updateMutation.mutate(payload)}
-                isSaving={updateMutation.isPending}
+                onUpdated={() => reviewsQuery.refetch()}
               />
             ))}
           </div>
@@ -95,32 +122,55 @@ const ReviewEditor = ({
   comment,
   rating,
   status,
-  onSave,
-  isSaving,
+  onUpdated,
 }: {
   reviewId: string;
   comment: string;
   rating: number;
   status: ReviewStatus;
-  onSave: (payload: { reviewId: string; comment: string; rating: number }) => void;
-  isSaving: boolean;
+  onUpdated: () => void;
 }) => {
   const [draftComment, setDraftComment] = useState(comment);
   const [draftRating, setDraftRating] = useState(rating);
 
+  const updateMutation = useMutation({
+    mutationFn: () => reviewsApi.update(reviewId, { comment: draftComment, rating: draftRating }),
+    onSuccess: async () => {
+      await onUpdated();
+    },
+  });
+
   return (
     <form className="list-item form-stack" onSubmit={(event) => {
       event.preventDefault();
-      onSave({ reviewId, comment: draftComment, rating: draftRating });
+      updateMutation.mutate();
     }}>
       <div className="card__row">
         <strong>Отзыв #{reviewId.slice(0, 8)}</strong>
         <StatusBadge status={status} />
       </div>
-      <Input id={`comment-${reviewId}`} label="Комментарий" value={draftComment} onChange={(event) => setDraftComment(event.target.value)} required />
-      <Input id={`rating-${reviewId}`} label="Оценка" type="number" min={1} max={5} value={draftRating} onChange={(event) => setDraftRating(Number(event.target.value))} required />
+      <Input
+        id={`comment-${reviewId}`}
+        label="Комментарий"
+        value={draftComment}
+        onChange={(event) => setDraftComment(event.target.value)}
+        required
+        disabled={updateMutation.isPending}
+      />
+      <Input
+        id={`rating-${reviewId}`}
+        label="Оценка"
+        type="number"
+        min={1}
+        max={5}
+        value={draftRating}
+        onChange={(event) => setDraftRating(Number(event.target.value))}
+        required
+        disabled={updateMutation.isPending}
+      />
+      {updateMutation.isError ? <div className="form-error">{extractApiError(updateMutation.error)}</div> : null}
       <div className="card__row">
-        <Button type="submit" variant="secondary" disabled={isSaving}>Обновить</Button>
+        <Button type="submit" variant="secondary" disabled={updateMutation.isPending}>Обновить</Button>
         <Link to={`/account/reviews/${reviewId}/edit`} className="text-link">Открыть отдельную страницу →</Link>
       </div>
     </form>
