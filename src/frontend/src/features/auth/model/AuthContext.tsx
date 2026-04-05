@@ -1,21 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
 import type { LoginPayload, RegisterPayload, SessionUser, TokenPair } from '@/entities/auth/types';
 import type { AuthState } from '@/features/auth/model/types';
+import { AuthContext } from '@/features/auth/model/auth-context';
 import { authApi } from '@/shared/api/auth';
 import { setHttpAuthHandlers } from '@/shared/api/http';
 import { tokenStorage } from '@/shared/lib/auth/tokenStorage';
-
-type AuthContextValue = AuthState & {
-  isAuthenticated: boolean;
-  isAdmin: boolean;
-  login: (payload: LoginPayload) => Promise<SessionUser>;
-  register: (payload: RegisterPayload) => Promise<SessionUser>;
-  logout: () => Promise<void>;
-  updateUser: (user: SessionUser | null) => void;
-};
-
-const AuthContext = createContext<AuthContextValue | null>(null);
+import type { AuthContextValue } from '@/features/auth/model/auth-context';
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [state, setState] = useState<AuthState>({
@@ -62,7 +53,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       try {
         const user = await authApi.me();
         setState({ user, tokens: tokenStorage.getTokens(), isInitialized: true });
-      } catch (error) {
+      } catch {
         clearSession();
       }
     };
@@ -110,14 +101,4 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   }), [login, logout, register, state, updateUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-
-  return context;
 };

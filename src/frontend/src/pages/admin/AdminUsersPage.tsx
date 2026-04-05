@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminUser, AdminUserUpdatePayload } from '@/entities/admin/types';
-import { useAuth } from '@/features/auth/model/AuthContext';
+import { useAuth } from '@/features/auth/model/useAuth';
 import { extractApiError } from '@/shared/api/client';
 import { formatDateTime, formatRole, formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';

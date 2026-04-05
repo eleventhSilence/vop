@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { useAuth } from '@/features/auth/model/AuthContext';
+import { useAuth } from '@/features/auth/model/useAuth';
 import { Button } from '@/shared/ui/Button';
 
 const guestLinks = [

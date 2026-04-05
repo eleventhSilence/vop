@@ -17,8 +17,14 @@ export const MyReviewsPage = () => {
   const reviewsQuery = useQuery({ queryKey: ['reviews', 'my'], queryFn: reviewsApi.myReviews });
   const coursesQuery = useQuery({ queryKey: ['courses', 'my'], queryFn: coursesApi.myCourses });
 
-  const reviews = reviewsQuery.data ? ensurePaginated(reviewsQuery.data).results : [];
-  const courses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
+  const reviews = useMemo(
+    () => (reviewsQuery.data ? ensurePaginated(reviewsQuery.data).results : []),
+    [reviewsQuery.data],
+  );
+  const courses = useMemo(
+    () => (coursesQuery.data ? ensurePaginated(coursesQuery.data).results : []),
+    [coursesQuery.data],
+  );
 
   const reviewedCourseIds = useMemo(() => new Set(reviews.map((review) => review.course_id)), [reviews]);
   const availableCourses = courses.filter((course) => !reviewedCourseIds.has(course.course_id));

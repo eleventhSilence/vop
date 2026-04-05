@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '@/features/auth/model/AuthContext';
+import { useAuth } from '@/features/auth/model/useAuth';
 import { LoadingState } from '@/shared/ui/DataState';
 
 const getDefaultAuthorizedRoute = (isAdmin: boolean) => (isAdmin ? '/admin/dashboard' : '/account/dashboard');
