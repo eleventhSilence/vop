@@ -42,3 +42,14 @@ export type RegisterResponse = {
   last_name: string;
   tokens: TokenPair;
 };
+
+
+export type UpdateMePayload = {
+  first_name: string;
+  last_name: string;
+};
+
+export type ChangePasswordPayload = {
+  current_password: string;
+  new_password: string;
+};
