@@ -150,6 +150,15 @@ export const CourseDetailPage = () => {
                   <Link to="/login" className="button button--primary">
                     Войти, чтобы записаться
                   </Link>
+                ) : enrollMutation.isSuccess ? (
+                  <>
+                    <Link to={`/account/courses/${courseId}`} className="button button--primary">
+                      Перейти к обучению
+                    </Link>
+                    <Link to="/account/courses" className="button button--ghost">
+                      Перейти в мои курсы
+                    </Link>
+                  </>
                 ) : enrolledCourse ? (
                   <>
                     <Link to={`/account/courses/${courseId}`} className="button button--primary">
@@ -167,19 +176,7 @@ export const CourseDetailPage = () => {
               </div>
 
               {enrollMutation.isError ? <div className="form-error">Не удалось оформить запись: {extractApiError(enrollMutation.error)}</div> : null}
-              {enrollMutation.isSuccess ? (
-                <div className="form-success">
-                  <p>{ENROLL_SUCCESS_TEXT}</p>
-                  <div className="hero-card__actions">
-                    <Link to={`/account/courses/${courseId}`} className="button button--primary">
-                      Перейти к обучению
-                    </Link>
-                    <Link to="/account/courses" className="button button--ghost">
-                      Перейти в мои курсы
-                    </Link>
-                  </div>
-                </div>
-              ) : null}
+              {enrollMutation.isSuccess ? <div className="form-success">{ENROLL_SUCCESS_TEXT}</div> : null}
             </div>
 
             <section className="public-course-content">
