@@ -268,9 +268,13 @@ class AdminAnswerOptionWriteSerializer(serializers.ModelSerializer):
 
         total_options = existing_options.count() + 1
         correct_options = existing_options.filter(is_correct=True).count() + int(is_correct)
-        error = question.get_answer_configuration_error(total_options=total_options, correct_options=correct_options)
+        error = question.get_answer_configuration_error(
+            total_options=total_options,
+            correct_options=correct_options,
+            allow_incomplete=True,
+        )
 
-        if error is not None and not (total_options == 1 and correct_options == 0):
+        if error is not None:
             raise serializers.ValidationError({"is_correct": error})
 
         return attrs
