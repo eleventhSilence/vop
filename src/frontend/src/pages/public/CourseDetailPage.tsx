@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
 import type { CourseEnrollment, EnrolledCourse } from '@/entities/course/types';
 import { reviewsApi } from '@/entities/review/api';
-import { useAuth } from '@/features/auth/model/AuthContext';
+import { useAuth } from '@/features/auth/model/useAuth';
 import { extractApiError } from '@/shared/api/client';
 import { formatDateTime, formatStatus } from '@/shared/lib/format';
 import { ensurePaginated, type PaginatedResponse } from '@/shared/lib/pagination';
