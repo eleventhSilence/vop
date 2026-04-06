@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
@@ -209,15 +209,6 @@ export const AdminQuestionOptionsPage = () => {
     startEdit(optionId, values);
   };
 
-  const stopActionPropagation = (event: MouseEvent<HTMLElement>) => {
-    event.stopPropagation();
-  };
-
-  const handleDeleteAction = (event: MouseEvent<HTMLButtonElement>, optionId: string) => {
-    event.stopPropagation();
-    handleDelete(optionId);
-  };
-
   const editingOption = options.find((option) => option.option_id === editingOptionId) ?? null;
 
   useEffect(() => {
@@ -235,8 +226,9 @@ export const AdminQuestionOptionsPage = () => {
         <div className="admin-question-context-card__top">
           <div className="admin-question-context-card__content">
             <p className="eyebrow">Администрирование</p>
-            <h2 className="admin-question-context-card__heading">Варианты ответа</h2>
-            <p className="muted">ID вопроса: {questionId ?? 'не определён'}</p>
+            <h2 className="admin-question-context-card__heading">
+              {questionQuery.data ? `Варианты ответа для вопроса «${questionQuery.data.text}»` : 'Варианты ответа'}
+            </h2>
             {questionQuery.data ? (
               <>
                 <div className="admin-question-context__meta">
@@ -254,18 +246,8 @@ export const AdminQuestionOptionsPage = () => {
               </Button>
             ) : null}
             {questionQuery.data?.test_id ? (
-              <>
-                <Link className="admin-question-page__back-chip" to={`/admin/tests/${questionQuery.data.test_id}`}>
-                  ← Назад к тесту
-                </Link>
-                <Link className="admin-question-page__back-chip" to={`/admin/tests/${questionQuery.data.test_id}/questions`}>
-                  К вопросам теста
-                </Link>
-              </>
-            ) : null}
-            {questionId ? (
-              <Link className="admin-question-page__back-chip" to={`/admin/questions/${questionId}`}>
-                Открыть детали вопроса
+              <Link className="admin-question-page__back-chip" to={`/admin/tests/${questionQuery.data.test_id}/questions`}>
+                ← К вопросам теста
               </Link>
             ) : null}
           </div>
@@ -340,8 +322,6 @@ export const AdminQuestionOptionsPage = () => {
         <div className="stack-list admin-questions-list">
           {options.length === 0 ? <EmptyState message="Для этого вопроса пока нет вариантов ответа." /> : null}
           {options.map((option) => {
-            const isDeleting = deleteOptionMutation.isPending && deleteOptionMutation.variables === option.option_id;
-
             return (
               <article
                 className={`card admin-test-card admin-interactive-card admin-option-card ${option.is_correct ? 'admin-option-card--correct' : ''}`}
@@ -377,14 +357,6 @@ export const AdminQuestionOptionsPage = () => {
                   <span className="badge badge--default">
                     {questionQuery.data?.question_type === 'multiple_choice' ? 'Множественный выбор' : 'Один выбор'}
                   </span>
-                </div>
-                <div className="admin-test-card__footer admin-question-card__footer">
-                  <Link className="admin-test-card__questions-chip" to={`/admin/questions/${questionId}`} onClick={stopActionPropagation}>
-                    Открыть детали вопроса
-                  </Link>
-                  <Button type="button" variant="ghost" onClick={(event) => handleDeleteAction(event, option.option_id)} disabled={isDeleting}>
-                    {isDeleting ? 'Удаление...' : 'Удалить'}
-                  </Button>
                 </div>
               </article>
             );
