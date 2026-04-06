@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/entities/admin/api';
 import { extractApiError } from '@/shared/api/client';
-import { ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 
 export const AdminDashboardPage = () => {
@@ -39,13 +39,17 @@ export const AdminDashboardPage = () => {
             <div className="card">
               <h3>Отзывы на модерации</h3>
               <div className="stack-list">
-                {dashboardQuery.data.pending_reviews.map((review) => (
-                  <div className="list-item" key={review.review_id}>
-                    <strong>{review.course_title}</strong>
-                    <p>{review.user_email}</p>
-                    <p>{review.comment}</p>
-                  </div>
-                ))}
+                {dashboardQuery.data.pending_reviews.length ? (
+                  dashboardQuery.data.pending_reviews.map((review) => (
+                    <div className="list-item" key={review.review_id}>
+                      <strong>{review.course_title}</strong>
+                      <p>{review.user_email}</p>
+                      <p>{review.comment}</p>
+                    </div>
+                  ))
+                ) : (
+                  <EmptyState message="Сейчас нет отзывов на модерации." />
+                )}
               </div>
             </div>
           </div>
