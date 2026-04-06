@@ -2,12 +2,12 @@ import { FormEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useState } fr
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
-import type { AdminTestCreatePayload } from '@/entities/admin/types';
+import type { AdminTestCreatePayload, AdminTestUpdatePayload } from '@/entities/admin/types';
 import { testingApi } from '@/entities/testing/api';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { EmptyState, LoadingState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
@@ -37,8 +37,11 @@ export const AdminTestsPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setCreateOpen] = useState(false);
+  const [editTestId, setEditTestId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<CreateTestFormValues>(defaultFormValues);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [editFormValues, setEditFormValues] = useState<CreateTestFormValues>(defaultFormValues);
+  const [editValidationErrors, setEditValidationErrors] = useState<ValidationErrors>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const testsQuery = useQuery({ queryKey: ['admin', 'tests'], queryFn: () => testingApi.adminTests() });
@@ -61,6 +64,30 @@ export const AdminTestsPage = () => {
     },
   });
 
+  const updateTestMutation = useMutation({
+    mutationFn: ({ testId, payload }: { testId: string; payload: AdminTestUpdatePayload }) => adminApi.updateTest(testId, payload),
+    onSuccess: async () => {
+      setToast({ type: 'success', message: 'Тест сохранён.' });
+      closeEdit();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'tests'] });
+    },
+    onError: (error) => {
+      setToast({ type: 'error', message: extractApiError(error) });
+    },
+  });
+
+  const deleteTestMutation = useMutation({
+    mutationFn: (testId: string) => adminApi.deleteTest(testId),
+    onSuccess: async () => {
+      setToast({ type: 'success', message: 'Тест удалён.' });
+      closeEdit();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'tests'] });
+    },
+    onError: (error) => {
+      setToast({ type: 'error', message: extractApiError(error) });
+    },
+  });
+
   const formErrorMessage = useMemo(() => {
     if (!Object.keys(validationErrors).length) {
       return null;
@@ -73,6 +100,12 @@ export const AdminTestsPage = () => {
     setCreateOpen(false);
     setValidationErrors({});
     setFormValues(defaultFormValues);
+  };
+
+  const closeEdit = () => {
+    setEditTestId(null);
+    setEditValidationErrors({});
+    setEditFormValues(defaultFormValues);
   };
 
   const handleCreate = (event: FormEvent<HTMLFormElement>) => {
@@ -116,6 +149,68 @@ export const AdminTestsPage = () => {
     });
   };
 
+  const openEdit = (testId: string) => {
+    const currentTest = tests.find((test) => test.test_id === testId);
+
+    if (!currentTest) {
+      return;
+    }
+
+    setEditTestId(currentTest.test_id);
+    setEditValidationErrors({});
+    setEditFormValues({
+      course_id: currentTest.course_id,
+      title: currentTest.title,
+      description: currentTest.description,
+      passing_score: String(currentTest.passing_score),
+      max_attempts: String(currentTest.max_attempts),
+      is_active: currentTest.is_active,
+    });
+  };
+
+  const handleEdit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setToast(null);
+
+    if (!editTestId) {
+      return;
+    }
+
+    const nextErrors: ValidationErrors = {};
+    const passingScore = Number(editFormValues.passing_score);
+    const maxAttempts = Number(editFormValues.max_attempts);
+
+    if (!editFormValues.title.trim()) {
+      nextErrors.title = 'Введите название теста.';
+    }
+
+    if (!Number.isFinite(passingScore) || passingScore <= 0) {
+      nextErrors.passing_score = 'Passing score должен быть числом больше 0.';
+    }
+
+    if (!Number.isFinite(maxAttempts) || maxAttempts <= 0) {
+      nextErrors.max_attempts = 'Max attempts должен быть числом больше 0.';
+    }
+
+    setEditValidationErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length) {
+      setToast({ type: 'error', message: 'Проверьте корректность заполнения формы.' });
+      return;
+    }
+
+    updateTestMutation.mutate({
+      testId: editTestId,
+      payload: {
+        title: editFormValues.title.trim(),
+        description: editFormValues.description.trim(),
+        passing_score: passingScore,
+        max_attempts: maxAttempts,
+        is_active: editFormValues.is_active,
+      },
+    });
+  };
+
   useEffect(() => {
     if (!toast) {
       return;
@@ -132,7 +227,7 @@ export const AdminTestsPage = () => {
   }, [testsQuery.error, testsQuery.isError]);
 
   const openTestCard = (testId: string) => {
-    navigate(`/admin/tests/${testId}`);
+    openEdit(testId);
   };
 
   const openTestQuestions = (event: MouseEvent<HTMLButtonElement>, testId: string) => {
@@ -147,6 +242,29 @@ export const AdminTestsPage = () => {
 
     event.preventDefault();
     openTestCard(testId);
+  };
+
+  const editTest = tests.find((test) => test.test_id === editTestId) ?? null;
+
+  const editFormErrorMessage = useMemo(() => {
+    if (!Object.keys(editValidationErrors).length) {
+      return null;
+    }
+
+    return 'Проверьте корректность заполнения формы.';
+  }, [editValidationErrors]);
+
+  const handleDelete = () => {
+    if (!editTestId) {
+      return;
+    }
+
+    if (!window.confirm('Удалить этот тест? Действие нельзя отменить.')) {
+      return;
+    }
+
+    setToast(null);
+    deleteTestMutation.mutate(editTestId);
   };
 
   return (
@@ -249,9 +367,93 @@ export const AdminTestsPage = () => {
         </div>
       ) : null}
 
+      {editTestId && editTest ? (
+        <div className="overlay" role="presentation" onClick={closeEdit}>
+          <div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="card__row">
+              <h3>Редактирование теста</h3>
+              <Button variant="ghost" type="button" onClick={closeEdit}>
+                Закрыть
+              </Button>
+            </div>
+            {editFormErrorMessage ? <p className="field__error">{editFormErrorMessage}</p> : null}
+            <form className="stack-list" onSubmit={handleEdit}>
+              <label className="field" htmlFor="admin-test-edit-course-id">
+                <span className="field__label">Курс</span>
+                <input id="admin-test-edit-course-id" className="field__control" value={editTest.course_title} readOnly />
+              </label>
+              <Input
+                id="admin-test-edit-title"
+                label="Название *"
+                value={editFormValues.title}
+                onChange={(event) => setEditFormValues((current) => ({ ...current, title: event.target.value }))}
+                error={editValidationErrors.title}
+                required
+              />
+              <label className="field" htmlFor="admin-test-edit-description">
+                <span className="field__label">Описание</span>
+                <textarea
+                  id="admin-test-edit-description"
+                  className="field__control"
+                  value={editFormValues.description}
+                  onChange={(event) => setEditFormValues((current) => ({ ...current, description: event.target.value }))}
+                  rows={5}
+                />
+              </label>
+              <Input
+                id="admin-test-edit-passing-score"
+                label="Passing score *"
+                type="number"
+                min={1}
+                step={1}
+                value={editFormValues.passing_score}
+                onChange={(event) => setEditFormValues((current) => ({ ...current, passing_score: event.target.value }))}
+                error={editValidationErrors.passing_score}
+                required
+              />
+              <Input
+                id="admin-test-edit-max-attempts"
+                label="Max attempts *"
+                type="number"
+                min={1}
+                step={1}
+                value={editFormValues.max_attempts}
+                onChange={(event) => setEditFormValues((current) => ({ ...current, max_attempts: event.target.value }))}
+                error={editValidationErrors.max_attempts}
+                required
+              />
+              <label className="field field--checkbox" htmlFor="admin-test-edit-is-active">
+                <span className="field__label">Активен</span>
+                <input
+                  id="admin-test-edit-is-active"
+                  type="checkbox"
+                  checked={editFormValues.is_active}
+                  onChange={(event) => setEditFormValues((current) => ({ ...current, is_active: event.target.checked }))}
+                />
+              </label>
+              <div className="actions-row admin-action-bar">
+                <Button variant="ghost" type="button" onClick={closeEdit}>
+                  Отмена
+                </Button>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={updateTestMutation.isPending || deleteTestMutation.isPending}
+                >
+                  {deleteTestMutation.isPending ? 'Удаление...' : 'Удалить'}
+                </Button>
+                <Button type="submit" disabled={updateTestMutation.isPending || deleteTestMutation.isPending}>
+                  {updateTestMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       {testsQuery.isLoading ? <LoadingState /> : null}
       {coursesQuery.isLoading && isCreateOpen ? <LoadingState message="Загрузка курсов..." /> : null}
-      {testsQuery.isError ? <ErrorState message={extractApiError(testsQuery.error)} /> : null}
 
       {!testsQuery.isLoading && !testsQuery.isError ? (
         <div className="stack-list admin-tests-list">
