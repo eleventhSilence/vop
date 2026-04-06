@@ -1,7 +1,8 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/features/auth/model/useAuth';
+import { brandingConfig } from '@/shared/config/branding';
 import { PageSection } from '@/shared/ui/PageSection';
-import heroBackground from '@/shared/assets/hero-memory-bg.svg';
 
 const organizationCards = [
   {
@@ -35,10 +36,55 @@ const learningSteps = [
 
 export const HomePage = () => {
   const { isAuthenticated, isAdmin } = useAuth();
+  const [isHeroImageReady, setIsHeroImageReady] = useState(false);
+  const heroBackgroundUrl = brandingConfig.heroBackgroundUrl;
+
+  useEffect(() => {
+    let isDisposed = false;
+
+    if (!heroBackgroundUrl) {
+      setIsHeroImageReady(false);
+      return () => {
+        isDisposed = true;
+      };
+    }
+
+    const image = new Image();
+    image.onload = () => {
+      if (!isDisposed) {
+        setIsHeroImageReady(true);
+      }
+    };
+    image.onerror = () => {
+      if (!isDisposed) {
+        setIsHeroImageReady(false);
+      }
+    };
+    image.src = heroBackgroundUrl;
+
+    return () => {
+      isDisposed = true;
+    };
+  }, [heroBackgroundUrl]);
+
+  const heroCardStyle = useMemo(
+    () => (isHeroImageReady ? { backgroundImage: `url(${heroBackgroundUrl})` } : undefined),
+    [heroBackgroundUrl, isHeroImageReady],
+  );
+
+  const heroCardClassName = [
+    'hero-card',
+    'public-hero-card',
+    'public-hero-card--single',
+    'public-hero-card--photo',
+    isHeroImageReady ? '' : 'public-hero-card--photo-fallback',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <PageSection className="public-page-stack">
-      <section className="hero-card public-hero-card public-hero-card--single public-hero-card--photo" style={{ backgroundImage: `url(${heroBackground})` }}>
+      <section className={heroCardClassName} style={heroCardStyle}>
         <div className="public-hero-card__content">
           <p className="eyebrow">Вологодское объединение поисковиков</p>
           <h1 className="hero-card__title">Онлайн-платформа "Вологодское Объединение Поисковиков"</h1>
