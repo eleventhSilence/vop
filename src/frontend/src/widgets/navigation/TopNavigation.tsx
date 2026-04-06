@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/features/auth/model/useAuth';
 import { Button } from '@/shared/ui/Button';
+import vopLogo from '@/shared/assets/vop-logo.svg';
 
 const guestLinks = [
   { to: '/login', label: 'Вход' },
@@ -43,10 +44,10 @@ export const TopNavigation = () => {
     <header className="topbar">
       <div className="topbar__brand-wrap">
         <NavLink to="/" className="brand-link" aria-label="Перейти на главную страницу">
-          <span className="brand-link__logo">ВКР</span>
-          <span>
-            <span className="eyebrow">VOP</span>
-            <strong className="brand-link__title">Онлайн-платформа обучения</strong>
+          <img src={vopLogo} alt="Логотип Вологодского объединения поисковиков" className="brand-link__logo-image" />
+          <span className="brand-link__text">
+            <span className="eyebrow">ВОП</span>
+            <strong className="brand-link__title">Онлайн-платформа «Вологодское Объединение Поисковиков»</strong>
           </span>
         </NavLink>
       </div>
