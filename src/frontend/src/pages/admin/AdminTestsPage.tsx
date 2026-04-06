@@ -1,6 +1,6 @@
-import { FormEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminTestCreatePayload, AdminTestUpdatePayload } from '@/entities/admin/types';
 import { testingApi } from '@/entities/testing/api';
@@ -35,7 +35,9 @@ const defaultFormValues: CreateTestFormValues = {
 
 export const AdminTestsPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const hasFocusedFromQueryRef = useRef(false);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editTestId, setEditTestId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<CreateTestFormValues>(defaultFormValues);
@@ -225,6 +227,30 @@ export const AdminTestsPage = () => {
       setToast({ type: 'error', message: extractApiError(testsQuery.error) });
     }
   }, [testsQuery.error, testsQuery.isError]);
+
+  useEffect(() => {
+    if (testsQuery.isLoading || hasFocusedFromQueryRef.current) {
+      return;
+    }
+
+    const focusTestId = searchParams.get('focusTestId');
+    if (!focusTestId) {
+      return;
+    }
+
+    const focusNode = document.getElementById(`admin-test-${focusTestId}`);
+    if (!focusNode) {
+      return;
+    }
+
+    focusNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    focusNode.focus({ preventScroll: true });
+    hasFocusedFromQueryRef.current = true;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('focusTestId');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams, testsQuery.isLoading]);
 
   const openTestCard = (testId: string) => {
     openEdit(testId);
@@ -460,6 +486,7 @@ export const AdminTestsPage = () => {
           {tests.length === 0 ? <EmptyState message="Тесты пока не созданы." /> : null}
           {tests.map((test) => (
             <article
+              id={`admin-test-${test.test_id}`}
               className={`card admin-test-card admin-interactive-card ${test.is_active ? 'admin-test-card--active' : 'admin-test-card--inactive'}`}
               key={test.test_id}
               role="button"
