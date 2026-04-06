@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
@@ -7,9 +7,10 @@ import { extractApiError } from '@/shared/api/client';
 import { formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
+import { EmptyState, LoadingState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
+import { Toast } from '@/shared/ui/Toast';
 
 type CreateCourseFormValues = {
   title: string;
@@ -33,20 +34,23 @@ export const AdminCoursesPage = () => {
   const queryClient = useQueryClient();
   const [formValues, setFormValues] = useState<CreateCourseFormValues>(defaultFormValues);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
+  const [isCreateFormOpen, setCreateFormOpen] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const coursesQuery = useQuery({ queryKey: ['admin', 'courses'], queryFn: () => adminApi.courses() });
   const courses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
 
   const createCourseMutation = useMutation({
     mutationFn: (payload: AdminCourseCreatePayload) => adminApi.createCourse(payload),
-    onSuccess: async (createdCourse) => {
-      setSuccessMessage('Курс создан.');
-      setCreatedCourseId(createdCourse.course_id);
+    onSuccess: async () => {
+      setToast({ type: 'success', message: 'Курс создан.' });
+      setCreateFormOpen(false);
       setFormValues(defaultFormValues);
       setValidationErrors({});
       await queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+    },
+    onError: (error) => {
+      setToast({ type: 'error', message: extractApiError(error) });
     },
   });
 
@@ -60,8 +64,7 @@ export const AdminCoursesPage = () => {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSuccessMessage(null);
-    setCreatedCourseId(null);
+    setToast(null);
 
     const nextErrors: ValidationErrors = {};
     const title = formValues.title.trim();
@@ -80,6 +83,7 @@ export const AdminCoursesPage = () => {
     setValidationErrors(nextErrors);
 
     if (Object.keys(nextErrors).length) {
+      setToast({ type: 'error', message: 'Проверьте корректность заполнения формы.' });
       return;
     }
 
@@ -91,75 +95,113 @@ export const AdminCoursesPage = () => {
     });
   };
 
+  const openCreateForm = () => {
+    setCreateFormOpen(true);
+    setValidationErrors({});
+  };
+
+  const closeCreateForm = () => {
+    setCreateFormOpen(false);
+    setValidationErrors({});
+    setFormValues(defaultFormValues);
+  };
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToast(null);
+    }, 3500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
+  useEffect(() => {
+    if (coursesQuery.isError) {
+      setToast({ type: 'error', message: extractApiError(coursesQuery.error) });
+    }
+  }, [coursesQuery.error, coursesQuery.isError]);
+
   return (
     <PageSection>
       <h2>Администратор: курсы</h2>
-      <div className="card stack-list">
-        <h3>Создание курса</h3>
-        <p className="muted">Минимальные обязательные поля: название и краткое описание.</p>
-        {formErrorMessage ? <ErrorState message={formErrorMessage} /> : null}
-        {createCourseMutation.isError ? <ErrorState message={extractApiError(createCourseMutation.error)} /> : null}
-        {successMessage ? <SuccessState message={successMessage} /> : null}
-        {createdCourseId ? (
-          <p>
-            <Link className="text-link" to={`/admin/courses/${createdCourseId}`}>
-              Открыть курс →
-            </Link>
-          </p>
-        ) : null}
-        <form className="stack-list" onSubmit={handleSubmit}>
-          <Input
-            id="admin-course-create-title"
-            label="Название"
-            value={formValues.title}
-            onChange={(event) => setFormValues((current) => ({ ...current, title: event.target.value }))}
-            error={validationErrors.title}
-            required
-          />
-          <label className="field" htmlFor="admin-course-create-short-description">
-            <span className="field__label">Короткое описание</span>
-            <textarea
-              id="admin-course-create-short-description"
-              className="field__control"
-              value={formValues.short_description}
-              onChange={(event) => setFormValues((current) => ({ ...current, short_description: event.target.value }))}
-              rows={3}
-              required
-            />
-            {validationErrors.short_description ? <span className="field__error">{validationErrors.short_description}</span> : null}
-          </label>
-          <label className="field" htmlFor="admin-course-create-content">
-            <span className="field__label">Контент</span>
-            <textarea
-              id="admin-course-create-content"
-              className="field__control"
-              value={formValues.content}
-              onChange={(event) => setFormValues((current) => ({ ...current, content: event.target.value }))}
-              rows={8}
-            />
-          </label>
-          <label className="field" htmlFor="admin-course-create-status">
-            <span className="field__label">Статус</span>
-            <select
-              id="admin-course-create-status"
-              className="field__control"
-              value={formValues.status}
-              onChange={(event) => setFormValues((current) => ({ ...current, status: event.target.value as AdminCourseStatus }))}
-            >
-              <option value="unavailable">unavailable</option>
-              <option value="available">available</option>
-            </select>
-          </label>
-          <div className="actions-row">
-            <Button type="submit" disabled={createCourseMutation.isPending}>
-              {createCourseMutation.isPending ? 'Создание...' : 'Создать курс'}
-            </Button>
-          </div>
-        </form>
+      <div className="admin-courses-toolbar">
+        <Button className="admin-courses-create-trigger" onClick={openCreateForm}>
+          Создать курс
+        </Button>
       </div>
+      {isCreateFormOpen ? (
+        <div className="overlay" role="presentation" onClick={closeCreateForm}>
+          <div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="card__row">
+              <h3>Создание курса</h3>
+              <Button variant="ghost" type="button" onClick={closeCreateForm}>
+                Закрыть
+              </Button>
+            </div>
+            {formErrorMessage ? <p className="field__error">{formErrorMessage}</p> : null}
+            <form className="stack-list" onSubmit={handleSubmit}>
+              <Input
+                id="admin-course-create-title"
+                label="Название *"
+                value={formValues.title}
+                onChange={(event) => setFormValues((current) => ({ ...current, title: event.target.value }))}
+                error={validationErrors.title}
+                required
+              />
+              <label className="field" htmlFor="admin-course-create-short-description">
+                <span className="field__label">Короткое описание *</span>
+                <textarea
+                  id="admin-course-create-short-description"
+                  className="field__control"
+                  value={formValues.short_description}
+                  onChange={(event) => setFormValues((current) => ({ ...current, short_description: event.target.value }))}
+                  rows={3}
+                  required
+                />
+                {validationErrors.short_description ? <span className="field__error">{validationErrors.short_description}</span> : null}
+              </label>
+              <label className="field" htmlFor="admin-course-create-content">
+                <span className="field__label">Контент</span>
+                <textarea
+                  id="admin-course-create-content"
+                  className="field__control"
+                  value={formValues.content}
+                  onChange={(event) => setFormValues((current) => ({ ...current, content: event.target.value }))}
+                  rows={8}
+                />
+              </label>
+              <label className="field" htmlFor="admin-course-create-status">
+                <span className="field__label">Статус</span>
+                <select
+                  id="admin-course-create-status"
+                  className="field__control"
+                  value={formValues.status}
+                  onChange={(event) => setFormValues((current) => ({ ...current, status: event.target.value as AdminCourseStatus }))}
+                >
+                  <option value="unavailable">unavailable</option>
+                  <option value="available">available</option>
+                </select>
+              </label>
+              <div className="actions-row">
+                <Button variant="ghost" type="button" onClick={closeCreateForm}>
+                  Отмена
+                </Button>
+                <Button type="submit" disabled={createCourseMutation.isPending}>
+                  {createCourseMutation.isPending ? 'Создание...' : 'Создать курс'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
       {coursesQuery.isLoading ? <LoadingState /> : null}
-      {coursesQuery.isError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
       <div className="stack-list">
+        {!coursesQuery.isLoading && !coursesQuery.isError && !courses.length ? (
+          <EmptyState message="Курсы пока не созданы." />
+        ) : null}
         {courses.map((course) => (
           <div className="card" key={course.course_id}>
             <div className="card__row">
@@ -174,6 +216,7 @@ export const AdminCoursesPage = () => {
           </div>
         ))}
       </div>
+      {toast ? <Toast key={toast.message} type={toast.type} message={toast.message} /> : null}
     </PageSection>
   );
 };
