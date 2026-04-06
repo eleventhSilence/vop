@@ -358,6 +358,62 @@ class ReviewsApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_author_can_delete_own_review(self):
+        review = self.create_review(status=ReviewStatus.APPROVED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.delete(self.get_update_url(review))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Review.objects.filter(id=review.id).exists())
+
+    def test_delete_review_requires_auth(self):
+        review = self.create_review()
+
+        response = self.client.delete(self.get_update_url(review))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(Review.objects.filter(id=review.id).exists())
+
+    def test_other_user_cannot_delete_foreign_review(self):
+        review = self.create_review()
+        self.client.force_authenticate(user=self.other_user)
+
+        response = self.client.delete(self.get_update_url(review))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Review.objects.filter(id=review.id).exists())
+
+    def test_deleted_review_disappears_from_my_and_public_lists(self):
+        my_review = self.create_review(status=ReviewStatus.APPROVED, text="Мой отзыв", course=self.second_course)
+        foreign_public_review = self.create_review(
+            user=self.other_user,
+            status=ReviewStatus.APPROVED,
+            text="Публичный отзыв",
+            course=self.course,
+        )
+
+        self.client.force_authenticate(user=self.user)
+        delete_response = self.client.delete(self.get_update_url(my_review))
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+
+        my_reviews_response = self.client.get(reverse("review-my-list"))
+        self.assertEqual(my_reviews_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(my_reviews_response.data["count"], 0)
+        self.assertEqual(my_reviews_response.data["results"], [])
+
+        public_deleted_course_response = self.client.get(
+            reverse("review-course-list", kwargs={"course_id": self.second_course.id}),
+        )
+        self.assertEqual(public_deleted_course_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(public_deleted_course_response.data["count"], 0)
+        self.assertEqual(public_deleted_course_response.data["results"], [])
+
+        public_other_course_response = self.client.get(reverse("review-course-list", kwargs={"course_id": self.course.id}))
+        self.assertEqual(public_other_course_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(public_other_course_response.data["count"], 1)
+        self.assertEqual(public_other_course_response.data["results"][0]["review_id"], str(foreign_public_review.id))
+
     def test_blocked_user_cannot_update_review(self):
         blocked_user = Account.objects.create_user(
             email="blocked-reviewer@example.com",

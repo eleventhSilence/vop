@@ -22,10 +22,10 @@ class ReviewCreateView(generics.CreateAPIView):
     serializer_class = ReviewCreateSerializer
 
 
-class ReviewUpdateView(generics.UpdateAPIView):
+class ReviewUpdateView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ReviewUpdateSerializer
-    http_method_names = ["patch", "head", "options"]
+    http_method_names = ["patch", "delete", "head", "options"]
 
     def get_queryset(self):
         return Review.objects.filter(user=self.request.user).select_related("course")
