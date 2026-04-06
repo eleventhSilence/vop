@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminCourseCreatePayload, AdminCourseStatus } from '@/entities/admin/types';
@@ -185,6 +185,15 @@ export const AdminCoursesPage = () => {
     setEditFormValues(defaultFormValues);
   };
 
+  const handleCourseCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, courseId: string) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    openEditForm(courseId);
+  };
+
   useEffect(() => {
     if (!toast) {
       return;
@@ -347,7 +356,15 @@ export const AdminCoursesPage = () => {
           <EmptyState message="Курсы пока не созданы." />
         ) : null}
         {courses.map((course) => (
-          <div className={`card admin-course-card admin-course-card--${course.status}`} key={course.course_id}>
+          <div
+            className={`card admin-course-card admin-course-card--${course.status} admin-interactive-card`}
+            key={course.course_id}
+            role="button"
+            tabIndex={0}
+            aria-label={`Открыть карточку курса «${course.title}»`}
+            onClick={() => openEditForm(course.course_id)}
+            onKeyDown={(event) => handleCourseCardKeyDown(event, course.course_id)}
+          >
             <div className="card__row admin-course-card__header">
               <h3 className="admin-course-card__title">{course.title}</h3>
               <StatusBadge
@@ -356,11 +373,6 @@ export const AdminCoursesPage = () => {
               />
             </div>
             <p className="admin-course-card__description">{course.short_description}</p>
-            <div className="admin-course-card__footer">
-              <Button variant="ghost" type="button" onClick={() => openEditForm(course.course_id)}>
-                Открыть карточку
-              </Button>
-            </div>
           </div>
         ))}
       </div>
