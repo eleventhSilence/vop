@@ -235,7 +235,6 @@ export const AdminQuestionOptionsPage = () => {
                   <StatusBadge status={questionQuery.data.question_type} label={`Тип: ${questionQuery.data.question_type}`} tone="accent" />
                   <StatusBadge status="order" label={`Порядок вопроса: ${questionQuery.data.order}`} tone="neutral" />
                 </div>
-                <p className="admin-question-context__text">{questionQuery.data.text}</p>
               </>
             ) : null}
           </div>
@@ -259,13 +258,6 @@ export const AdminQuestionOptionsPage = () => {
       {optionsQuery.isLoading ? <LoadingState message="Загрузка вариантов ответа..." /> : null}
       {questionQuery.isError ? <ErrorState message={extractApiError(questionQuery.error)} /> : null}
       {optionsQuery.isError ? <ErrorState message={extractApiError(optionsQuery.error)} /> : null}
-
-      {questionQuery.data?.question_type === 'single_choice' ? (
-        <div className="admin-options-hint">
-          <span className="badge badge--neutral">single_choice</span>
-          <span>Только один вариант может быть правильным — остальные флаги снимаются автоматически.</span>
-        </div>
-      ) : null}
 
       {isCreateOpen ? (
         <div className="overlay" role="presentation" onClick={closeCreate}>
@@ -319,7 +311,7 @@ export const AdminQuestionOptionsPage = () => {
       ) : null}
 
       {!optionsQuery.isLoading && !optionsQuery.isError && questionId ? (
-        <div className="stack-list admin-questions-list">
+        <div className="stack-list admin-questions-list admin-options-list">
           {options.length === 0 ? <EmptyState message="Для этого вопроса пока нет вариантов ответа." /> : null}
           {options.map((option) => {
             return (
@@ -354,9 +346,6 @@ export const AdminQuestionOptionsPage = () => {
                 </div>
                 <div className="admin-test-card__meta">
                   <span className="badge badge--neutral">Порядок: {option.order}</span>
-                  <span className="badge badge--default">
-                    {questionQuery.data?.question_type === 'multiple_choice' ? 'Множественный выбор' : 'Один выбор'}
-                  </span>
                 </div>
               </article>
             );
