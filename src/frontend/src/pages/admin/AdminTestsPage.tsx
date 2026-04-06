@@ -1,6 +1,6 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminTestCreatePayload } from '@/entities/admin/types';
 import { testingApi } from '@/entities/testing/api';
@@ -34,6 +34,7 @@ const defaultFormValues: CreateTestFormValues = {
 };
 
 export const AdminTestsPage = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [formValues, setFormValues] = useState<CreateTestFormValues>(defaultFormValues);
@@ -129,6 +130,24 @@ export const AdminTestsPage = () => {
       setToast({ type: 'error', message: extractApiError(testsQuery.error) });
     }
   }, [testsQuery.error, testsQuery.isError]);
+
+  const openTestCard = (testId: string) => {
+    navigate(`/admin/tests/${testId}`);
+  };
+
+  const openTestQuestions = (event: MouseEvent<HTMLButtonElement>, testId: string) => {
+    event.stopPropagation();
+    navigate(`/admin/tests/${testId}/questions`);
+  };
+
+  const handleTestCardKeyDown = (event: KeyboardEvent<HTMLElement>, testId: string) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    openTestCard(testId);
+  };
 
   return (
     <PageSection>
@@ -239,8 +258,13 @@ export const AdminTestsPage = () => {
           {tests.length === 0 ? <EmptyState message="Тесты пока не созданы." /> : null}
           {tests.map((test) => (
             <article
-              className={`card admin-test-card ${test.is_active ? 'admin-test-card--active' : 'admin-test-card--inactive'}`}
+              className={`card admin-test-card admin-interactive-card ${test.is_active ? 'admin-test-card--active' : 'admin-test-card--inactive'}`}
               key={test.test_id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Открыть карточку теста «${test.title}»`}
+              onClick={() => openTestCard(test.test_id)}
+              onKeyDown={(event) => handleTestCardKeyDown(event, test.test_id)}
             >
               <div className="card__row admin-test-card__header">
                 <h3 className="admin-test-card__title">{test.title}</h3>
@@ -252,12 +276,14 @@ export const AdminTestsPage = () => {
                 <span className="badge badge--neutral">Max attempts: {test.max_attempts}</span>
               </div>
               <div className="admin-test-card__footer">
-                <Link to={`/admin/tests/${test.test_id}`} className="text-link">
-                  Открыть карточку →
-                </Link>
-                <Link to={`/admin/tests/${test.test_id}/questions`} className="text-link">
+                <button
+                  type="button"
+                  className="admin-test-card__questions-chip"
+                  aria-label={`Перейти к вопросам теста «${test.title}»`}
+                  onClick={(event) => openTestQuestions(event, test.test_id)}
+                >
                   Вопросы →
-                </Link>
+                </button>
               </div>
             </article>
           ))}
