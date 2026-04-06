@@ -1,36 +1,270 @@
-import { useQuery } from '@tanstack/react-query';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { adminApi } from '@/entities/admin/api';
+import type { AdminTestCreatePayload } from '@/entities/admin/types';
 import { testingApi } from '@/entities/testing/api';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
-import { ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { Button } from '@/shared/ui/Button';
+import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
+import { StatusBadge } from '@/shared/ui/StatusBadge';
+import { Toast } from '@/shared/ui/Toast';
+
+type CreateTestFormValues = {
+  course_id: string;
+  title: string;
+  description: string;
+  passing_score: string;
+  max_attempts: string;
+  is_active: boolean;
+};
+
+type ValidationErrors = Partial<Record<keyof CreateTestFormValues, string>>;
+
+const defaultFormValues: CreateTestFormValues = {
+  course_id: '',
+  title: '',
+  description: '',
+  passing_score: '70',
+  max_attempts: '1',
+  is_active: true,
+};
 
 export const AdminTestsPage = () => {
+  const queryClient = useQueryClient();
+  const [isCreateOpen, setCreateOpen] = useState(false);
+  const [formValues, setFormValues] = useState<CreateTestFormValues>(defaultFormValues);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const testsQuery = useQuery({ queryKey: ['admin', 'tests'], queryFn: () => testingApi.adminTests() });
+  const coursesQuery = useQuery({ queryKey: ['admin', 'courses', 'for-test-create'], queryFn: () => adminApi.courses({ page_size: 100 }) });
+
   const tests = testsQuery.data ? ensurePaginated(testsQuery.data).results : [];
+  const createCourses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
+
+  const createTestMutation = useMutation({
+    mutationFn: (payload: AdminTestCreatePayload) => adminApi.createTest(payload),
+    onSuccess: async () => {
+      setToast({ type: 'success', message: 'Тест успешно создан.' });
+      setFormValues(defaultFormValues);
+      setValidationErrors({});
+      setCreateOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'tests'] });
+    },
+    onError: (error) => {
+      setToast({ type: 'error', message: extractApiError(error) });
+    },
+  });
+
+  const formErrorMessage = useMemo(() => {
+    if (!Object.keys(validationErrors).length) {
+      return null;
+    }
+
+    return 'Проверьте корректность заполнения формы.';
+  }, [validationErrors]);
+
+  const closeCreate = () => {
+    setCreateOpen(false);
+    setValidationErrors({});
+    setFormValues(defaultFormValues);
+  };
+
+  const handleCreate = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setToast(null);
+
+    const nextErrors: ValidationErrors = {};
+    const passingScore = Number(formValues.passing_score);
+    const maxAttempts = Number(formValues.max_attempts);
+
+    if (!formValues.course_id.trim()) {
+      nextErrors.course_id = 'Выберите курс.';
+    }
+
+    if (!formValues.title.trim()) {
+      nextErrors.title = 'Введите название теста.';
+    }
+
+    if (!Number.isFinite(passingScore) || passingScore <= 0) {
+      nextErrors.passing_score = 'Passing score должен быть числом больше 0.';
+    }
+
+    if (!Number.isFinite(maxAttempts) || maxAttempts <= 0) {
+      nextErrors.max_attempts = 'Max attempts должен быть числом больше 0.';
+    }
+
+    setValidationErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length) {
+      setToast({ type: 'error', message: 'Проверьте корректность заполнения формы.' });
+      return;
+    }
+
+    createTestMutation.mutate({
+      course_id: formValues.course_id.trim(),
+      title: formValues.title.trim(),
+      description: formValues.description.trim(),
+      passing_score: passingScore,
+      max_attempts: maxAttempts,
+      is_active: formValues.is_active,
+    });
+  };
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
+  useEffect(() => {
+    if (testsQuery.isError) {
+      setToast({ type: 'error', message: extractApiError(testsQuery.error) });
+    }
+  }, [testsQuery.error, testsQuery.isError]);
 
   return (
     <PageSection>
       <h2>Администратор: тесты</h2>
-      <p>
-        <Link to="/admin/tests/new" className="text-link">Создать тест →</Link>
-      </p>
-      {testsQuery.isLoading ? <LoadingState /> : null}
-      {testsQuery.isError ? <ErrorState message={extractApiError(testsQuery.error)} /> : null}
-      <div className="stack-list">
-        {tests.map((test) => (
-          <div className="card" key={test.test_id}>
-            <h3>{test.title}</h3>
-            <p>{test.course_title}</p>
-            <p className="muted">Passing score: {test.passing_score}, max attempts: {test.max_attempts}</p>
-            <div className="stack-list">
-              <Link to={`/admin/tests/${test.test_id}`} className="text-link">Открыть тест →</Link>
-              <Link to={`/admin/tests/${test.test_id}/questions`} className="text-link">Перейти к вопросам →</Link>
-            </div>
-          </div>
-        ))}
+      <div className="admin-tests-toolbar">
+        <Button className="admin-tests-create-trigger" onClick={() => setCreateOpen(true)}>
+          Создать тест
+        </Button>
       </div>
+
+      {isCreateOpen ? (
+        <div className="overlay" role="presentation" onClick={closeCreate}>
+          <div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="card__row">
+              <h3>Создание теста</h3>
+              <Button variant="ghost" type="button" onClick={closeCreate}>
+                Закрыть
+              </Button>
+            </div>
+            {formErrorMessage ? <p className="field__error">{formErrorMessage}</p> : null}
+            <form className="stack-list" onSubmit={handleCreate}>
+              <label className="field" htmlFor="admin-test-create-course-id">
+                <span className="field__label">Курс *</span>
+                <select
+                  id="admin-test-create-course-id"
+                  className="field__control"
+                  value={formValues.course_id}
+                  onChange={(event) => setFormValues((current) => ({ ...current, course_id: event.target.value }))}
+                  required
+                >
+                  <option value="">Выберите курс</option>
+                  {createCourses.map((course) => (
+                    <option key={course.course_id} value={course.course_id}>
+                      {course.title}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.course_id ? <span className="field__error">{validationErrors.course_id}</span> : null}
+              </label>
+              <Input
+                id="admin-test-create-title"
+                label="Название *"
+                value={formValues.title}
+                onChange={(event) => setFormValues((current) => ({ ...current, title: event.target.value }))}
+                error={validationErrors.title}
+                required
+              />
+              <label className="field" htmlFor="admin-test-create-description">
+                <span className="field__label">Описание</span>
+                <textarea
+                  id="admin-test-create-description"
+                  className="field__control"
+                  value={formValues.description}
+                  onChange={(event) => setFormValues((current) => ({ ...current, description: event.target.value }))}
+                  rows={5}
+                />
+              </label>
+              <Input
+                id="admin-test-create-passing-score"
+                label="Passing score *"
+                type="number"
+                min={1}
+                step={1}
+                value={formValues.passing_score}
+                onChange={(event) => setFormValues((current) => ({ ...current, passing_score: event.target.value }))}
+                error={validationErrors.passing_score}
+                required
+              />
+              <Input
+                id="admin-test-create-max-attempts"
+                label="Max attempts *"
+                type="number"
+                min={1}
+                step={1}
+                value={formValues.max_attempts}
+                onChange={(event) => setFormValues((current) => ({ ...current, max_attempts: event.target.value }))}
+                error={validationErrors.max_attempts}
+                required
+              />
+              <label className="field field--checkbox" htmlFor="admin-test-create-is-active">
+                <span className="field__label">Активен</span>
+                <input
+                  id="admin-test-create-is-active"
+                  type="checkbox"
+                  checked={formValues.is_active}
+                  onChange={(event) => setFormValues((current) => ({ ...current, is_active: event.target.checked }))}
+                />
+              </label>
+              <div className="actions-row">
+                <Button variant="ghost" type="button" onClick={closeCreate}>
+                  Отмена
+                </Button>
+                <Button type="submit" disabled={createTestMutation.isPending || coursesQuery.isLoading}>
+                  {createTestMutation.isPending ? 'Создание...' : 'Создать'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {testsQuery.isLoading ? <LoadingState /> : null}
+      {coursesQuery.isLoading && isCreateOpen ? <LoadingState message="Загрузка курсов..." /> : null}
+      {testsQuery.isError ? <ErrorState message={extractApiError(testsQuery.error)} /> : null}
+
+      {!testsQuery.isLoading && !testsQuery.isError ? (
+        <div className="stack-list admin-tests-list">
+          {tests.length === 0 ? <EmptyState message="Тесты пока не созданы." /> : null}
+          {tests.map((test) => (
+            <article
+              className={`card admin-test-card ${test.is_active ? 'admin-test-card--active' : 'admin-test-card--inactive'}`}
+              key={test.test_id}
+            >
+              <div className="card__row admin-test-card__header">
+                <h3 className="admin-test-card__title">{test.title}</h3>
+                <StatusBadge status={test.is_active ? 'active' : 'inactive'} label={test.is_active ? 'Активен' : 'Неактивен'} tone={test.is_active ? 'success' : 'danger'} />
+              </div>
+              <p className="muted">Курс: {test.course_title}</p>
+              <div className="admin-test-card__meta">
+                <span className="badge badge--default">Passing score: {test.passing_score}</span>
+                <span className="badge badge--neutral">Max attempts: {test.max_attempts}</span>
+              </div>
+              <div className="admin-test-card__footer">
+                <Link to={`/admin/tests/${test.test_id}`} className="text-link">
+                  Открыть карточку →
+                </Link>
+                <Link to={`/admin/tests/${test.test_id}/questions`} className="text-link">
+                  Вопросы →
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {toast ? <Toast type={toast.type} message={toast.message} /> : null}
     </PageSection>
   );
 };
