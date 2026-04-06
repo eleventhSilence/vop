@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/features/auth/model/useAuth';
+import { brandingConfig } from '@/shared/config/branding';
 import { Button } from '@/shared/ui/Button';
-import vopLogo from '@/shared/assets/vop-logo.svg';
 
 const guestLinks = [
   { to: '/login', label: 'Вход' },
@@ -27,12 +27,17 @@ export const TopNavigation = () => {
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim();
   const initials = [user?.first_name?.[0], user?.last_name?.[0]].filter(Boolean).join('').toUpperCase();
+  const [isLogoBroken, setIsLogoBroken] = useState(false);
 
   useEffect(() => {
     if (menuRef.current?.open) {
       menuRef.current.open = false;
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    setIsLogoBroken(false);
+  }, [brandingConfig.logoUrl]);
 
   const closeMenu = () => {
     if (menuRef.current?.open) {
@@ -44,7 +49,18 @@ export const TopNavigation = () => {
     <header className="topbar">
       <div className="topbar__brand-wrap">
         <NavLink to="/" className="brand-link" aria-label="Перейти на главную страницу">
-          <img src={vopLogo} alt="Логотип Вологодского объединения поисковиков" className="brand-link__logo-image" />
+          {isLogoBroken ? (
+            <span className="brand-link__logo-fallback" role="img" aria-label="Логотип Вологодского объединения поисковиков">
+              ВОП
+            </span>
+          ) : (
+            <img
+              src={brandingConfig.logoUrl}
+              alt="Логотип Вологодского объединения поисковиков"
+              className="brand-link__logo-image"
+              onError={() => setIsLogoBroken(true)}
+            />
+          )}
           <span className="brand-link__text">
             <span className="eyebrow">ВОП</span>
             <strong className="brand-link__title">Онлайн-платформа «Вологодское Объединение Поисковиков»</strong>

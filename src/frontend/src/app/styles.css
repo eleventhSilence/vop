@@ -41,14 +41,25 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   min-width: 0;
 }
 .brand-link:hover { text-decoration: none; }
-.brand-link__logo-image {
+.brand-link__logo-image,
+.brand-link__logo-fallback {
   width: 3rem;
   height: 3rem;
   border-radius: 999px;
-  object-fit: cover;
   border: 1px solid #d2deec;
   background: #fff;
   flex: 0 0 auto;
+}
+.brand-link__logo-image {
+  object-fit: cover;
+}
+.brand-link__logo-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #2347f0;
+  background: linear-gradient(180deg, #f7faff 0%, #edf2ff 100%);
 }
 .brand-link__text {
   display: grid;
@@ -336,6 +347,9 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   position: relative;
   z-index: 1;
 }
+.public-hero-card--photo-fallback {
+  background: linear-gradient(120deg, #f8fbff 0%, #edf3ff 55%, #e6eeff 100%);
+}
 .public-cta-card__actions--wrap {
   display: flex;
   flex-wrap: wrap;
@@ -436,7 +450,8 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     align-items: stretch;
   }
 
-  .brand-link__logo-image {
+  .brand-link__logo-image,
+  .brand-link__logo-fallback {
     width: 2.5rem;
     height: 2.5rem;
   }

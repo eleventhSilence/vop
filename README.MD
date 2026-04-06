@@ -167,6 +167,31 @@ make frontend-build
 VITE_API_BASE_URL=/api
 ```
 
+### 5. Настройка изображений бренда (logo + hero)
+
+Во frontend добавлены переменные окружения для централизованной подстановки изображений без хранения бинарников в git и без ручного копирования в `public/uploads/...`:
+
+- `VITE_BRAND_LOGO_URL` — URL логотипа в верхней навигации
+- `VITE_HERO_BACKGROUND_URL` — URL фонового изображения hero-блока на главной странице
+
+Пример файла `src/frontend/.env` на основе шаблона `src/frontend/.env.example`:
+
+```bash
+VITE_API_BASE_URL=/api
+VITE_BRAND_LOGO_URL=/branding/vop-logo.svg
+VITE_HERO_BACKGROUND_URL=https://cdn.example.org/vop/hero.jpg
+```
+
+Поддерживаются: 
+- относительные URL (например, `/branding/logo.svg`) для dev/stage/prod при наличии файла на том же домене;
+- абсолютные URL (например, `https://cdn.example.org/...`) для CDN/S3/объектного хранилища.
+
+Fallback-поведение:
+- если `VITE_BRAND_LOGO_URL` не задан, используется локальный placeholder-логотип из исходников frontend;
+- если URL логотипа недоступен, вместо «битой» картинки показывается аккуратный круглый fallback с надписью `ВОП`;
+- если `VITE_HERO_BACKGROUND_URL` не задан, используется локальный fallback-фон из исходников frontend;
+- если hero-фон не загружается, включается нейтральный градиент без «битого» изображения.
+
 ## Команды через Makefile
 
 `Makefile` запускается из корня репозитория и не заменяет понимание рабочих директорий. Он просто фиксирует те же команды в явном виде.
