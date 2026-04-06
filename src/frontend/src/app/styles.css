@@ -643,6 +643,24 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   justify-content: flex-end;
   margin-bottom: 1rem;
 }
+.admin-question-page__back-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d6def2;
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  background: #fff;
+  color: #2347f0;
+  font-weight: 700;
+}
+.admin-question-page__back-chip:hover {
+  text-decoration: none;
+  background: #edf2ff;
+}
+.admin-question-page__back-chip:focus-visible {
+  outline: 3px solid #2b59ff;
+  outline-offset: 2px;
+}
 .admin-tests-create-trigger {
   min-width: 180px;
 }
@@ -744,6 +762,16 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .admin-options-create-panel {
   gap: 0.9rem;
+}
+.admin-question-create-panel {
+  gap: 1rem;
+}
+.admin-questions-list {
+  gap: 0.85rem;
+}
+.admin-question-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border-color: #d9e5f2;
 }
 .admin-option-card {
   gap: 0.8rem;
