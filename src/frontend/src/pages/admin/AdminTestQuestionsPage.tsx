@@ -25,6 +25,7 @@ export const AdminTestQuestionsPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { testId } = useParams();
+  const [isCreateOpen, setCreateOpen] = useState(false);
   const [createValues, setCreateValues] = useState<QuestionFormValues>(defaultQuestionFormValues);
   const [createErrors, setCreateErrors] = useState<ValidationErrors>({});
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -59,12 +60,17 @@ export const AdminTestQuestionsPage = () => {
     setEditValues(defaultQuestionFormValues);
   };
 
+  const closeCreate = () => {
+    setCreateOpen(false);
+    setCreateErrors({});
+    setCreateValues(defaultQuestionFormValues);
+  };
+
   const createQuestionMutation = useMutation({
     mutationFn: (payload: AdminTestQuestionCreatePayload) => adminApi.createQuestion(payload),
     onSuccess: async () => {
       setToast({ type: 'success', message: 'Вопрос успешно создан.' });
-      setCreateValues(defaultQuestionFormValues);
-      setCreateErrors({});
+      closeCreate();
       await queryClient.invalidateQueries({ queryKey: ['admin', 'questions', testId], exact: true });
     },
     onError: (error) => {
@@ -219,48 +225,68 @@ export const AdminTestQuestionsPage = () => {
       {questionsQuery.isError ? <ErrorState message={extractApiError(questionsQuery.error)} /> : null}
 
       {testId && !testQuery.isLoading && !testQuery.isError ? (
-        <form className="card stack-list admin-question-create-panel" onSubmit={handleCreate}>
-          <h3>Создать вопрос</h3>
-          <Input
-            id="create-question-text"
-            label="Текст вопроса *"
-            value={createValues.text}
-            onChange={(event) => setCreateValues((current) => ({ ...current, text: event.target.value }))}
-            error={createErrors.text}
-            required
-          />
-          <label className="field" htmlFor="create-question-type">
-            <span className="field__label">Тип вопроса *</span>
-            <select
-              id="create-question-type"
-              className="field__control"
-              value={createValues.question_type}
-              onChange={(event) =>
-                setCreateValues((current) => ({ ...current, question_type: event.target.value as AdminQuestionType }))
-              }
-              required
-            >
-              <option value="single_choice">single_choice</option>
-              <option value="multiple_choice">multiple_choice</option>
-            </select>
-          </label>
-          <Input
-            id="create-question-order"
-            label="Порядок *"
-            type="number"
-            min={1}
-            step={1}
-            value={createValues.order}
-            onChange={(event) => setCreateValues((current) => ({ ...current, order: event.target.value }))}
-            error={createErrors.order}
-            required
-          />
-          <div className="actions-row">
-            <Button type="submit" disabled={createQuestionMutation.isPending}>
-              {createQuestionMutation.isPending ? 'Создание...' : 'Создать вопрос'}
-            </Button>
+        <div className="admin-questions-toolbar">
+          <Button className="admin-questions-create-trigger" onClick={() => setCreateOpen(true)}>
+            Создать вопрос
+          </Button>
+        </div>
+      ) : null}
+
+      {isCreateOpen ? (
+        <div className="overlay" role="presentation" onClick={closeCreate}>
+          <div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="card__row">
+              <h3>Создать вопрос</h3>
+              <Button variant="ghost" type="button" onClick={closeCreate}>
+                Закрыть
+              </Button>
+            </div>
+            <form className="stack-list admin-question-create-panel" onSubmit={handleCreate}>
+              <Input
+                id="create-question-text"
+                label="Текст вопроса *"
+                value={createValues.text}
+                onChange={(event) => setCreateValues((current) => ({ ...current, text: event.target.value }))}
+                error={createErrors.text}
+                required
+              />
+              <label className="field" htmlFor="create-question-type">
+                <span className="field__label">Тип вопроса *</span>
+                <select
+                  id="create-question-type"
+                  className="field__control"
+                  value={createValues.question_type}
+                  onChange={(event) =>
+                    setCreateValues((current) => ({ ...current, question_type: event.target.value as AdminQuestionType }))
+                  }
+                  required
+                >
+                  <option value="single_choice">single_choice</option>
+                  <option value="multiple_choice">multiple_choice</option>
+                </select>
+              </label>
+              <Input
+                id="create-question-order"
+                label="Порядок *"
+                type="number"
+                min={1}
+                step={1}
+                value={createValues.order}
+                onChange={(event) => setCreateValues((current) => ({ ...current, order: event.target.value }))}
+                error={createErrors.order}
+                required
+              />
+              <div className="actions-row">
+                <Button variant="ghost" type="button" onClick={closeCreate}>
+                  Отмена
+                </Button>
+                <Button type="submit" disabled={createQuestionMutation.isPending}>
+                  {createQuestionMutation.isPending ? 'Создание...' : 'Создать вопрос'}
+                </Button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       ) : null}
 
       {!questionsQuery.isLoading && !questionsQuery.isError && testId ? (

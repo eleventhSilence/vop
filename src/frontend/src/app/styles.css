@@ -643,6 +643,11 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   justify-content: flex-end;
   margin-bottom: 1rem;
 }
+.admin-questions-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
 .admin-question-page__back-chip {
   display: inline-flex;
   align-items: center;
@@ -662,6 +667,9 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   outline-offset: 2px;
 }
 .admin-tests-create-trigger {
+  min-width: 180px;
+}
+.admin-questions-create-trigger {
   min-width: 180px;
 }
 .admin-tests-list {
@@ -921,10 +929,16 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   .admin-tests-toolbar {
     justify-content: stretch;
   }
+  .admin-questions-toolbar {
+    justify-content: stretch;
+  }
   .admin-courses-create-trigger {
     width: 100%;
   }
   .admin-tests-create-trigger {
+    width: 100%;
+  }
+  .admin-questions-create-trigger {
     width: 100%;
   }
   .actions-row .button {
