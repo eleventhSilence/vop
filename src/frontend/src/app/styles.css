@@ -624,6 +624,90 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .admin-courses-create-trigger {
   min-width: 180px;
 }
+.admin-tests-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+.admin-tests-create-trigger {
+  min-width: 180px;
+}
+.admin-tests-list {
+  gap: 0.85rem;
+}
+.admin-test-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+}
+.admin-test-card--active {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fdf9 100%);
+  border-color: #d4e9db;
+}
+.admin-test-card--inactive {
+  background: linear-gradient(180deg, #ffffff 0%, #fff9f9 100%);
+  border-color: #efd7d7;
+}
+.admin-test-card__header {
+  align-items: center;
+}
+.admin-test-card__title {
+  margin: 0;
+  color: #1b3561;
+}
+.admin-test-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.admin-test-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.9rem;
+}
+.admin-test-detail-header {
+  gap: 0.25rem;
+}
+.admin-test-detail-form {
+  gap: 1rem;
+}
+.admin-test-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+.admin-action-bar {
+  border-top: 1px solid #e4ebf5;
+  margin-top: 0.5rem;
+  padding-top: 0.9rem;
+}
+.admin-question-context {
+  gap: 0.8rem;
+}
+.admin-question-context__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.admin-question-context__text {
+  margin: 0;
+  color: #2a3b52;
+}
+.admin-options-create-panel {
+  gap: 0.9rem;
+}
+.admin-option-card {
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+}
+.admin-option-card--correct {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fdf9 100%);
+  border-color: #d4e9db;
+}
+.admin-option-card__header {
+  align-items: center;
+}
 .admin-courses-list {
   gap: 0.85rem;
 }
@@ -763,7 +847,13 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   .admin-courses-toolbar {
     justify-content: stretch;
   }
+  .admin-tests-toolbar {
+    justify-content: stretch;
+  }
   .admin-courses-create-trigger {
+    width: 100%;
+  }
+  .admin-tests-create-trigger {
     width: 100%;
   }
   .actions-row .button {
