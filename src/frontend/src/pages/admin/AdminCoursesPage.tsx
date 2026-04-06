@@ -1,15 +1,14 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminCourseCreatePayload, AdminCourseStatus } from '@/entities/admin/types';
 import { extractApiError } from '@/shared/api/client';
-import { formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, LoadingState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
+import { StatusBadge } from '@/shared/ui/StatusBadge';
 import { Toast } from '@/shared/ui/Toast';
 
 type CreateCourseFormValues = {
@@ -35,6 +34,9 @@ export const AdminCoursesPage = () => {
   const [formValues, setFormValues] = useState<CreateCourseFormValues>(defaultFormValues);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [isCreateFormOpen, setCreateFormOpen] = useState(false);
+  const [editCourseId, setEditCourseId] = useState<string | null>(null);
+  const [editFormValues, setEditFormValues] = useState<CreateCourseFormValues>(defaultFormValues);
+  const [editValidationErrors, setEditValidationErrors] = useState<ValidationErrors>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const coursesQuery = useQuery({ queryKey: ['admin', 'courses'], queryFn: () => adminApi.courses() });
@@ -47,6 +49,20 @@ export const AdminCoursesPage = () => {
       setCreateFormOpen(false);
       setFormValues(defaultFormValues);
       setValidationErrors({});
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
+    },
+    onError: (error) => {
+      setToast({ type: 'error', message: extractApiError(error) });
+    },
+  });
+
+  const updateCourseMutation = useMutation({
+    mutationFn: ({ courseId, payload }: { courseId: string; payload: AdminCourseCreatePayload }) => adminApi.updateCourse(courseId, payload),
+    onSuccess: async () => {
+      setToast({ type: 'success', message: 'Курс обновлён.' });
+      setEditCourseId(null);
+      setEditFormValues(defaultFormValues);
+      setEditValidationErrors({});
       await queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
     },
     onError: (error) => {
@@ -95,6 +111,46 @@ export const AdminCoursesPage = () => {
     });
   };
 
+  const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setToast(null);
+
+    if (!editCourseId) {
+      return;
+    }
+
+    const nextErrors: ValidationErrors = {};
+    const title = editFormValues.title.trim();
+    const shortDescription = editFormValues.short_description.trim();
+
+    if (!title) {
+      nextErrors.title = 'Введите название курса.';
+    }
+
+    if (!shortDescription) {
+      nextErrors.short_description = 'Введите короткое описание курса.';
+    } else if (shortDescription.length < SHORT_DESCRIPTION_MIN_LENGTH) {
+      nextErrors.short_description = `Короткое описание должно быть не короче ${SHORT_DESCRIPTION_MIN_LENGTH} символов.`;
+    }
+
+    setEditValidationErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length) {
+      setToast({ type: 'error', message: 'Проверьте корректность заполнения формы.' });
+      return;
+    }
+
+    updateCourseMutation.mutate({
+      courseId: editCourseId,
+      payload: {
+        title,
+        short_description: shortDescription,
+        content: editFormValues.content,
+        status: editFormValues.status,
+      },
+    });
+  };
+
   const openCreateForm = () => {
     setCreateFormOpen(true);
     setValidationErrors({});
@@ -104,6 +160,29 @@ export const AdminCoursesPage = () => {
     setCreateFormOpen(false);
     setValidationErrors({});
     setFormValues(defaultFormValues);
+  };
+
+  const openEditForm = (courseId: string) => {
+    const course = courses.find((item) => item.course_id === courseId);
+
+    if (!course) {
+      return;
+    }
+
+    setEditCourseId(course.course_id);
+    setEditValidationErrors({});
+    setEditFormValues({
+      title: course.title,
+      short_description: course.short_description,
+      content: course.content,
+      status: course.status,
+    });
+  };
+
+  const closeEditForm = () => {
+    setEditCourseId(null);
+    setEditValidationErrors({});
+    setEditFormValues(defaultFormValues);
   };
 
   useEffect(() => {
@@ -197,22 +276,91 @@ export const AdminCoursesPage = () => {
           </div>
         </div>
       ) : null}
+      {editCourseId ? (
+        <div className="overlay" role="presentation" onClick={closeEditForm}>
+          <div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="card__row">
+              <h3>Редактирование курса</h3>
+              <Button variant="ghost" type="button" onClick={closeEditForm}>
+                Закрыть
+              </Button>
+            </div>
+            {Object.keys(editValidationErrors).length ? <p className="field__error">Проверьте корректность заполнения формы.</p> : null}
+            <form className="stack-list" onSubmit={handleEditSubmit}>
+              <Input
+                id="admin-course-edit-title"
+                label="Название *"
+                value={editFormValues.title}
+                onChange={(event) => setEditFormValues((current) => ({ ...current, title: event.target.value }))}
+                error={editValidationErrors.title}
+                required
+              />
+              <label className="field" htmlFor="admin-course-edit-short-description">
+                <span className="field__label">Короткое описание *</span>
+                <textarea
+                  id="admin-course-edit-short-description"
+                  className="field__control"
+                  value={editFormValues.short_description}
+                  onChange={(event) => setEditFormValues((current) => ({ ...current, short_description: event.target.value }))}
+                  rows={3}
+                  required
+                />
+                {editValidationErrors.short_description ? <span className="field__error">{editValidationErrors.short_description}</span> : null}
+              </label>
+              <label className="field" htmlFor="admin-course-edit-content">
+                <span className="field__label">Контент</span>
+                <textarea
+                  id="admin-course-edit-content"
+                  className="field__control"
+                  value={editFormValues.content}
+                  onChange={(event) => setEditFormValues((current) => ({ ...current, content: event.target.value }))}
+                  rows={8}
+                />
+              </label>
+              <label className="field" htmlFor="admin-course-edit-status">
+                <span className="field__label">Статус</span>
+                <select
+                  id="admin-course-edit-status"
+                  className="field__control"
+                  value={editFormValues.status}
+                  onChange={(event) => setEditFormValues((current) => ({ ...current, status: event.target.value as AdminCourseStatus }))}
+                >
+                  <option value="unavailable">unavailable</option>
+                  <option value="available">available</option>
+                </select>
+              </label>
+              <div className="actions-row">
+                <Button variant="ghost" type="button" onClick={closeEditForm}>
+                  Отмена
+                </Button>
+                <Button type="submit" disabled={updateCourseMutation.isPending}>
+                  {updateCourseMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
       {coursesQuery.isLoading ? <LoadingState /> : null}
-      <div className="stack-list">
+      <div className="stack-list admin-courses-list">
         {!coursesQuery.isLoading && !coursesQuery.isError && !courses.length ? (
           <EmptyState message="Курсы пока не созданы." />
         ) : null}
         {courses.map((course) => (
-          <div className="card" key={course.course_id}>
-            <div className="card__row">
-              <h3>{course.title}</h3>
-              <span>{formatStatus(course.status)}</span>
+          <div className={`card admin-course-card admin-course-card--${course.status}`} key={course.course_id}>
+            <div className="card__row admin-course-card__header">
+              <h3 className="admin-course-card__title">{course.title}</h3>
+              <StatusBadge
+                status={course.status}
+                tone={course.status === 'available' ? 'success' : 'danger'}
+              />
             </div>
-            <p>{course.short_description}</p>
-            <p className="muted">{course.content || 'Контент пока пуст.'}</p>
-            <Link to={`/admin/courses/${course.course_id}`} className="text-link">
-              Открыть карточку курса →
-            </Link>
+            <p className="admin-course-card__description">{course.short_description}</p>
+            <div className="admin-course-card__footer">
+              <Button variant="ghost" type="button" onClick={() => openEditForm(course.course_id)}>
+                Открыть карточку
+              </Button>
+            </div>
           </div>
         ))}
       </div>
