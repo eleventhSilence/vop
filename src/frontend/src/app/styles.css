@@ -318,6 +318,24 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .public-hero-card--single {
   grid-template-columns: 1fr;
 }
+
+.public-hero-card--photo {
+  position: relative;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  border-color: #d7e2ee;
+}
+.public-hero-card--photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, rgba(248, 251, 255, 0.96) 0%, rgba(248, 251, 255, 0.92) 50%, rgba(248, 251, 255, 0.78) 100%);
+}
+.public-hero-card--photo .public-hero-card__content {
+  position: relative;
+  z-index: 1;
+}
 .public-cta-card__actions--wrap {
   display: flex;
   flex-wrap: wrap;

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/features/auth/model/useAuth';
 import { PageSection } from '@/shared/ui/PageSection';
+import heroBackground from '@/shared/assets/hero-memory-bg.svg';
 
 const organizationCards = [
   {
@@ -37,7 +38,7 @@ export const HomePage = () => {
 
   return (
     <PageSection className="public-page-stack">
-      <section className="hero-card public-hero-card public-hero-card--single">
+      <section className="hero-card public-hero-card public-hero-card--single public-hero-card--photo" style={{ backgroundImage: `url(${heroBackground})` }}>
         <div className="public-hero-card__content">
           <p className="eyebrow">Вологодское объединение поисковиков</p>
           <h1 className="hero-card__title">Онлайн-платформа "Вологодское Объединение Поисковиков"</h1>
