@@ -661,6 +661,23 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   outline: 3px solid #2b59ff;
   outline-offset: 2px;
 }
+.admin-question-context-card {
+  gap: 1rem;
+}
+.admin-question-context-card__meta {
+  display: grid;
+  gap: 0.55rem;
+}
+.admin-question-context-card__title {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #1b3561;
+  font-weight: 600;
+}
+.admin-question-context-card__actions {
+  display: flex;
+  justify-content: flex-start;
+}
 .admin-tests-create-trigger {
   min-width: 180px;
 }

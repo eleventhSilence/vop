@@ -183,14 +183,6 @@ export const AdminTestQuestionsPage = () => {
     navigate(`/admin/questions/${questionId}/options`);
   };
 
-  const openTestDetail = (event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    if (!testId) {
-      return;
-    }
-    navigate('/admin/tests');
-  };
-
   const handleQuestionCardKeyDown = (event: KeyboardEvent<HTMLElement>, questionId: string, values: QuestionFormValues) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return;
@@ -225,17 +217,25 @@ export const AdminTestQuestionsPage = () => {
 
   return (
     <PageSection>
-      <div className="card stack-list">
+      <div className="card stack-list admin-question-context-card">
         <p className="eyebrow">Администрирование</p>
         <h2>Вопросы теста</h2>
-        <p className="muted">{testQuery.data ? testQuery.data.title : `ID теста: ${testId ?? 'не определён'}`}</p>
-        {testId ? (
-          <div>
-            <Link className="admin-question-page__back-chip" to="/admin/tests">
-              ← Назад к тесту
-            </Link>
+        {testQuery.data ? (
+          <div className="admin-question-context-card__meta">
+            <p className="muted admin-question-context-card__title">{testQuery.data.title}</p>
+            <div className="admin-test-card__meta">
+              <span className="badge badge--default">Курс: {testQuery.data.course_title}</span>
+              <span className="badge badge--neutral">ID теста: {testQuery.data.test_id}</span>
+            </div>
           </div>
-        ) : null}
+        ) : (
+          <p className="muted">ID теста: {testId ?? 'не определён'}</p>
+        )}
+        <div className="admin-question-context-card__actions">
+          <Link className="admin-question-page__back-chip" to={testId ? `/admin/tests?focusTestId=${testId}` : '/admin/tests'}>
+            ← К списку тестов
+          </Link>
+        </div>
       </div>
 
       {!testId ? <ErrorState message="Не удалось определить ID теста в маршруте." /> : null}
@@ -338,14 +338,6 @@ export const AdminTestQuestionsPage = () => {
                 <span className="badge badge--neutral">Порядок: {question.order}</span>
               </div>
               <div className="admin-test-card__footer admin-question-card__footer">
-                <button
-                  type="button"
-                  className="admin-test-card__questions-chip"
-                  aria-label={`Вернуться к тесту «${testQuery.data?.title ?? 'текущий тест'}»`}
-                  onClick={openTestDetail}
-                >
-                  Назад к тесту
-                </button>
                 <button
                   type="button"
                   className="admin-test-card__questions-chip"
