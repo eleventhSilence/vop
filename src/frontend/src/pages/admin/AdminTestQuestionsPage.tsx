@@ -188,7 +188,7 @@ export const AdminTestQuestionsPage = () => {
     if (!testId) {
       return;
     }
-    navigate(`/admin/tests/${testId}`);
+    navigate('/admin/tests');
   };
 
   const handleQuestionCardKeyDown = (event: KeyboardEvent<HTMLElement>, questionId: string, values: QuestionFormValues) => {
@@ -231,7 +231,7 @@ export const AdminTestQuestionsPage = () => {
         <p className="muted">{testQuery.data ? testQuery.data.title : `ID теста: ${testId ?? 'не определён'}`}</p>
         {testId ? (
           <div>
-            <Link className="admin-question-page__back-chip" to={`/admin/tests/${testId}`}>
+            <Link className="admin-question-page__back-chip" to="/admin/tests">
               ← Назад к тесту
             </Link>
           </div>
