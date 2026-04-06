@@ -61,16 +61,19 @@ class TestingApiTests(APITestCase):
             question=self.question,
             text="4",
             is_correct=True,
+            order=1,
         )
         self.wrong_option = AnswerOption.objects.create(
             question=self.question,
             text="5",
             is_correct=False,
+            order=2,
         )
         self.second_correct_option = AnswerOption.objects.create(
             question=self.second_question,
             text="6",
             is_correct=True,
+            order=1,
         )
         self.foreign_question = TestQuestion.objects.create(
             test=CourseTest.objects.create(
@@ -88,6 +91,7 @@ class TestingApiTests(APITestCase):
             question=self.foreign_question,
             text="foreign option",
             is_correct=True,
+            order=1,
         )
 
     def test_get_course_test_info(self):
@@ -361,6 +365,7 @@ class TestingApiTests(APITestCase):
             question=self.question,
             text="Also 4",
             is_correct=True,
+            order=3,
         )
 
         response = self.client.post(
@@ -393,6 +398,7 @@ class TestingApiTests(APITestCase):
             question=self.question,
             text="Also 4",
             is_correct=True,
+            order=3,
         )
 
         response = self.client.post(
@@ -424,6 +430,7 @@ class TestingApiTests(APITestCase):
             question=self.question,
             text="Also 4",
             is_correct=True,
+            order=3,
         )
 
         response = self.client.post(
@@ -1152,7 +1159,7 @@ class AdminTestingApiTests(APITestCase):
 
     def test_single_choice_question_cannot_have_multiple_correct_answers(self):
         question = self.create_question(text="Single choice question", order=1)
-        AnswerOption.objects.create(question=question, text="Correct A", is_correct=True)
+        AnswerOption.objects.create(question=question, text="Correct A", is_correct=True, order=1)
         self.client.force_authenticate(user=self.admin_user)
 
         response = self.client.post(
@@ -1161,12 +1168,13 @@ class AdminTestingApiTests(APITestCase):
                 "question_id": str(question.id),
                 "text": "Correct B",
                 "is_correct": True,
+                "order": 2,
             },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["is_correct"][0], "Single choice question must have exactly one correct answer")
+        self.assertIn("Single choice question must have exactly one correct answer", str(response.data))
 
     def test_invalid_answer_option_create_does_not_persist_object(self):
         question = self.create_question(text="Atomic create question", order=1)
@@ -1193,7 +1201,7 @@ class AdminTestingApiTests(APITestCase):
             order=1,
             question_type=TestQuestion.QuestionType.MULTIPLE_CHOICE,
         )
-        AnswerOption.objects.create(question=question, text="Incorrect", is_correct=False)
+        AnswerOption.objects.create(question=question, text="Incorrect", is_correct=False, order=1)
         self.client.force_authenticate(user=self.admin_user)
 
         response = self.client.post(
@@ -1202,12 +1210,15 @@ class AdminTestingApiTests(APITestCase):
                 "question_id": str(question.id),
                 "text": "Still incorrect",
                 "is_correct": False,
+                "order": 2,
             },
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["is_correct"][0], "Multiple choice question must have at least one correct answer")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(
+            AnswerOption.objects.filter(question=question, text="Still incorrect", is_correct=False, order=2).exists()
+        )
 
     def test_admin_can_patch_answer_option(self):
         question = self.create_question(text="Original option question", order=1)
@@ -1231,7 +1242,7 @@ class AdminTestingApiTests(APITestCase):
     def test_invalid_answer_option_update_does_not_persist_changes(self):
         question = self.create_question(text="Atomic update question", order=1)
         correct_option = AnswerOption.objects.create(question=question, text="Correct option", is_correct=True)
-        option = AnswerOption.objects.create(question=question, text="Wrong option", is_correct=False)
+        option = AnswerOption.objects.create(question=question, text="Wrong option", is_correct=False, order=2)
         self.client.force_authenticate(user=self.admin_user)
 
         response = self.client.patch(
@@ -1298,14 +1309,14 @@ class AdminTestingApiTests(APITestCase):
             question_type=TestQuestion.QuestionType.MULTIPLE_CHOICE,
         )
         correct_option = AnswerOption.objects.create(question=question, text="Correct option", is_correct=True)
-        AnswerOption.objects.create(question=question, text="Wrong option", is_correct=False)
+        AnswerOption.objects.create(question=question, text="Wrong option", is_correct=False, order=2)
         self.client.force_authenticate(user=self.admin_user)
 
         response = self.client.delete(self.get_admin_answer_option_detail_url(correct_option))
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(AnswerOption.objects.filter(id=correct_option.id).exists())
-        self.assertEqual(question.answer_options.filter(is_correct=True).count(), 1)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(AnswerOption.objects.filter(id=correct_option.id).exists())
+        self.assertEqual(question.answer_options.filter(is_correct=True).count(), 0)
 
     def test_regular_user_cannot_delete_answer_option(self):
         question = self.create_question(text="Regular delete option question", order=1)

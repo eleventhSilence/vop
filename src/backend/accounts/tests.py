@@ -866,16 +866,19 @@ class AdminDashboardApiTests(APITestCase):
             question=self.question_one,
             text="Answer 1",
             is_correct=True,
+            order=1,
         )
         AnswerOption.objects.create(
             question=self.question_one,
             text="Answer 2",
             is_correct=False,
+            order=2,
         )
         AnswerOption.objects.create(
             question=self.question_two,
             text="Answer 3",
             is_correct=True,
+            order=1,
         )
 
     def authenticate_with_jwt(self, user):

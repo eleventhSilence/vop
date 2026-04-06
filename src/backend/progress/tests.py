@@ -48,8 +48,12 @@ class ProgressApiTests(APITestCase):
             is_active=True,
         )
         self.question = TestQuestion.objects.create(test=self.test, text="1 + 1 = ?", order=1)
-        self.correct_option = AnswerOption.objects.create(question=self.question, text="2", is_correct=True)
-        self.wrong_option = AnswerOption.objects.create(question=self.question, text="3", is_correct=False)
+        self.correct_option = AnswerOption.objects.create(
+            question=self.question, text="2", is_correct=True, order=1
+        )
+        self.wrong_option = AnswerOption.objects.create(
+            question=self.question, text="3", is_correct=False, order=2
+        )
 
     def test_complete_theory_success(self):
         self.client.force_authenticate(user=self.user)
