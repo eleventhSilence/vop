@@ -218,37 +218,38 @@ export const AdminTestQuestionsPage = () => {
   return (
     <PageSection>
       <div className="card stack-list admin-question-context-card">
-        <p className="eyebrow">Администрирование</p>
-        <h2>Вопросы теста</h2>
-        {testQuery.data ? (
-          <div className="admin-question-context-card__meta">
-            <p className="muted admin-question-context-card__title">{testQuery.data.title}</p>
-            <div className="admin-test-card__meta">
-              <span className="badge badge--default">Курс: {testQuery.data.course_title}</span>
-              <span className="badge badge--neutral">ID теста: {testQuery.data.test_id}</span>
-            </div>
+        <div className="admin-question-context-card__top">
+          <div className="admin-question-context-card__content">
+            <p className="eyebrow">Администрирование</p>
+            <h2 className="admin-question-context-card__heading">Вопросы теста</h2>
+            {testQuery.data ? (
+              <div className="admin-question-context-card__meta">
+                <p className="muted admin-question-context-card__title">{testQuery.data.title}</p>
+                <div className="admin-test-card__meta">
+                  <span className="badge badge--default">Курс: {testQuery.data.course_title}</span>
+                  <span className="badge badge--neutral">ID теста: {testQuery.data.test_id}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="muted">ID теста: {testId ?? 'не определён'}</p>
+            )}
           </div>
-        ) : (
-          <p className="muted">ID теста: {testId ?? 'не определён'}</p>
-        )}
-        <div className="admin-question-context-card__actions">
-          <Link className="admin-question-page__back-chip" to={testId ? `/admin/tests?focusTestId=${testId}` : '/admin/tests'}>
-            ← К списку тестов
-          </Link>
+          <div className="admin-question-context-card__actions">
+            {testId && !testQuery.isLoading && !testQuery.isError ? (
+              <Button className="admin-tests-create-trigger" onClick={() => setCreateOpen(true)}>
+                Создать вопрос
+              </Button>
+            ) : null}
+            <Link className="admin-question-page__back-chip" to={testId ? `/admin/tests?focusTestId=${testId}` : '/admin/tests'}>
+              ← К списку тестов
+            </Link>
+          </div>
         </div>
       </div>
 
       {!testId ? <ErrorState message="Не удалось определить ID теста в маршруте." /> : null}
       {testQuery.isLoading ? <LoadingState message="Загрузка теста..." /> : null}
       {questionsQuery.isLoading ? <LoadingState message="Загрузка вопросов..." /> : null}
-
-      {testId && !testQuery.isLoading && !testQuery.isError ? (
-        <div className="admin-tests-toolbar">
-          <Button className="admin-tests-create-trigger" onClick={() => setCreateOpen(true)}>
-            Создать вопрос
-          </Button>
-        </div>
-      ) : null}
 
       {isCreateOpen ? (
         <div className="overlay" role="presentation" onClick={closeCreate}>
