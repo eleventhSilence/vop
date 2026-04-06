@@ -27,6 +27,7 @@ export const TopNavigation = () => {
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim();
   const initials = [user?.first_name?.[0], user?.last_name?.[0]].filter(Boolean).join('').toUpperCase();
+  const [logoUrl, setLogoUrl] = useState(brandingConfig.logoUrl);
   const [isLogoBroken, setIsLogoBroken] = useState(false);
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export const TopNavigation = () => {
   }, [location.pathname]);
 
   useEffect(() => {
+    setLogoUrl(brandingConfig.logoUrl);
     setIsLogoBroken(false);
   }, [brandingConfig.logoUrl]);
 
@@ -55,10 +57,18 @@ export const TopNavigation = () => {
             </span>
           ) : (
             <img
-              src={brandingConfig.logoUrl}
+              src={logoUrl}
               alt="Логотип Вологодского объединения поисковиков"
               className="brand-link__logo-image"
-              onError={() => setIsLogoBroken(true)}
+              onError={() => {
+                if (logoUrl !== brandingConfig.defaultLogoUrl) {
+                  // Debug note: внешний источник может блокировать загрузку (hotlink/403), переключаемся на локальный fallback-asset.
+                  setLogoUrl(brandingConfig.defaultLogoUrl);
+                  return;
+                }
+
+                setIsLogoBroken(true);
+              }}
             />
           )}
           <span className="brand-link__text">

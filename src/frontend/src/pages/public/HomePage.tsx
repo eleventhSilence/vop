@@ -37,7 +37,11 @@ const learningSteps = [
 export const HomePage = () => {
   const { isAuthenticated, isAdmin } = useAuth();
   const [isHeroImageReady, setIsHeroImageReady] = useState(false);
-  const heroBackgroundUrl = brandingConfig.heroBackgroundUrl;
+  const [heroBackgroundUrl, setHeroBackgroundUrl] = useState(brandingConfig.heroBackgroundUrl);
+
+  useEffect(() => {
+    setHeroBackgroundUrl(brandingConfig.heroBackgroundUrl);
+  }, [brandingConfig.heroBackgroundUrl]);
 
   useEffect(() => {
     let isDisposed = false;
@@ -56,9 +60,17 @@ export const HomePage = () => {
       }
     };
     image.onerror = () => {
-      if (!isDisposed) {
-        setIsHeroImageReady(false);
+      if (isDisposed) {
+        return;
       }
+
+      if (heroBackgroundUrl !== brandingConfig.defaultHeroBackgroundUrl) {
+        // Debug note: внешний хост может блокировать hotlink (403/referer), поэтому переключаемся на локальный fallback.
+        setHeroBackgroundUrl(brandingConfig.defaultHeroBackgroundUrl);
+        return;
+      }
+
+      setIsHeroImageReady(false);
     };
     image.src = heroBackgroundUrl;
 
@@ -150,19 +162,24 @@ export const HomePage = () => {
 
           {isAuthenticated && !isAdmin && (
             <>
-              <Link to="/account/courses" className="button button--primary">
-                Мои курсы
+              <Link to="/courses" className="button button--primary">
+                Открыть каталог
               </Link>
-              <Link to="/account/dashboard" className="button button--secondary">
-                Продолжить обучение
+              <Link to="/account/courses" className="button button--secondary">
+                Мои курсы
               </Link>
             </>
           )}
 
           {isAuthenticated && isAdmin && (
-            <Link to="/admin/dashboard" className="button button--primary">
-              Админ-панель
-            </Link>
+            <>
+              <Link to="/courses" className="button button--primary">
+                Открыть каталог
+              </Link>
+              <Link to="/admin/dashboard" className="button button--secondary">
+                Админ-панель
+              </Link>
+            </>
           )}
         </div>
       </section>
