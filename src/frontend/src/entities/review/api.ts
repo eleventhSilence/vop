@@ -15,6 +15,9 @@ export const reviewsApi = {
   update(reviewId: string, payload: Partial<Pick<ReviewWritePayload, 'comment' | 'rating'>>) {
     return http.patch<Review>(`/reviews/${reviewId}/`, payload).then((response) => response.data);
   },
+  remove(reviewId: string) {
+    return http.delete(`/reviews/${reviewId}/`);
+  },
   adminList(params?: Record<string, string | number>) {
     return http.get<PaginatedResponse<AdminReview>>('/admin/reviews/', { params }).then((response) => response.data);
   },

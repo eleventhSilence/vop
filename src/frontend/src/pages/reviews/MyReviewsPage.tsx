@@ -115,6 +115,9 @@ export const MyReviewsPage = () => {
                 rating={review.rating}
                 status={review.status ?? 'pending'}
                 onUpdated={() => reviewsQuery.refetch()}
+                onDeleted={async () => {
+                  await Promise.all([reviewsQuery.refetch(), coursesQuery.refetch()]);
+                }}
               />
             ))}
           </div>
@@ -130,15 +133,18 @@ const ReviewEditor = ({
   rating,
   status,
   onUpdated,
+  onDeleted,
 }: {
   reviewId: string;
   comment: string;
   rating: number;
   status: ReviewStatus;
   onUpdated: () => void;
+  onDeleted: () => Promise<void>;
 }) => {
   const [draftComment, setDraftComment] = useState(comment);
   const [draftRating, setDraftRating] = useState(rating);
+  const [isDeleted, setIsDeleted] = useState(false);
 
   const updateMutation = useMutation({
     mutationFn: () => reviewsApi.update(reviewId, { comment: draftComment, rating: draftRating }),
@@ -146,6 +152,27 @@ const ReviewEditor = ({
       await onUpdated();
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => reviewsApi.remove(reviewId),
+    onSuccess: async () => {
+      setIsDeleted(true);
+      await onDeleted();
+    },
+  });
+
+  const isBusy = updateMutation.isPending || deleteMutation.isPending;
+
+  const handleDelete = () => {
+    if (!window.confirm('Удалить отзыв? Это действие нельзя отменить.')) {
+      return;
+    }
+    deleteMutation.mutate();
+  };
+
+  if (isDeleted) {
+    return <SuccessState message="Отзыв удалён." />;
+  }
 
   return (
     <form className="list-item form-stack" onSubmit={(event) => {
@@ -162,7 +189,7 @@ const ReviewEditor = ({
         value={draftComment}
         onChange={(event) => setDraftComment(event.target.value)}
         required
-        disabled={updateMutation.isPending}
+        disabled={isBusy}
       />
       <Input
         id={`rating-${reviewId}`}
@@ -173,12 +200,16 @@ const ReviewEditor = ({
         value={draftRating}
         onChange={(event) => setDraftRating(Number(event.target.value))}
         required
-        disabled={updateMutation.isPending}
+        disabled={isBusy}
       />
       {updateMutation.isError ? <ErrorState message={extractApiError(updateMutation.error)} /> : null}
+      {deleteMutation.isError ? <ErrorState message={extractApiError(deleteMutation.error)} /> : null}
       {updateMutation.isSuccess ? <SuccessState message="Изменения сохранены." /> : null}
       <div className="card__row">
-        <Button type="submit" variant="secondary" disabled={updateMutation.isPending}>Сохранить изменения</Button>
+        <Button type="submit" variant="secondary" disabled={isBusy}>Сохранить изменения</Button>
+        <Button type="button" variant="ghost" onClick={handleDelete} disabled={isBusy}>
+          {deleteMutation.isPending ? 'Удаляем...' : 'Удалить отзыв'}
+        </Button>
         <Link to={`/account/reviews/${reviewId}/edit`} className="text-link">Открыть отдельную страницу →</Link>
       </div>
     </form>
