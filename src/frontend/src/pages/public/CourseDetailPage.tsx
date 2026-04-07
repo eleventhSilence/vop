@@ -12,13 +12,6 @@ import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/
 import { PageSection } from '@/shared/ui/PageSection';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
 
-const getContentBlocks = (content: string) => {
-  return content
-    .split(/\n\s*\n/g)
-    .map((block) => block.trim())
-    .filter(Boolean);
-};
-
 const ENROLL_PENDING_TEXT = 'Оформляем запись...';
 const ENROLL_SUCCESS_TEXT = 'Запись оформлена. Курс уже доступен в личном кабинете.';
 
@@ -39,7 +32,7 @@ const toEnrolledCourse = (
 export const CourseDetailPage = () => {
   const { courseId = '' } = useParams();
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
 
   const courseQuery = useQuery({
     queryKey: ['courses', 'detail', courseId],
@@ -106,7 +99,6 @@ export const CourseDetailPage = () => {
   const reviews = reviewsQuery.data ? ensurePaginated(reviewsQuery.data).results : [];
   const myCourses = myCoursesQuery.data ? ensurePaginated(myCoursesQuery.data).results : [];
   const enrolledCourse = myCourses.find((course) => course.course_id === courseId);
-  const contentBlocks = courseQuery.data ? getContentBlocks(courseQuery.data.content) : [];
   const isCourseAvailable = courseQuery.data?.status === 'available';
 
   return (
@@ -133,23 +125,34 @@ export const CourseDetailPage = () => {
             <div className="card public-course-cta-card">
               <div>
                 <p className="eyebrow">Действие по курсу</p>
-                <h3>{enrolledCourse ? 'Можно продолжить обучение' : 'Готово к записи и дальнейшему прохождению'}</h3>
+                <h3>{enrolledCourse ? 'Можно продолжить обучение' : 'Готово к записи'}</h3>
                 <p className="muted">
                   {!isAuthenticated
-                    ? 'Для записи на курс и перехода в учебный контур необходимо авторизоваться.'
+                    ? 'Авторизуйтесь, чтобы записаться и продолжить обучение в личном кабинете.'
+                    : isAdmin
+                      ? 'Вы вошли как администратор. Можно открыть учебную страницу или перейти в панель управления.'
                     : enrolledCourse
-                      ? `Текущий статус: ${formatStatus(enrolledCourse.progress_status)}. Прогресс: ${enrolledCourse.progress_percent}%.`
+                      ? `Статус: ${formatStatus(enrolledCourse.progress_status)}. Прогресс: ${enrolledCourse.progress_percent}%.`
                       : isCourseAvailable
-                        ? 'После записи курс появится в личном кабинете и будет доступен для дальнейшего обучения.'
-                        : 'Курс временно недоступен для новой записи, но его описание и структура уже открыты для просмотра.'}
+                        ? 'После записи курс появится в разделе «Мои курсы».'
+                        : 'Сейчас запись на курс недоступна.'}
                 </p>
               </div>
 
-              <div className="hero-card__actions">
+              <div className="hero-card__actions public-course-cta-card__actions">
                 {!isAuthenticated ? (
-                  <Link to="/login" className="button button--primary">
+                  <Link to="/login" state={{ from: { pathname: `/courses/${courseId}` } }} className="button button--primary">
                     Войти, чтобы записаться
                   </Link>
+                ) : isAdmin ? (
+                  <>
+                    <Link to={`/account/courses/${courseId}`} className="button button--primary">
+                      Перейти к обучению
+                    </Link>
+                    <Link to="/admin/courses" className="button button--ghost">
+                      Перейти в админку
+                    </Link>
+                  </>
                 ) : enrollMutation.isSuccess ? (
                   <>
                     <Link to={`/account/courses/${courseId}`} className="button button--primary">
@@ -160,14 +163,9 @@ export const CourseDetailPage = () => {
                     </Link>
                   </>
                 ) : enrolledCourse ? (
-                  <>
-                    <Link to={`/account/courses/${courseId}`} className="button button--primary">
-                      Перейти к обучению
-                    </Link>
-                    <Link to={`/account/courses/${courseId}/test`} className="button button--ghost">
-                      Открыть тестирование
-                    </Link>
-                  </>
+                  <Link to={`/account/courses/${courseId}`} className="button button--primary">
+                    Перейти к обучению
+                  </Link>
                 ) : (
                   <Button onClick={() => enrollMutation.mutate()} disabled={enrollMutation.isPending || !isCourseAvailable}>
                     {enrollMutation.isPending ? ENROLL_PENDING_TEXT : 'Записаться на курс'}
@@ -178,25 +176,6 @@ export const CourseDetailPage = () => {
               {enrollMutation.isError ? <ErrorState message={`Не удалось оформить запись: ${extractApiError(enrollMutation.error)}`} /> : null}
               {enrollMutation.isSuccess ? <SuccessState message={ENROLL_SUCCESS_TEXT} /> : null}
             </div>
-
-            <section className="public-course-content">
-              <div className="section-header">
-                <div>
-                  <p className="eyebrow">Содержание курса</p>
-                  <h3>Описание и материалы</h3>
-                </div>
-              </div>
-
-              {contentBlocks.length ? (
-                <div className="prose-block public-prose-stack">
-                  {contentBlocks.map((block) => (
-                    <p key={block}>{block}</p>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="Подробное содержание курса пока не заполнено." />
-              )}
-            </section>
           </article>
 
           <aside className="stack-list public-course-sidebar">
@@ -214,10 +193,6 @@ export const CourseDetailPage = () => {
                 <div>
                   <dt>Отзывы</dt>
                   <dd>{reviews.length}</dd>
-                </div>
-                <div>
-                  <dt>Формат доступа</dt>
-                  <dd>Открытое описание + обучение после записи</dd>
                 </div>
               </dl>
             </section>
