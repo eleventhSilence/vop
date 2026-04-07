@@ -422,6 +422,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 .public-course-link-card:hover {
+  text-decoration: none;
   border-color: #cfdcf0;
   box-shadow: 0 12px 24px rgba(20, 36, 66, 0.08);
   transform: translateY(-1px);
