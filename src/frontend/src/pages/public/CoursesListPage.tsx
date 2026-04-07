@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
+import type { KeyboardEvent } from 'react';
 import { coursesApi } from '@/entities/course/api';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
-import { StatusBadge } from '@/shared/ui/StatusBadge';
 
 const PAGE_SIZE = 6;
 
@@ -27,6 +27,13 @@ export const CoursesListPage = () => {
     setSearchParams(page <= 1 ? {} : { page: String(page) });
   };
 
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLAnchorElement>) => {
+    if (event.key === ' ') {
+      event.preventDefault();
+      event.currentTarget.click();
+    }
+  };
+
   return (
     <PageSection className="public-page-stack">
       <div className="section-header public-section-header">
@@ -34,8 +41,7 @@ export const CoursesListPage = () => {
           <p className="eyebrow">Каталог курсов</p>
           <h2>Открытые учебные программы платформы</h2>
           <p className="muted public-section-header__text">
-            Страница использует существующий публичный endpoint <code>/api/courses/</code> и показывает курсы как основную
-            точку входа в образовательную часть системы.
+            Выберите программу, чтобы узнать подробнее о формате обучения, содержании и дальнейших шагах.
           </p>
         </div>
         <div className="card public-summary-card">
@@ -50,22 +56,23 @@ export const CoursesListPage = () => {
         <EmptyState message="Пока в каталоге нет курсов. Когда материалы появятся, они будут показаны здесь." />
       ) : null}
 
-      <div className="card-grid public-courses-grid">
+      <div className="public-courses-list">
         {courses.map((course) => (
-          <article key={course.course_id} className="card public-course-card">
-            <div className="stack-list public-course-card__content">
-              <div className="card__row public-course-card__header">
+          <article key={course.course_id}>
+            <Link
+              to={`/courses/${course.course_id}`}
+              className="public-course-link-card"
+              tabIndex={0}
+              onKeyDown={handleCardKeyDown}
+            >
+              <div className="stack-list public-course-card__content">
                 <h3>{course.title}</h3>
-                <StatusBadge status="available" label="Открытый курс" tone="default" />
+                <p className="muted">{course.short_description || 'Описание курса будет добавлено позднее.'}</p>
               </div>
-              <p className="muted">{course.short_description || 'Описание курса будет добавлено позднее.'}</p>
-            </div>
-
-            <div className="public-course-card__footer">
-              <Link to={`/courses/${course.course_id}`} className="button button--secondary">
-                Перейти к курсу
-              </Link>
-            </div>
+              <div className="public-course-card__footer" aria-hidden>
+                <span>Подробнее →</span>
+              </div>
+            </Link>
           </article>
         ))}
       </div>
