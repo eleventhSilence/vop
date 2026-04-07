@@ -404,17 +404,47 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   display: block;
   font-size: 2rem;
 }
-.public-courses-grid {
-  align-items: stretch;
+.public-courses-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+}
+.public-course-link-card {
+  display: grid;
+  gap: 0.9rem;
+  min-height: 100%;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid #dde7f2;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #fbfdff 0%, #f6f9ff 100%);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.public-course-link-card:hover {
+  text-decoration: none;
+  border-color: #cfdcf0;
+  box-shadow: 0 12px 24px rgba(20, 36, 66, 0.08);
+  transform: translateY(-1px);
+}
+.public-course-link-card:focus-visible {
+  outline: 2px solid #6b8df8;
+  outline-offset: 2px;
+  border-color: #8ca8fa;
+  box-shadow: 0 0 0 3px rgba(107, 141, 248, 0.2);
 }
 .public-course-card__content {
   min-height: 100%;
 }
-.public-course-card__header {
-  align-items: center;
-}
 .public-course-card__footer {
   margin-top: auto;
+  color: #3f5f9f;
+  font-weight: 600;
+}
+.public-course-card__footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 .public-pagination-card,
 .public-cta-card {
