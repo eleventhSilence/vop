@@ -466,14 +466,16 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   gap: 1rem;
 }
 .public-course-cta-card {
-  background: #f8fbff;
+  margin-top: 0.5rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e2eaf4;
+  border-radius: 0.95rem;
+  background: #fbfdff;
 }
-.public-prose-stack {
-  display: grid;
-  gap: 1rem;
-}
-.public-prose-stack p {
-  margin: 0;
+.public-course-cta-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 .public-review-item p {
   margin-bottom: 0;
