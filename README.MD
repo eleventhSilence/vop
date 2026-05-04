@@ -66,6 +66,29 @@ cd src/backend
 ../../venv/bin/python manage.py migrate
 ```
 
+### Настройка backend БД: SQLite ↔ PostgreSQL
+
+В `src/backend/vop/settings.py` настроено переключение БД через env-переменные:
+
+- если `DB_NAME` задана, используется PostgreSQL;
+- если `DB_NAME` не задана, используется fallback на SQLite (`src/backend/db.sqlite3`).
+
+Пример безопасного шаблона находится в `src/backend/.env.example`.
+
+Локальный запуск с PostgreSQL (пример):
+
+```bash
+cd src/backend
+export DB_ENGINE=django.db.backends.postgresql
+export DB_NAME=vop
+export DB_USER=vop_user
+export DB_PASSWORD=change_me
+export DB_HOST=127.0.0.1
+export DB_PORT=5432
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8000
+```
+
 Альтернатива через `make` из корня репозитория:
 
 ```bash
