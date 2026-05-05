@@ -1,0 +1,29 @@
+{
+	admin off
+}
+
+http://localhost, http://127.0.0.1 {
+	redir https://localhost{uri} 308
+}
+
+https://localhost {
+	tls internal
+	encode gzip zstd
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000 {
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+
+	handle_path /api/static/* {
+		root A:\Works\vop\src\backend\staticfiles
+		file_server
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:5173
+	}
+}

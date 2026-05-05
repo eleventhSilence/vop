@@ -8,7 +8,7 @@ __pycache__
 /backup
 env
 env.prod
-src/backend/static/
+src/backend/staticfiles/
 *src/backend/media/knowledgebase_documents/
 *src/backend/media/product_cards/
 # Nuxt dev/build outputs

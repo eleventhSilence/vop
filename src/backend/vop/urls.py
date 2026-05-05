@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
+from django.conf import settings
 
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -15,7 +16,7 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=[permissions.AllowAny],
-    url="http://127.0.0.1:8000",  # <- важно
+    url=getattr(settings, "SWAGGER_API_URL", None),
 )
 
 urlpatterns = [

@@ -105,7 +105,7 @@ cd src/backend
 ../../venv/bin/python manage.py runserver 127.0.0.1:8000
 ```
 
-Backend будет доступен по адресу `http://127.0.0.1:8000`.
+Backend будет доступен по адресу `http://127.0.0.1:8000` (или через HTTPS proxy: `https://localhost`).
 
 Альтернатива через `make` из корня репозитория:
 
@@ -159,7 +159,7 @@ cd src/frontend
 npm run dev
 ```
 
-По умолчанию Vite использует proxy `/api` → `http://127.0.0.1:8000`.
+По умолчанию Vite использует proxy `/api` → `http://127.0.0.1:8000` для чистого dev-режима без TLS.
 
 Или через `make` из корня репозитория:
 
@@ -262,3 +262,77 @@ make frontend-build
 - Frontend опирается на существующие backend endpoint-ы из `/api/...`
 - Course lifecycle в admin UI должен использовать `status`, а не delete
 - В backend включена пагинация DRF (`PAGE_SIZE = 10`), поэтому frontend учитывает paginated responses
+
+
+## HTTPS demo-контур (Caddy + локальный TLS)
+
+Для P0 выбран **Caddy**: он проще для локального TLS (`tls internal`), автоматически выпускает локальный сертификат и не требует ручной генерации ключей/сертификатов как в Nginx.
+
+Конфиг: `infra/caddy/Caddyfile`.
+
+### 1) Подготовка backend env для HTTPS режима
+
+Пример переменных для demo-режима:
+
+```bash
+cd src/backend
+export DJANGO_DEBUG=False
+export DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+export DJANGO_CSRF_TRUSTED_ORIGINS=https://localhost
+export DJANGO_SECURE_SSL_REDIRECT=False
+export DJANGO_SESSION_COOKIE_SECURE=True
+export DJANGO_CSRF_COOKIE_SECURE=True
+export DJANGO_USE_X_FORWARDED_HOST=True
+export DJANGO_SWAGGER_API_URL=https://localhost
+```
+
+> `DJANGO_SECURE_SSL_REDIRECT` можно включать (`True`) когда весь трафик гарантированно идет только через proxy.
+
+### 2) Запуск PostgreSQL
+
+Поднимите локальный PostgreSQL и экспортируйте `DB_*` переменные (пример в `src/backend/.env.example`).
+
+### 3) Запуск backend
+
+```bash
+cd src/backend
+python manage.py migrate
+python manage.py runserver 127.0.0.1:8000
+```
+
+### 4) Запуск frontend
+
+Вариант для demo через общий HTTPS host (рекомендовано):
+
+```bash
+cd src/frontend
+npm install
+VITE_API_BASE_URL=/api npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+### 5) Запуск Caddy reverse proxy
+
+Установите Caddy (https://caddyserver.com/docs/install), затем:
+
+```bash
+cd /workspace/vop
+caddy run --config infra/caddy/Caddyfile
+```
+
+Открыть: `https://localhost`.
+
+### 6) Проверка доверия сертификату
+
+При `tls internal` Caddy использует локальный CA. Для устранения browser warning установите root CA в trust store:
+
+```bash
+caddy trust
+```
+
+Если команда требует повышенных прав ОС, выполните её в терминале администратора.
+
+### Известные ограничения self-signed / local CA
+
+- на новом ПК/профиле браузера может быть предупреждение до установки trust;
+- `https://localhost` и `https://127.0.0.1` — разные origin, используйте один стабильный хост;
+- локальный сертификат не подходит для публичного production-трафика.
