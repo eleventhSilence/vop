@@ -97,6 +97,7 @@ export const AdminCoursesPage = () => {
     },
     onError: (error) => setToast({ type: 'error', message: extractApiError(error) }),
   });
+  const mediaFiles = Array.isArray(mediaQuery.data) ? mediaQuery.data : [];
   const formErrorMessage = useMemo(() => {
     if (!Object.keys(validationErrors).length) {
       return null;
@@ -372,7 +373,7 @@ export const AdminCoursesPage = () => {
                       e.currentTarget.value = '';
                     }}
                   />
-                  {mediaQuery.data?.map((item: CourseMedia) => (
+                  {mediaFiles.map((item: CourseMedia) => (
                     <div key={item.id} className="list-item">
                       <div><strong>{item.title}</strong> ({item.media_type}) — {item.original_name} — {item.slug}</div>
                       <div className="actions-row">

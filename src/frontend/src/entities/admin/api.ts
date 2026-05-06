@@ -77,7 +77,18 @@ export const adminApi = {
     return http.delete(`/admin/courses/${courseId}/`);
   },
   courseMedia(courseId: string) {
-    return http.get<CourseMedia[]>(`/admin/courses/${courseId}/media/`).then((r)=>r.data);
+    return http
+      .get<CourseMedia[] | PaginatedResponse<CourseMedia>>(`/admin/courses/${courseId}/media/`)
+      .then((response): CourseMedia[] => {
+        const payload = response.data;
+        if (Array.isArray(payload)) {
+          return payload;
+        }
+        if (payload && Array.isArray(payload.results)) {
+          return payload.results;
+        }
+        return [];
+      });
   },
   uploadCourseMedia(courseId: string, payload: { file: File; title?: string }) {
     const formData = new FormData();
