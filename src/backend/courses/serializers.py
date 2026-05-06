@@ -57,6 +57,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
 class AdminCourseBaseSerializer(serializers.ModelSerializer):
     course_id = serializers.UUIDField(source="id", read_only=True)
     description = serializers.CharField(source="content")
+    media = CourseMediaSerializer(many=True, read_only=True)
     status = serializers.ChoiceField(
         choices=Course._meta.get_field("status").choices,
         help_text="Use status to manage course availability in admin API. Physical deletion is not supported.",
@@ -74,7 +75,7 @@ class AdminCourseBaseSerializer(serializers.ModelSerializer):
             "updated_at",
             "media",
         )
-        read_only_fields = ("course_id", "created_at", "updated_at")
+        read_only_fields = ("course_id", "created_at", "updated_at", "media")
 
 
 class AdminCourseListSerializer(AdminCourseBaseSerializer):
@@ -87,7 +88,7 @@ class AdminCourseDetailSerializer(AdminCourseBaseSerializer):
 
 class AdminCourseWriteSerializer(AdminCourseBaseSerializer):
     class Meta(AdminCourseBaseSerializer.Meta):
-        read_only_fields = ("course_id", "created_at", "updated_at")
+        read_only_fields = ("course_id", "created_at", "updated_at", "media")
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
@@ -138,5 +139,4 @@ class MyCourseSerializer(serializers.ModelSerializer):
 
     def get_is_test_passed(self, obj):
         return self._progress_payload(obj)["is_test_passed"]
-
 

@@ -311,6 +311,24 @@ class AdminCoursesApiTests(APITestCase):
         self.assertEqual(created_course.status, CourseStatus.AVAILABLE)
         self.assertEqual(response.data["course_id"], str(created_course.id))
         self.assertEqual(response.data["description"], created_course.content)
+        self.assertEqual(response.data["media"], [])
+
+    def test_admin_can_create_course_without_media_payload(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_list_url(),
+            {
+                "title": "Course without media payload",
+                "short_description": "Short admin description",
+                "description": "Detailed admin description",
+                "status": CourseStatus.AVAILABLE,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["media"], [])
 
     def test_invalid_data_returns_400_on_course_create(self):
         self.client.force_authenticate(user=self.admin_user)
@@ -377,6 +395,19 @@ class AdminCoursesApiTests(APITestCase):
         self.assertEqual(self.course.short_description, original_short_description)
         self.assertEqual(self.course.status, original_status)
         self.assertEqual(self.course.content, "Full description")
+
+    def test_patch_course_without_media_payload_is_successful(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_detail_url(self.course),
+            {"title": "Patched without media"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["title"], "Patched without media")
+        self.assertEqual(response.data["media"], [])
 
     def test_nonexistent_course_returns_404(self):
         self.client.force_authenticate(user=self.admin_user)
