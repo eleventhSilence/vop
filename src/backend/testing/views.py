@@ -20,6 +20,7 @@ from testing.serializers import (
     CourseTestInfoSerializer,
     EmptyCourseTestInfoSerializer,
     TestAttemptSerializer,
+    TestAttemptDetailSerializer,
     TestSubmitResultSerializer,
     TestSubmitSerializer,
     create_attempt_with_answers,
@@ -116,6 +117,15 @@ class TestAttemptHistoryView(generics.ListAPIView):
     def get_queryset(self):
         test = get_object_or_404(CourseTest, id=self.kwargs["test_id"])
         return TestAttempt.objects.filter(user=self.request.user, test=test).order_by("-created_at", "id")
+
+
+class TestAttemptDetailView(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = TestAttemptDetailSerializer
+    lookup_url_kwarg = "attempt_id"
+
+    def get_queryset(self):
+        return TestAttempt.objects.filter(user=self.request.user).select_related("test")
 
 
 class AdminCourseTestListCreateView(generics.ListCreateAPIView):

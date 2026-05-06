@@ -38,3 +38,30 @@ export type TestSubmitResult = {
   attempt_number: number;
   remaining_attempts: number;
 };
+
+export type AttemptOptionStatus = 'success' | 'error';
+
+export type TestAttemptDetailOption = {
+  option_id: string;
+  text: string;
+  status: AttemptOptionStatus;
+};
+
+export type TestAttemptDetailQuestion = {
+  question_id: string;
+  text: string;
+  order: number;
+  question_type: TestQuestionType;
+  result: AttemptOptionStatus;
+  selected_options: TestAttemptDetailOption[];
+};
+
+export type TestAttemptDetail = {
+  attempt_id: string;
+  created_at: string;
+  score: number;
+  percent: number;
+  is_passed: boolean;
+  attempt_number: number;
+  questions: TestAttemptDetailQuestion[];
+};
