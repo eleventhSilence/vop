@@ -64,7 +64,20 @@ class CourseMediaType(models.TextChoices):
 
 def course_media_upload_to(instance: "CourseMedia", filename: str) -> str:
     ext = Path(filename).suffix.lower()
-    return f"courses/{instance.course_id}/{uuid.uuid4().hex}{ext}"
+    source_name = instance.title.strip() if instance.title else ""
+    if not source_name:
+        source_name = Path(instance.original_name or filename).stem
+    base_name = slugify(source_name) or "media-file"
+    candidate = f"{base_name}{ext}"
+    directory = f"courses/{instance.course_id}"
+    storage = instance.file.storage
+    path = f"{directory}/{candidate}"
+    index = 2
+    while storage.exists(path):
+        candidate = f"{base_name}-{index}{ext}"
+        path = f"{directory}/{candidate}"
+        index += 1
+    return path
 
 
 class CourseMedia(models.Model):
@@ -99,4 +112,3 @@ class CourseMedia(models.Model):
         super().delete(*args, **kwargs)
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
-

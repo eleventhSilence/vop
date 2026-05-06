@@ -18,7 +18,12 @@ const renderInline = (text: string) => {
     if (part.startsWith('**') && part.endsWith('**')) return <strong key={i}>{part.slice(2, -2)}</strong>;
     if (part.startsWith('*') && part.endsWith('*')) return <em key={i}>{part.slice(1, -1)}</em>;
     const m = part.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
-    if (m) return <a key={i} href={m[2]} target="_blank" rel="noreferrer">{m[1]}</a>;
+    if (m) {
+      if (m[2].startsWith('media:')) {
+        return <span key={i} className="muted">Материал недоступен</span>;
+      }
+      return <a key={i} href={m[2]} target="_blank" rel="noreferrer">{m[1]}</a>;
+    }
     return <Fragment key={i}>{part}</Fragment>;
   });
 };

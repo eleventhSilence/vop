@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Account, AccountRole, AccountStatus
-from courses.models import Course, CourseEnrollment, CourseStatus
+from courses.models import Course, CourseEnrollment, CourseMedia, CourseStatus
 from testing.models import CourseTest, TestAttempt
 
 
@@ -508,3 +508,26 @@ class AdminCourseMediaApiTests(APITestCase):
         file = SimpleUploadedFile("image.jpg", b"filecontent", content_type="image/jpeg")
         response = self.client.post(reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}), {"file": file}, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_uploaded_file_name_is_human_readable_and_unique(self):
+        self.client.force_authenticate(user=self.admin_user)
+        first_file = SimpleUploadedFile("sample 5s.mp4", b"filecontent", content_type="video/mp4")
+        second_file = SimpleUploadedFile("sample 5s.mp4", b"filecontent", content_type="video/mp4")
+
+        first_response = self.client.post(
+            reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}),
+            {"file": first_file, "title": "Sample 5s"},
+            format="multipart",
+        )
+        second_response = self.client.post(
+            reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}),
+            {"file": second_file, "title": "Sample 5s"},
+            format="multipart",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_201_CREATED)
+        first = CourseMedia.objects.get(id=first_response.data["id"])
+        second = CourseMedia.objects.get(id=second_response.data["id"])
+        self.assertIn(f"courses/{self.course.id}/sample-5s.mp4", first.file.name)
+        self.assertIn(f"courses/{self.course.id}/sample-5s-2.mp4", second.file.name)
