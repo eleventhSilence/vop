@@ -288,6 +288,7 @@ export const AdminCoursesPage = () => {
                   rows={8}
                 />
               </label>
+              <p className="muted">Файлы курса можно будет добавить после создания курса в режиме редактирования.</p>
               <label className="field" htmlFor="admin-course-create-status">
                 <span className="field__label">Статус</span>
                 <select
@@ -300,21 +301,6 @@ export const AdminCoursesPage = () => {
                   <option value="available">available</option>
                 </select>
               </label>
-
-              <section className="card stack-list">
-                <h4>Файлы курса</h4>
-                <Input id="media-title" label="Название файла (опционально)" value={mediaTitle} onChange={(e)=>setMediaTitle(e.target.value)} />
-                <input type="file" onChange={(e)=>{const file=e.target.files?.[0]; if(file){uploadMediaMutation.mutate({file, title: mediaTitle || undefined}); e.currentTarget.value='';}}} />
-                {mediaQuery.data?.map((item: CourseMedia) => (
-                  <div key={item.id} className="list-item">
-                    <div><strong>{item.title}</strong> ({item.media_type}) — {item.original_name} — {item.slug}</div>
-                    <div className="actions-row">
-                      <Button type="button" variant="ghost" onClick={()=>navigator.clipboard.writeText(item.markdown_image_snippet ?? item.markdown_embed_snippet)}>Скопировать вставку</Button>
-                      <Button type="button" variant="ghost" onClick={()=>window.confirm('Удалить файл?') && deleteMediaMutation.mutate(item.id)}>Удалить</Button>
-                    </div>
-                  </div>
-                ))}
-              </section>
               <div className="actions-row">
                 <Button variant="ghost" type="button" onClick={closeCreateForm}>
                   Отмена
@@ -370,6 +356,33 @@ export const AdminCoursesPage = () => {
               </label>
 
               <p className="muted">Markdown поддерживает заголовки, списки, ссылки. HTML запрещён. Изображение: <code>![Описание](media:slug)</code>. Видео/документ: <code>{{ media:slug }}</code>. Сначала загрузите файл в блоке «Файлы курса».</p>
+              {editCourseId ? (
+                <section className="card stack-list">
+                  <h4>Файлы курса</h4>
+                  <Input id="media-title" label="Название файла (опционально)" value={mediaTitle} onChange={(e) => setMediaTitle(e.target.value)} />
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!editCourseId || !file) {
+                        e.currentTarget.value = '';
+                        return;
+                      }
+                      uploadMediaMutation.mutate({ file, title: mediaTitle || undefined });
+                      e.currentTarget.value = '';
+                    }}
+                  />
+                  {mediaQuery.data?.map((item: CourseMedia) => (
+                    <div key={item.id} className="list-item">
+                      <div><strong>{item.title}</strong> ({item.media_type}) — {item.original_name} — {item.slug}</div>
+                      <div className="actions-row">
+                        <Button type="button" variant="ghost" onClick={() => navigator.clipboard.writeText(item.markdown_image_snippet ?? item.markdown_embed_snippet)}>Скопировать вставку</Button>
+                        <Button type="button" variant="ghost" onClick={() => window.confirm('Удалить файл?') && deleteMediaMutation.mutate(item.id)}>Удалить</Button>
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              ) : null}
               <label className="field" htmlFor="admin-course-edit-status">
                 <span className="field__label">Статус</span>
                 <select
