@@ -502,6 +502,57 @@ class TestingApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "Theory must be completed before testing")
 
+    def test_get_attempt_detail_for_owner(self):
+        attempt = TestAttempt.objects.create(
+            user=self.user,
+            test=self.test,
+            score=1,
+            is_passed=False,
+            attempt_number=1,
+        )
+        UserAnswer.objects.create(attempt=attempt, question=self.question, selected_option=self.wrong_option)
+        UserAnswer.objects.create(attempt=attempt, question=self.second_question, selected_option=self.second_correct_option)
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse("test-attempt-detail", kwargs={"attempt_id": attempt.id}))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["attempt_id"], str(attempt.id))
+        self.assertEqual(response.data["percent"], 50.0)
+        self.assertEqual(len(response.data["questions"]), 2)
+        first_question = response.data["questions"][0]
+        self.assertEqual(first_question["result"], "error")
+        self.assertEqual(len(first_question["selected_options"]), 1)
+        self.assertEqual(first_question["selected_options"][0]["status"], "error")
+        self.assertNotIn("is_correct", first_question["selected_options"][0])
+
+    def test_get_attempt_detail_denied_for_foreign_user(self):
+        attempt = TestAttempt.objects.create(
+            user=self.other_user,
+            test=self.test,
+            score=0,
+            is_passed=False,
+            attempt_number=1,
+        )
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(reverse("test-attempt-detail", kwargs={"attempt_id": attempt.id}))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_attempt_detail_requires_auth(self):
+        attempt = TestAttempt.objects.create(
+            user=self.user,
+            test=self.test,
+            score=1,
+            is_passed=False,
+            attempt_number=1,
+        )
+
+        response = self.client.get(reverse("test-attempt-detail", kwargs={"attempt_id": attempt.id}))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class AdminTestingApiTests(APITestCase):
     def setUp(self):

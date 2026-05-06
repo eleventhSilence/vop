@@ -349,6 +349,72 @@ class TestAttemptSerializer(serializers.ModelSerializer):
         fields = ("attempt_id", "score", "is_passed", "attempt_number", "created_at")
 
 
+class AttemptDetailOptionSerializer(serializers.Serializer):
+    option_id = serializers.UUIDField(source="selected_option.id", read_only=True)
+    text = serializers.CharField(source="selected_option.text", read_only=True)
+    status = serializers.SerializerMethodField()
+
+    def get_status(self, obj):
+        return "success" if obj.selected_option.is_correct else "error"
+
+
+class AttemptDetailQuestionSerializer(serializers.Serializer):
+    question_id = serializers.UUIDField(source="id", read_only=True)
+    text = serializers.CharField(read_only=True)
+    order = serializers.IntegerField(read_only=True)
+    question_type = serializers.CharField(read_only=True)
+    result = serializers.SerializerMethodField()
+    selected_options = serializers.SerializerMethodField()
+
+    def get_selected_options(self, obj):
+        answers_map = self.context.get("answers_map", {})
+        selected_answers = answers_map.get(obj.id, [])
+        return AttemptDetailOptionSerializer(selected_answers, many=True).data
+
+    def get_result(self, obj):
+        correct_option_ids_map = self.context.get("correct_option_ids_map", {})
+        answers_map = self.context.get("answers_map", {})
+        selected_ids = {answer.selected_option_id for answer in answers_map.get(obj.id, [])}
+        return "success" if selected_ids == correct_option_ids_map.get(obj.id, set()) else "error"
+
+
+class TestAttemptDetailSerializer(serializers.ModelSerializer):
+    attempt_id = serializers.UUIDField(source="id", read_only=True)
+    percent = serializers.SerializerMethodField()
+    questions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestAttempt
+        fields = ("attempt_id", "created_at", "score", "percent", "is_passed", "attempt_number", "questions")
+
+    def get_percent(self, obj):
+        total_questions = obj.test.questions.count()
+        if total_questions == 0:
+            return 0
+        return round((obj.score / total_questions) * 100, 2)
+
+    def get_questions(self, obj):
+        questions = list(obj.test.questions.prefetch_related("answer_options").order_by("order", "created_at", "id"))
+        user_answers = (
+            obj.answers.select_related("selected_option", "question")
+            .order_by("question__order", "selected_option__order", "selected_option__created_at", "selected_option_id")
+        )
+        answers_map = {}
+        for answer in user_answers:
+            answers_map.setdefault(answer.question_id, []).append(answer)
+
+        correct_option_ids_map = {
+            question.id: set(question.answer_options.filter(is_correct=True).values_list("id", flat=True))
+            for question in questions
+        }
+        serializer = AttemptDetailQuestionSerializer(
+            questions,
+            many=True,
+            context={"answers_map": answers_map, "correct_option_ids_map": correct_option_ids_map},
+        )
+        return serializer.data
+
+
 def _normalize_selected_option_ids(item: dict, *, question: TestQuestion) -> list:
     if question.question_type == TestQuestion.QuestionType.SINGLE_CHOICE:
         if "selected_option" not in item or "selected_option_ids" in item:
