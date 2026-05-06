@@ -1,4 +1,5 @@
 import { http } from '@/shared/api/http';
+import type { CourseMedia } from '@/entities/course/types';
 import type {
   AdminAnswerOption,
   AdminAnswerOptionCreatePayload,
@@ -74,6 +75,18 @@ export const adminApi = {
   },
   deleteCourse(courseId: string) {
     return http.delete(`/admin/courses/${courseId}/`);
+  },
+  courseMedia(courseId: string) {
+    return http.get<CourseMedia[]>(`/admin/courses/${courseId}/media/`).then((r)=>r.data);
+  },
+  uploadCourseMedia(courseId: string, payload: { file: File; title?: string }) {
+    const formData = new FormData();
+    formData.append('file', payload.file);
+    if (payload.title) formData.append('title', payload.title);
+    return http.post<CourseMedia>(`/admin/courses/${courseId}/media/`, formData, { headers: {'Content-Type': 'multipart/form-data'} }).then((r)=>r.data);
+  },
+  deleteCourseMedia(courseId: string, mediaId: string) {
+    return http.delete(`/admin/courses/${courseId}/media/${mediaId}/`);
   },
   users(params?: Record<string, string | number>) {
     return http.get<PaginatedResponse<AdminUser>>('/admin/users/', { params }).then((response) => response.data);

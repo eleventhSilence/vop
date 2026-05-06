@@ -5,6 +5,7 @@ import type { AdminCourseCreatePayload, AdminCourseStatus } from '@/entities/adm
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
+import type { CourseMedia } from '@/entities/course/types';
 import { EmptyState, LoadingState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
@@ -38,6 +39,7 @@ export const AdminCoursesPage = () => {
   const [editFormValues, setEditFormValues] = useState<CreateCourseFormValues>(defaultFormValues);
   const [editValidationErrors, setEditValidationErrors] = useState<ValidationErrors>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [mediaTitle, setMediaTitle] = useState('');
 
   const coursesQuery = useQuery({ queryKey: ['admin', 'courses'], queryFn: () => adminApi.courses() });
   const courses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
@@ -70,6 +72,31 @@ export const AdminCoursesPage = () => {
     },
   });
 
+
+  const mediaQuery = useQuery({
+    queryKey: ['admin', 'course-media', editCourseId],
+    queryFn: () => adminApi.courseMedia(editCourseId as string),
+    enabled: Boolean(editCourseId),
+  });
+
+  const uploadMediaMutation = useMutation({
+    mutationFn: ({ file, title }: { file: File; title?: string }) => adminApi.uploadCourseMedia(editCourseId as string, { file, title }),
+    onSuccess: async () => {
+      setToast({ type: 'success', message: 'Файл загружен.' });
+      setMediaTitle('');
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'course-media', editCourseId] });
+    },
+    onError: (error) => setToast({ type: 'error', message: extractApiError(error) }),
+  });
+
+  const deleteMediaMutation = useMutation({
+    mutationFn: (mediaId: string) => adminApi.deleteCourseMedia(editCourseId as string, mediaId),
+    onSuccess: async () => {
+      setToast({ type: 'success', message: 'Файл удалён.' });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'course-media', editCourseId] });
+    },
+    onError: (error) => setToast({ type: 'error', message: extractApiError(error) }),
+  });
   const formErrorMessage = useMemo(() => {
     if (!Object.keys(validationErrors).length) {
       return null;
@@ -273,6 +300,21 @@ export const AdminCoursesPage = () => {
                   <option value="available">available</option>
                 </select>
               </label>
+
+              <section className="card stack-list">
+                <h4>Файлы курса</h4>
+                <Input id="media-title" label="Название файла (опционально)" value={mediaTitle} onChange={(e)=>setMediaTitle(e.target.value)} />
+                <input type="file" onChange={(e)=>{const file=e.target.files?.[0]; if(file){uploadMediaMutation.mutate({file, title: mediaTitle || undefined}); e.currentTarget.value='';}}} />
+                {mediaQuery.data?.map((item: CourseMedia) => (
+                  <div key={item.id} className="list-item">
+                    <div><strong>{item.title}</strong> ({item.media_type}) — {item.original_name} — {item.slug}</div>
+                    <div className="actions-row">
+                      <Button type="button" variant="ghost" onClick={()=>navigator.clipboard.writeText(item.markdown_image_snippet ?? item.markdown_embed_snippet)}>Скопировать вставку</Button>
+                      <Button type="button" variant="ghost" onClick={()=>window.confirm('Удалить файл?') && deleteMediaMutation.mutate(item.id)}>Удалить</Button>
+                    </div>
+                  </div>
+                ))}
+              </section>
               <div className="actions-row">
                 <Button variant="ghost" type="button" onClick={closeCreateForm}>
                   Отмена
@@ -326,6 +368,8 @@ export const AdminCoursesPage = () => {
                   rows={8}
                 />
               </label>
+
+              <p className="muted">Markdown поддерживает заголовки, списки, ссылки. HTML запрещён. Изображение: <code>![Описание](media:slug)</code>. Видео/документ: <code>{{ media:slug }}</code>. Сначала загрузите файл в блоке «Файлы курса».</p>
               <label className="field" htmlFor="admin-course-edit-status">
                 <span className="field__label">Статус</span>
                 <select

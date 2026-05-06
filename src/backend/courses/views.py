@@ -1,11 +1,15 @@
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from pathlib import Path
+
 from rest_framework import generics, permissions, status
+from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 
 from drf_yasg.utils import swagger_auto_schema
 
-from courses.models import Course, CourseEnrollment, CourseStatus
+from courses.models import Course, CourseEnrollment, CourseMedia, CourseMediaType, CourseStatus
 from courses.serializers import (
     AdminCourseDetailSerializer,
     AdminCourseListSerializer,
@@ -14,6 +18,7 @@ from courses.serializers import (
     CourseEnrollmentSerializer,
     CourseListSerializer,
     MyCourseSerializer,
+    CourseMediaSerializer,
 )
 from accounts.models import AccountRole
 from reviews.permissions import IsAdminUserRole
@@ -146,3 +151,56 @@ class AdminCourseRetrieveUpdateView(generics.RetrieveUpdateAPIView):
 
         response_serializer = AdminCourseDetailSerializer(instance)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+ALLOWED_BY_TYPE = {
+    "image": {"ext": {"jpg", "jpeg", "png", "webp"}, "types": {"image/jpeg", "image/png", "image/webp"}, "max": 5 * 1024 * 1024},
+    "video": {"ext": {"mp4"}, "types": {"video/mp4"}, "max": 100 * 1024 * 1024},
+    "document": {"ext": {"pdf", "doc", "docx", "ppt", "pptx"}, "types": {"application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation"}, "max": 20 * 1024 * 1024},
+}
+EXT_TO_TYPE = {ext: t for t, conf in ALLOWED_BY_TYPE.items() for ext in conf["ext"]}
+
+
+def _validate_media_file(uploaded_file):
+    ext = Path(uploaded_file.name).suffix.lower().lstrip(".")
+    media_type = EXT_TO_TYPE.get(ext)
+    if not media_type:
+        raise ValidationError({"file": "Неподдерживаемый формат файла."})
+    conf = ALLOWED_BY_TYPE[media_type]
+    content_type = (uploaded_file.content_type or "").lower()
+    if conf["types"] and content_type and content_type not in conf["types"]:
+        raise ValidationError({"file": "Неверный MIME-тип файла для выбранного формата."})
+    if uploaded_file.size > conf["max"]:
+        raise ValidationError({"file": "Размер файла превышает допустимый лимит."})
+    return media_type
+
+
+class AdminCourseMediaListCreateView(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    serializer_class = CourseMediaSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get_course(self):
+        return get_object_or_404(Course, id=self.kwargs["course_id"])
+
+    def get_queryset(self):
+        return CourseMedia.objects.filter(course=self.get_course()).order_by("-uploaded_at")
+
+    def create(self, request, *args, **kwargs):
+        course = self.get_course()
+        uploaded = request.FILES.get("file")
+        if not uploaded:
+            raise ValidationError({"file": "Файл обязателен."})
+        media_type = _validate_media_file(uploaded)
+        title = (request.data.get("title") or Path(uploaded.name).stem).strip()
+        media = CourseMedia.objects.create(course=course, file=uploaded, title=title, media_type=media_type, original_name=uploaded.name, file_size=uploaded.size)
+        serializer = self.get_serializer(media)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class AdminCourseMediaDestroyView(generics.DestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    serializer_class = CourseMediaSerializer
+
+    def get_queryset(self):
+        return CourseMedia.objects.filter(course_id=self.kwargs["course_id"])

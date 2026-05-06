@@ -448,3 +448,32 @@ class AdminCoursesApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.headers["Allow"], "GET, PATCH, HEAD, OPTIONS")
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+import tempfile
+
+
+@override_settings(MEDIA_ROOT=tempfile.gettempdir())
+class AdminCourseMediaApiTests(APITestCase):
+    def setUp(self):
+        self.admin_user = Account.objects.create_user(email="admin-media@example.com", password="StrongPass123", role=AccountRole.ADMIN, is_staff=True)
+        self.user = Account.objects.create_user(email="user-media@example.com", password="StrongPass123")
+        self.course = Course.objects.create(title="Course", short_description="Desc desc desc", content="content")
+
+    def test_admin_can_upload_media(self):
+        self.client.force_authenticate(user=self.admin_user)
+        file = SimpleUploadedFile("image.jpg", b"filecontent", content_type="image/jpeg")
+        response = self.client.post(reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}), {"file": file}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_upload_unsupported_extension_fails(self):
+        self.client.force_authenticate(user=self.admin_user)
+        file = SimpleUploadedFile("bad.exe", b"abc", content_type="application/octet-stream")
+        response = self.client.post(reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}), {"file": file}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_non_admin_cannot_upload(self):
+        self.client.force_authenticate(user=self.user)
+        file = SimpleUploadedFile("image.jpg", b"filecontent", content_type="image/jpeg")
+        response = self.client.post(reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}), {"file": file}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
