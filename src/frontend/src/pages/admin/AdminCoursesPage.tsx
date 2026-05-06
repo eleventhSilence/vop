@@ -355,7 +355,7 @@ export const AdminCoursesPage = () => {
                 />
               </label>
 
-              <p className="muted">Markdown поддерживает заголовки, списки, ссылки. HTML запрещён. Изображение: <code>![Описание](media:slug)</code>. Видео/документ: <code>{{ media:slug }}</code>. Сначала загрузите файл в блоке «Файлы курса».</p>
+              <p className="muted">Markdown поддерживает заголовки, списки, ссылки. HTML запрещён. Изображение: <code>{'![Описание](media:slug)'}</code>. Видео/документ: <code>{'{{ media:slug }}'}</code>. Сначала загрузите файл в блоке «Файлы курса».</p>
               {editCourseId ? (
                 <section className="card stack-list">
                   <h4>Файлы курса</h4>
