@@ -12,7 +12,16 @@ a { color: #3557ff; text-decoration: none; }
 a:hover { text-decoration: underline; }
 code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 
-.app-shell { min-height: 100vh; }
+.app-shell {
+  min-height: 100vh;
+  background-color: #f4f7fb;
+  background-image: var(--app-bg-image, none);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -51,7 +60,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   flex: 0 0 auto;
 }
 .brand-link__logo-image {
-  object-fit: cover;
+  object-fit: contain;
 }
 .brand-link__logo-fallback {
   display: inline-flex;
@@ -363,6 +372,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   background: #fff;
 }
 @media (max-width: 768px) {
+  .app-shell { background-attachment: scroll; }
   .sidebar {
     position: static;
     top: auto;

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth/model/useAuth';
 import { SectionSidebar } from '@/widgets/navigation/SectionSidebar';
 import { TopNavigation } from '@/widgets/navigation/TopNavigation';
+import { platformAssets } from '@/shared/config/platformAssets';
 
 const accountNavItems = [
   { to: '/account/dashboard', label: 'Дашборд', end: true },
@@ -34,7 +36,7 @@ export const AccountLayout = () => {
   const isCollapsed = isScrollCollapsed && !isManualExpanded;
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" style={{ '--app-bg-image': `url(${platformAssets.appBackground})` } as CSSProperties }>
       <TopNavigation />
       <div className="shell-grid">
         <SectionSidebar
