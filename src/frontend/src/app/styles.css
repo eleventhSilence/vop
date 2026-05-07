@@ -315,6 +315,8 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .course-media-image {
   display: block;
   max-width: 80%;
+  max-height: 70vh;
+  width: auto;
   height: auto;
   margin: 12px auto;
   border-radius: 12px;
@@ -324,10 +326,12 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   display: block;
   width: 80%;
   max-width: 720px;
+  max-height: 70vh;
   height: auto;
   border-radius: 12px;
   margin: 12px auto;
   background: #000;
+  object-fit: contain;
 }
 .course-media-document {
   max-width: 100%;
@@ -340,10 +344,12 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 @media (max-width: 768px) {
   .course-media-image {
     max-width: 100%;
+    max-height: 65vh;
   }
   .course-media-video {
     width: 100%;
     max-width: 100%;
+    max-height: 65vh;
   }
 }
 .description-list {
