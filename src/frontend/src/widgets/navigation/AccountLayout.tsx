@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom';
+import { useAuth } from '@/features/auth/model/useAuth';
 import { SectionSidebar } from '@/widgets/navigation/SectionSidebar';
 import { TopNavigation } from '@/widgets/navigation/TopNavigation';
 
@@ -10,11 +11,14 @@ const accountNavItems = [
 ];
 
 export const AccountLayout = () => {
+  const { isAdmin } = useAuth();
+  const navItems = isAdmin ? [...accountNavItems, { to: '/admin/dashboard', label: 'Админ-панель' }] : accountNavItems;
+
   return (
     <div className="app-shell">
       <TopNavigation />
       <div className="shell-grid">
-        <SectionSidebar title="Личный кабинет" items={accountNavItems} />
+        <SectionSidebar title="Личный кабинет" items={navItems} />
         <main className="content">
           <Outlet />
         </main>
