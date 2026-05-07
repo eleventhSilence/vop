@@ -23,6 +23,11 @@ https://localhost {
 		file_server
 	}
 
+	handle_path /media/* {
+		root /workspace/vop/src/backend/media
+		file_server
+	}
+
 	handle {
 		reverse_proxy 127.0.0.1:5173
 	}
