@@ -213,6 +213,12 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .user-menu__logout {
   width: 100%;
   text-align: left;
+  border: 0;
+  box-shadow: none;
+}
+.user-menu__logout:hover,
+.user-menu__logout:focus-visible {
+  background: rgba(235, 226, 205, 0.35);
 }
 .content { padding: 2rem; }
 .content--public { max-width: 1280px; margin: 0 auto; width: 100%; }
