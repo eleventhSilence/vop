@@ -58,3 +58,19 @@ export type AdminCourse = {
   created_at: string;
   updated_at: string;
 };
+
+export type CourseCatalogEnrollmentFilter = 'all' | 'enrolled' | 'not_enrolled';
+
+export type CourseCatalogQueryParams = {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  enrollment?: CourseCatalogEnrollmentFilter;
+};
+
+export type MyCoursesProgressFilter = 'all' | '25' | '50' | '75' | '100';
+
+export type MyCoursesQueryParams = {
+  search?: string;
+  progress?: MyCoursesProgressFilter;
+};

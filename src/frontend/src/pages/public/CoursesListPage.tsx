@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { KeyboardEvent } from 'react';
 import { coursesApi } from '@/entities/course/api';
+import type { CourseCatalogEnrollmentFilter } from '@/entities/course/types';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
@@ -11,12 +13,37 @@ const PAGE_SIZE = 6;
 
 export const CoursesListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [searchInput, setSearchInput] = useState(searchParams.get('search') ?? '');
   const currentPageParam = Number(searchParams.get('page') ?? '1');
   const currentPage = Number.isFinite(currentPageParam) && currentPageParam > 0 ? currentPageParam : 1;
+  const search = (searchParams.get('search') ?? '').trim();
+  const enrollment = ((searchParams.get('enrollment') ?? 'all').trim().toLowerCase() || 'all') as CourseCatalogEnrollmentFilter;
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const trimmedSearch = searchInput.trim();
+      const nextSearch = trimmedSearch ? trimmedSearch : null;
+      const prevSearch = searchParams.get('search');
+      if ((prevSearch ?? null) === nextSearch) {
+        return;
+      }
+
+      const nextParams = new URLSearchParams(searchParams);
+      if (nextSearch) {
+        nextParams.set('search', nextSearch);
+      } else {
+        nextParams.delete('search');
+      }
+      nextParams.delete('page');
+      setSearchParams(nextParams);
+    }, 400);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput, searchParams, setSearchParams]);
 
   const coursesQuery = useQuery({
-    queryKey: ['courses', 'public', currentPage],
-    queryFn: () => coursesApi.list({ page: currentPage, page_size: PAGE_SIZE }),
+    queryKey: ['courses', 'public', currentPage, search, enrollment],
+    queryFn: () => coursesApi.list({ page: currentPage, page_size: PAGE_SIZE, search, enrollment }),
   });
 
   const paginatedCourses = coursesQuery.data ? ensurePaginated(coursesQuery.data) : null;
@@ -24,7 +51,24 @@ export const CoursesListPage = () => {
   const totalPages = paginatedCourses ? Math.max(1, Math.ceil(paginatedCourses.count / PAGE_SIZE)) : 1;
 
   const setPage = (page: number) => {
-    setSearchParams(page <= 1 ? {} : { page: String(page) });
+    const nextParams = new URLSearchParams(searchParams);
+    if (page <= 1) {
+      nextParams.delete('page');
+    } else {
+      nextParams.set('page', String(page));
+    }
+    setSearchParams(nextParams);
+  };
+
+  const setEnrollment = (nextEnrollment: CourseCatalogEnrollmentFilter) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextEnrollment === 'all') {
+      nextParams.delete('enrollment');
+    } else {
+      nextParams.set('enrollment', nextEnrollment);
+    }
+    nextParams.delete('page');
+    setSearchParams(nextParams);
   };
 
   const handleCardKeyDown = (event: KeyboardEvent<HTMLAnchorElement>) => {
@@ -49,11 +93,31 @@ export const CoursesListPage = () => {
           <span className="muted">курсов доступно в каталоге</span>
         </div>
       </div>
+      <div className="card courses-filters">
+        <label className="field courses-filters__field" htmlFor="catalog-search">
+          <span className="field__label">Поиск</span>
+          <input
+            id="catalog-search"
+            className="field__control"
+            placeholder="Поиск по курсам"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+          />
+        </label>
+        <label className="field courses-filters__field" htmlFor="catalog-enrollment">
+          <span className="field__label">Фильтр записи</span>
+          <select id="catalog-enrollment" className="field__control" value={enrollment} onChange={(event) => setEnrollment(event.target.value as CourseCatalogEnrollmentFilter)}>
+            <option value="all">Все курсы</option>
+            <option value="enrolled">Я записан</option>
+            <option value="not_enrolled">Я не записан</option>
+          </select>
+        </label>
+      </div>
 
       {coursesQuery.isLoading ? <LoadingState message="Загружаем каталог курсов..." /> : null}
       {coursesQuery.isError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
       {!coursesQuery.isLoading && !coursesQuery.isError && !courses.length ? (
-        <EmptyState message="Пока в каталоге нет курсов. Когда материалы появятся, они будут показаны здесь." />
+        <EmptyState message={search || enrollment !== 'all' ? 'Курсы не найдены.' : 'Пока в каталоге нет курсов. Когда материалы появятся, они будут показаны здесь.'} />
       ) : null}
 
       <div className="public-courses-list">
