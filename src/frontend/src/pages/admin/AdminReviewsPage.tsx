@@ -69,7 +69,12 @@ export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolea
             onChange={(event) => setSearchInput(event.target.value)}
           />
           {!pendingOnly ? (
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | Extract<ReviewStatus, 'approved' | 'rejected'>)}>
+            <select
+              id="admin-reviews-status-filter"
+              className="field__control"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as 'all' | Extract<ReviewStatus, 'approved' | 'rejected'>)}
+            >
               <option value="all">Все статусы</option>
               <option value="approved">Одобрен</option>
               <option value="rejected">Отклонён</option>
