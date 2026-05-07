@@ -60,6 +60,13 @@ export type AdminUserDetail = AdminUser & {
 };
 
 export type AdminUserUpdatePayload = Partial<Pick<AdminUser, 'first_name' | 'last_name' | 'role' | 'status'>>;
+export type AdminUserListParams = {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  role?: 'all' | Lowercase<AdminUser['role']>;
+  status?: 'all' | 'active' | 'inactive';
+};
 
 export type AdminTest = {
   test_id: string;

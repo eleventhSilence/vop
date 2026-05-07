@@ -18,6 +18,7 @@ import type {
   AdminTestUpdatePayload,
   AdminUser,
   AdminUserDetail,
+  AdminUserListParams,
   AdminUserUpdatePayload,
 } from '@/entities/admin/types';
 import type { PaginatedResponse } from '@/shared/lib/pagination';
@@ -104,7 +105,7 @@ export const adminApi = {
   deleteCourseMedia(courseId: string, mediaId: string) {
     return http.delete(`/admin/courses/${courseId}/media/${mediaId}/`);
   },
-  users(params?: Record<string, string | number>) {
+  users(params?: AdminUserListParams) {
     return http.get<PaginatedResponse<AdminUser>>('/admin/users/', { params }).then((response) => response.data);
   },
   userDetail(userId: string) {

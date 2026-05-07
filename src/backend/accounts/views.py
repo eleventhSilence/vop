@@ -123,27 +123,34 @@ class AdminUserListView(generics.ListAPIView):
     def get_queryset(self):
         queryset = Account.objects.all().order_by("-registered_at", "email")
 
-        role_filter = self.request.query_params.get("role")
-        if role_filter is not None:
+        role_filter = (self.request.query_params.get("role") or "").strip()
+        if role_filter and role_filter.lower() != "all":
             valid_roles = {choice for choice, _ in AccountRole.choices}
-            if role_filter not in valid_roles:
+            normalized_role_filter = role_filter.upper()
+            if normalized_role_filter not in valid_roles:
                 raise ValidationError({"role": "Invalid role."})
-            queryset = queryset.filter(role=role_filter)
+            queryset = queryset.filter(role=normalized_role_filter)
 
-        status_filter = self.request.query_params.get("status")
-        if status_filter is not None:
-            valid_statuses = {choice for choice, _ in AccountStatus.choices}
-            if status_filter not in valid_statuses:
+        status_filter = (self.request.query_params.get("status") or "").strip()
+        if status_filter and status_filter.lower() != "all":
+            normalized_status_filter = status_filter.upper()
+            status_mapping = {
+                "ACTIVE": AccountStatus.ACTIVE,
+                "INACTIVE": AccountStatus.BLOCKED,
+                AccountStatus.ACTIVE: AccountStatus.ACTIVE,
+                AccountStatus.BLOCKED: AccountStatus.BLOCKED,
+            }
+            mapped_status = status_mapping.get(normalized_status_filter)
+            if mapped_status is None:
                 raise ValidationError({"status": "Invalid status."})
-            queryset = queryset.filter(status=status_filter)
+            queryset = queryset.filter(status=mapped_status)
 
-        search = self.request.query_params.get("search")
+        search = (self.request.query_params.get("search") or "").strip()
         if search:
-            queryset = queryset.filter(
-                Q(email__icontains=search)
-                | Q(first_name__icontains=search)
-                | Q(last_name__icontains=search)
-            )
+            search_query = Q(email__icontains=search) | Q(first_name__icontains=search) | Q(last_name__icontains=search)
+            if hasattr(Account, "username"):
+                search_query |= Q(username__icontains=search)
+            queryset = queryset.filter(search_query)
 
         return queryset
 
