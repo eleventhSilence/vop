@@ -8,6 +8,7 @@ import { formatDateTime, formatRole, formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
 
@@ -37,15 +38,34 @@ export const AdminUsersPage = () => {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'user' | 'admin'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [knownPageSize, setKnownPageSize] = useState<number | null>(null);
   const [nameDrafts, setNameDrafts] = useState<Record<string, EditableName>>({});
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setSearch(searchInput.trim()), 400);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, roleFilter, statusFilter]);
+
   const usersQuery = useQuery({
-    queryKey: ['admin', 'users', page],
-    queryFn: () => adminApi.users({ page }),
+    queryKey: ['admin', 'users', page, search, roleFilter, statusFilter],
+    queryFn: () =>
+      adminApi.users({
+        page,
+        search: search || undefined,
+        role: roleFilter,
+        status: statusFilter,
+      }),
   });
   const paginatedUsers = usersQuery.data
     ? ensurePaginated(usersQuery.data)
@@ -213,6 +233,43 @@ export const AdminUsersPage = () => {
           <p className="muted">
             Управляйте ролями, статусами и именами через существующий admin API без перезагрузки страницы.
           </p>
+        </div>
+      </div>
+      <div className="admin-users-toolbar">
+        <div className="admin-list-filters">
+          <Input
+            id="admin-users-search"
+            label=""
+            placeholder="Поиск по пользователям"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+          />
+          <label className="field" htmlFor="admin-users-role-filter">
+            <span>Роль</span>
+            <select
+              id="admin-users-role-filter"
+              className="field__control"
+              value={roleFilter}
+              onChange={(event) => setRoleFilter(event.target.value as 'all' | 'user' | 'admin')}
+            >
+              <option value="all">Все роли</option>
+              <option value="user">Пользователь</option>
+              <option value="admin">Администратор</option>
+            </select>
+          </label>
+          <label className="field" htmlFor="admin-users-status-filter">
+            <span>Статус</span>
+            <select
+              id="admin-users-status-filter"
+              className="field__control"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as 'all' | 'active' | 'inactive')}
+            >
+              <option value="all">Все статусы</option>
+              <option value="active">Активен</option>
+              <option value="inactive">Неактивен</option>
+            </select>
+          </label>
         </div>
       </div>
       {usersQuery.isLoading ? <LoadingState /> : null}
