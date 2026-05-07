@@ -19,12 +19,12 @@ https://localhost {
 	}
 
 	handle_path /api/static/* {
-		root A:\Works\vop\src\backend\staticfiles
+		root * /workspace/vop/src/backend/staticfiles
 		file_server
 	}
 
 	handle_path /media/* {
-		root /workspace/vop/src/backend/media
+		root * /workspace/vop/src/backend/media
 		file_server
 	}
 
