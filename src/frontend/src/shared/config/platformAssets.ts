@@ -1,5 +1,5 @@
 export const platformAssets = {
-  logo: '/platform-assets/logo/platform-logo.png',
-  heroBackground: '/platform-assets/backgrounds/hero-background.png',
-  appBackground: '/platform-assets/backgrounds/app-background.png',
+  logo: '/platform-assets/logo.png',
+  heroBackground: '/platform-assets/imageInTheTitle.jpg',
+  appBackground: 'platform-assets/back4.png',
 } as const;
