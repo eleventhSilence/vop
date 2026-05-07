@@ -131,8 +131,14 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   transition: opacity 0.2s ease, max-height 0.25s ease, transform 0.2s ease, visibility 0.2s ease;
 }
 .sidebar__group + .sidebar__group { margin-top: 1.5rem; }
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
 .sidebar__title {
-  margin: 0 0 0.75rem;
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.75rem;
@@ -433,7 +439,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     color: rgba(36, 48, 70, 0.45);
     opacity: 0.5;
     cursor: pointer;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0;
     font-size: 1.35rem;
     line-height: 1;
     transition: opacity 0.2s ease, color 0.2s ease, transform 0.2s ease;

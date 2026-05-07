@@ -16,18 +16,32 @@ type SectionSidebarProps = {
 export const SectionSidebar = ({ title, items, isCollapsed = false, onToggle }: SectionSidebarProps) => {
   return (
     <aside className={`sidebar ${isCollapsed ? 'sidebar--collapsed' : ''}`}>
-      <button
-        type="button"
-        className="sidebar__toggle"
-        onClick={onToggle}
-        aria-label={isCollapsed ? 'Показать меню личного кабинета' : 'Скрыть меню личного кабинета'}
-        title={isCollapsed ? 'Показать меню личного кабинета' : 'Скрыть меню личного кабинета'}
-        aria-expanded={!isCollapsed}
-      >
-        {isCollapsed ? '›' : '‹'}
-      </button>
+      {isCollapsed ? (
+        <button
+          type="button"
+          className="sidebar__toggle"
+          onClick={onToggle}
+          aria-label="Показать меню личного кабинета"
+          title="Показать меню личного кабинета"
+          aria-expanded={false}
+        >
+          ›
+        </button>
+      ) : null}
       <nav className="sidebar__group" aria-label={title} aria-hidden={isCollapsed} hidden={isCollapsed}>
-        <p className="sidebar__title">{title}</p>
+        <div className="sidebar__header">
+          <button
+            type="button"
+            className="sidebar__toggle"
+            onClick={onToggle}
+            aria-label="Скрыть меню личного кабинета"
+            title="Скрыть меню личного кабинета"
+            aria-expanded
+          >
+            ‹
+          </button>
+          <p className="sidebar__title">{title}</p>
+        </div>
         {items.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className="sidebar__link">
             {item.label}
