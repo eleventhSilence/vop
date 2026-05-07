@@ -15,7 +15,7 @@ export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolea
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | ReviewStatus>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | Extract<ReviewStatus, 'approved' | 'rejected'>>('all');
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setSearch(searchInput.trim()), 400);
@@ -69,9 +69,8 @@ export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolea
             onChange={(event) => setSearchInput(event.target.value)}
           />
           {!pendingOnly ? (
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | ReviewStatus)}>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | Extract<ReviewStatus, 'approved' | 'rejected'>)}>
               <option value="all">Все статусы</option>
-              <option value="pending">Ожидает модерации</option>
               <option value="approved">Одобрен</option>
               <option value="rejected">Отклонён</option>
             </select>
