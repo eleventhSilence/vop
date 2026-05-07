@@ -14,24 +14,23 @@ const resolveTitle = (media?: CourseMedia, preferred?: string) => {
 
 const renderEmbed = (slug: string, media?: CourseMedia, preferredTitle?: string) => {
   if (!media) return <div className="muted">Материал недоступен</div>;
-  const title = resolveTitle(media, preferredTitle);
+  const title = preferredTitle?.trim() || undefined;
+  const visualTitle = resolveTitle(media);
   if (media.media_type === 'image') return (
     <figure className="course-media-figure">
-      <img src={media.file_url} alt={title} className="course-media-image" />
-      {title ? <figcaption className="course-media-caption">{title}</figcaption> : null}
+      <img src={media.file_url} alt={title || visualTitle} title={title} className="course-media-image" />
     </figure>
   );
   if (media.media_type === 'video') return (
     <figure className="course-media-figure">
-      <video controls src={media.file_url} className="course-media-video" />
-      {title ? <figcaption className="course-media-caption">{title}</figcaption> : null}
+      <video controls src={media.file_url} title={title} aria-label={title} className="course-media-video" />
     </figure>
   );
   return (
-    <article className="course-media-document">
-      <strong>{title}</strong>
+    <article className="course-media-document" title={title} aria-label={title}>
+      <strong>{visualTitle}</strong>
       {media.original_name ? <p className="muted">{media.original_name}</p> : null}
-      <a href={media.file_url} target="_blank" rel="noreferrer">Открыть</a>
+      <a href={media.file_url} target="_blank" rel="noreferrer" title={title} aria-label={title}>Открыть</a>
     </article>
   );
 };
@@ -61,7 +60,7 @@ export const CourseContentRenderer = ({ content, media }: Props) => {
       const m = lookup.get(img[2]);
       if (!m || m.media_type !== 'image') return <div key={idx} className="muted">Материал недоступен</div>;
       const caption = img[1]?.trim();
-      return <figure key={idx} className="course-media-figure"><img src={m.file_url} alt={caption || m.title} className="course-media-image" />{caption ? <figcaption className="course-media-caption">{caption}</figcaption> : null}</figure>;
+      return <figure key={idx} className="course-media-figure"><img src={m.file_url} alt={caption || m.title} title={caption} className="course-media-image" /></figure>;
     }
     const mediaLink = line.trim().match(/^\[([^\]]+)\]\(media:([a-z0-9-]+)\)$/i);
     if (mediaLink) {

@@ -314,24 +314,20 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .course-media-image {
   display: block;
-  max-width: 100%;
+  max-width: 80%;
   height: auto;
+  margin: 12px auto;
   border-radius: 12px;
   object-fit: contain;
 }
 .course-media-video {
   display: block;
-  width: 100%;
+  width: 80%;
   max-width: 720px;
   height: auto;
   border-radius: 12px;
-  margin: 12px 0;
+  margin: 12px auto;
   background: #000;
-}
-.course-media-caption {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: #586779;
 }
 .course-media-document {
   max-width: 100%;
@@ -340,6 +336,15 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   padding: 0.85rem 1rem;
   overflow-wrap: anywhere;
   background: #fff;
+}
+@media (max-width: 768px) {
+  .course-media-image {
+    max-width: 100%;
+  }
+  .course-media-video {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 .description-list {
   display: grid;
