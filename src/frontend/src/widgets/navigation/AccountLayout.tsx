@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/features/auth/model/useAuth';
 import { SectionSidebar } from '@/widgets/navigation/SectionSidebar';
@@ -13,12 +14,35 @@ const accountNavItems = [
 export const AccountLayout = () => {
   const { isAdmin } = useAuth();
   const navItems = isAdmin ? [...accountNavItems, { to: '/admin/dashboard', label: 'Админ-панель' }] : accountNavItems;
+  const [isScrollCollapsed, setIsScrollCollapsed] = useState(false);
+  const [isManualExpanded, setIsManualExpanded] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const shouldCollapse = window.scrollY > 100;
+      setIsScrollCollapsed(shouldCollapse);
+      if (!shouldCollapse) {
+        setIsManualExpanded(false);
+      }
+    };
+
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const isCollapsed = isScrollCollapsed && !isManualExpanded;
 
   return (
     <div className="app-shell">
       <TopNavigation />
       <div className="shell-grid">
-        <SectionSidebar title="Личный кабинет" items={navItems} />
+        <SectionSidebar
+          title="Личный кабинет"
+          items={navItems}
+          isCollapsed={isCollapsed}
+          onToggle={() => setIsManualExpanded((current) => !current)}
+        />
         <main className="content">
           <Outlet />
         </main>

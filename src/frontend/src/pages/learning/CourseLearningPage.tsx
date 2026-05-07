@@ -6,7 +6,6 @@ import { CourseContentRenderer } from '@/entities/course/CourseContentRenderer';
 import { progressApi } from '@/entities/progress/api';
 import { reviewsApi } from '@/entities/review/api';
 import { extractApiError } from '@/shared/api/client';
-import { formatDateTime, formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
@@ -76,6 +75,14 @@ export const CourseLearningPage = () => {
   };
 
   const pageError = courseQuery.isError ? courseQuery.error : progressQuery.isError ? progressQuery.error : null;
+  const getProgressStage = () => {
+    if (!progressQuery.data) return '';
+    if (progressQuery.data.progress_status === 'completed' || progressQuery.data.progress_percent >= 100) return 'Курс завершён';
+    if (progressQuery.data.progress_percent >= 75) return 'Предприняты попытки прохождения теста, тест пока не завершён';
+    if (progressQuery.data.is_theory_completed || progressQuery.data.progress_percent >= 50) return 'Теория завершена';
+    if (progressQuery.data.progress_percent > 0) return 'Теория не завершена';
+    return 'Записан на курс';
+  };
 
   return (
     <PageSection>
@@ -85,7 +92,6 @@ export const CourseLearningPage = () => {
         <div className="stack-list">
           <article className="card card--wide form-stack">
             <h2>{courseQuery.data.title}</h2>
-            <p className="lead">{courseQuery.data.short_description}</p>
 
             <div className="learning-progress-card">
               <div className="card__row">
@@ -95,14 +101,7 @@ export const CourseLearningPage = () => {
               <div className="learning-progress-card__bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressQuery.data.progress_percent}>
                 <span style={{ width: `${progressQuery.data.progress_percent}%` }} />
               </div>
-              <p className="muted">
-                {progressQuery.data.progress_status === 'completed'
-                  ? 'Курс завершён'
-                  : progressQuery.data.is_theory_completed
-                    ? 'Теория завершена. Тест доступен.'
-                    : 'Теория не завершена.'}
-              </p>
-              <p className="muted">Статус: {formatStatus(progressQuery.data.progress_status)} • Дата завершения теории: {formatDateTime(progressQuery.data.theory_completed_at)} • Попыток теста: {progressQuery.data.total_attempts}</p>
+              <p className="muted">{getProgressStage()}</p>
             </div>
 
             <CourseContentRenderer content={courseQuery.data.content} media={courseQuery.data.media} />
@@ -114,7 +113,10 @@ export const CourseLearningPage = () => {
             {completeTheoryMutation.isSuccess ? <SuccessState message="Теория отмечена как завершённая. Прогресс курса обновлён." /> : null}
 
             {progressQuery.data.is_theory_completed ? (
-              <Link to={`/account/courses/${courseId}/test`} className="button button--secondary">Перейти к тестированию</Link>
+              <div className="form-stack">
+                <p className="muted">Тестирование доступно.</p>
+                <Link to={`/account/courses/${courseId}/test`} className="button button--secondary">Перейти к тестированию</Link>
+              </div>
             ) : null}
           </article>
 
