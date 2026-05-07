@@ -487,6 +487,15 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   grid-template-columns: 1fr;
   gap: 0.9rem;
 }
+.courses-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 0.75rem;
+  align-items: end;
+}
+.courses-filters__field {
+  margin-bottom: 0;
+}
 .public-course-link-card {
   display: grid;
   gap: 0.9rem;
@@ -586,6 +595,10 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 
   .public-cta-card__actions--wrap .button {
     width: 100%;
+  }
+
+  .courses-filters {
+    grid-template-columns: 1fr;
   }
 }
 

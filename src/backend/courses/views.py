@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from pathlib import Path
+from django.db.models import Exists, OuterRef, Q
 
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
@@ -22,6 +23,7 @@ from courses.serializers import (
 )
 from accounts.models import AccountRole
 from reviews.permissions import IsAdminUserRole
+from testing.models import TestAttempt
 
 
 class CourseListView(generics.ListAPIView):
@@ -29,7 +31,22 @@ class CourseListView(generics.ListAPIView):
     serializer_class = CourseListSerializer
 
     def get_queryset(self):
-        return Course.objects.filter(status=CourseStatus.AVAILABLE).order_by("-created_at", "id")
+        queryset = Course.objects.filter(status=CourseStatus.AVAILABLE)
+
+        search = (self.request.query_params.get("search") or "").strip()
+        if search:
+            queryset = queryset.filter(Q(title__icontains=search) | Q(short_description__icontains=search))
+
+        enrollment = (self.request.query_params.get("enrollment") or "all").strip().lower()
+        if self.request.user.is_authenticated and enrollment in {"enrolled", "not_enrolled"}:
+            user_enrollment = CourseEnrollment.objects.filter(user=self.request.user, course_id=OuterRef("pk"))
+            queryset = queryset.annotate(is_enrolled=Exists(user_enrollment))
+            if enrollment == "enrolled":
+                queryset = queryset.filter(is_enrolled=True)
+            else:
+                queryset = queryset.filter(is_enrolled=False)
+
+        return queryset.order_by("-created_at", "id")
 
 
 class MyCourseListView(generics.ListAPIView):
@@ -37,7 +54,28 @@ class MyCourseListView(generics.ListAPIView):
     serializer_class = MyCourseSerializer
 
     def get_queryset(self):
-        return CourseEnrollment.objects.filter(user=self.request.user).select_related("course").order_by("-enrolled_at", "id")
+        queryset = CourseEnrollment.objects.filter(user=self.request.user).select_related("course")
+
+        search = (self.request.query_params.get("search") or "").strip()
+        if search:
+            queryset = queryset.filter(Q(course__title__icontains=search) | Q(course__short_description__icontains=search))
+
+        progress = (self.request.query_params.get("progress") or "all").strip().lower()
+        passed_attempts = TestAttempt.objects.filter(user=self.request.user, test__course_id=OuterRef("course_id"), is_passed=True)
+        any_attempts = TestAttempt.objects.filter(user=self.request.user, test__course_id=OuterRef("course_id"))
+
+        if progress in {"25", "50", "75", "100"}:
+            queryset = queryset.annotate(has_any_attempts=Exists(any_attempts), has_passed_attempt=Exists(passed_attempts))
+            if progress == "25":
+                queryset = queryset.filter(is_theory_completed=False)
+            elif progress == "50":
+                queryset = queryset.filter(is_theory_completed=True, has_any_attempts=False)
+            elif progress == "75":
+                queryset = queryset.filter(is_theory_completed=True, has_any_attempts=True, has_passed_attempt=False)
+            elif progress == "100":
+                queryset = queryset.filter(is_theory_completed=True, has_passed_attempt=True)
+
+        return queryset.order_by("-enrolled_at", "id")
 
 
 class CourseDetailView(generics.RetrieveAPIView):
