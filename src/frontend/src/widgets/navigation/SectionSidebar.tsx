@@ -20,10 +20,11 @@ export const SectionSidebar = ({ title, items, isCollapsed = false, onToggle }: 
         type="button"
         className="sidebar__toggle"
         onClick={onToggle}
-        aria-label={isCollapsed ? 'Показать меню личного кабинета' : 'Свернуть меню личного кабинета'}
-        title={isCollapsed ? 'Показать меню личного кабинета' : 'Свернуть меню личного кабинета'}
+        aria-label={isCollapsed ? 'Показать меню личного кабинета' : 'Скрыть меню личного кабинета'}
+        title={isCollapsed ? 'Показать меню личного кабинета' : 'Скрыть меню личного кабинета'}
+        aria-expanded={!isCollapsed}
       >
-        {isCollapsed ? '▸' : '◂'}
+        {isCollapsed ? '›' : '‹'}
       </button>
       <nav className="sidebar__group" aria-label={title} aria-hidden={isCollapsed} hidden={isCollapsed}>
         <p className="sidebar__title">{title}</p>

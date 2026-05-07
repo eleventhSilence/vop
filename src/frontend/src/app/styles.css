@@ -99,6 +99,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   min-height: calc(100vh - 85px);
 }
 .sidebar {
+  width: 260px;
   padding: 1.5rem;
   border-right: 1px solid var(--surface-border);
   background: var(--surface-main);
@@ -107,22 +108,27 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   align-self: start;
   max-height: calc(100vh - 85px - 2rem);
   overflow: auto;
-  transition: max-height 0.25s ease, width 0.25s ease, padding 0.25s ease;
+  transition: max-height 0.25s ease, width 0.25s ease, padding 0.25s ease, opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 .sidebar__toggle {
   display: none;
 }
 .sidebar--collapsed {
-  padding: 0.5rem;
+  width: 40px;
+  padding: 0.5rem 0.35rem;
   overflow: hidden;
+  background: transparent;
+  border-right-color: transparent;
 }
 .sidebar--collapsed .sidebar__group {
   opacity: 0;
+  transform: translateX(-6px);
   pointer-events: none;
+  visibility: hidden;
   max-height: 0;
 }
 .sidebar__group {
-  transition: opacity 0.2s ease, max-height 0.25s ease;
+  transition: opacity 0.2s ease, max-height 0.25s ease, transform 0.2s ease, visibility 0.2s ease;
 }
 .sidebar__group + .sidebar__group { margin-top: 1.5rem; }
 .sidebar__title {
@@ -420,12 +426,23 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    border: 1px solid #d3dfef;
-    border-radius: 0.65rem;
-    background: #fff;
-    color: #3557ff;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: rgba(36, 48, 70, 0.45);
+    opacity: 0.5;
     cursor: pointer;
-    margin-bottom: 0.65rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.35rem;
+    line-height: 1;
+    transition: opacity 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  }
+  .sidebar__toggle:hover,
+  .sidebar__toggle:focus-visible {
+    opacity: 0.95;
+    color: rgba(36, 48, 70, 0.82);
+    transform: translateX(1px);
   }
   .sidebar--collapsed .sidebar__toggle {
     margin-bottom: 0;
