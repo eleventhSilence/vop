@@ -755,15 +755,26 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .admin-courses-toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: end;
+  gap: 0.8rem;
+  flex-wrap: wrap;
   margin-bottom: 1rem;
+}
+.admin-list-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(180px, 220px);
+  gap: 0.75rem;
 }
 .admin-courses-create-trigger {
   min-width: 180px;
 }
 .admin-tests-toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: end;
+  gap: 0.8rem;
+  flex-wrap: wrap;
   margin-bottom: 1rem;
 }
 .admin-question-page__back-chip {
@@ -1080,6 +1091,10 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   }
   .admin-tests-toolbar {
     justify-content: stretch;
+  }
+  .admin-list-filters {
+    grid-template-columns: 1fr;
+    width: 100%;
   }
   .admin-courses-create-trigger {
     width: 100%;

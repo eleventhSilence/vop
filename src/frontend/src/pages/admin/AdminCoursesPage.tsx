@@ -41,7 +41,19 @@ export const AdminCoursesPage = () => {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [mediaTitle, setMediaTitle] = useState('');
 
-  const coursesQuery = useQuery({ queryKey: ['admin', 'courses'], queryFn: () => adminApi.courses() });
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | AdminCourseStatus>('all');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setSearch(searchInput.trim()), 400);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput]);
+
+  const coursesQuery = useQuery({
+    queryKey: ['admin', 'courses', search, statusFilter],
+    queryFn: () => adminApi.courses({ search, status: statusFilter }),
+  });
   const courses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
 
   const createCourseMutation = useMutation({
@@ -249,6 +261,17 @@ export const AdminCoursesPage = () => {
     <PageSection>
       <h2>Администратор: курсы</h2>
       <div className="admin-courses-toolbar">
+        <div className="admin-list-filters">
+          <Input id="admin-courses-search" label="" placeholder="Поиск по курсам" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+          <label className="field" htmlFor="admin-courses-status-filter">
+            <span className="field__label">Статус</span>
+            <select id="admin-courses-status-filter" className="field__control" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | AdminCourseStatus)}>
+              <option value="all">Все статусы</option>
+              <option value="available">Доступен</option>
+              <option value="unavailable">Недоступен</option>
+            </select>
+          </label>
+        </div>
         <Button className="admin-courses-create-trigger" onClick={openCreateForm}>
           Создать курс
         </Button>
@@ -428,7 +451,7 @@ export const AdminCoursesPage = () => {
       {coursesQuery.isLoading ? <LoadingState /> : null}
       <div className="stack-list admin-courses-list">
         {!coursesQuery.isLoading && !coursesQuery.isError && !courses.length ? (
-          <EmptyState message="Курсы пока не созданы." />
+          <EmptyState message={search || statusFilter !== 'all' ? 'Курсы не найдены.' : 'Курсы пока не созданы.'} />
         ) : null}
         {courses.map((course) => (
           <div

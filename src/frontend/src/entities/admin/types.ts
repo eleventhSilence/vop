@@ -122,3 +122,17 @@ export type AdminCourse = {
 
 export type AdminCourseCreatePayload = Pick<AdminCourse, 'title' | 'short_description' | 'content' | 'status'>;
 export type AdminCourseUpdatePayload = Partial<Pick<AdminCourse, 'title' | 'short_description' | 'content' | 'status'>>;
+
+export type AdminCourseListParams = {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status?: 'all' | AdminCourseStatus;
+};
+
+export type AdminTestListParams = {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status?: 'all' | AdminCourseStatus | 'active' | 'inactive';
+};

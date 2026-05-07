@@ -2,8 +2,7 @@ import { FormEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useSt
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
-import type { AdminTestCreatePayload, AdminTestUpdatePayload } from '@/entities/admin/types';
-import { testingApi } from '@/entities/testing/api';
+import type { AdminCourseStatus, AdminTestCreatePayload, AdminTestUpdatePayload } from '@/entities/admin/types';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
@@ -46,7 +45,19 @@ export const AdminTestsPage = () => {
   const [editValidationErrors, setEditValidationErrors] = useState<ValidationErrors>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const testsQuery = useQuery({ queryKey: ['admin', 'tests'], queryFn: () => testingApi.adminTests() });
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | AdminCourseStatus>('all');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setSearch(searchInput.trim()), 400);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput]);
+
+  const testsQuery = useQuery({
+    queryKey: ['admin', 'tests', search, statusFilter],
+    queryFn: () => adminApi.tests({ search, status: statusFilter }),
+  });
   const coursesQuery = useQuery({ queryKey: ['admin', 'courses', 'for-test-create'], queryFn: () => adminApi.courses({ page_size: 100 }) });
 
   const tests = testsQuery.data ? ensurePaginated(testsQuery.data).results : [];
@@ -297,6 +308,17 @@ export const AdminTestsPage = () => {
     <PageSection>
       <h2>Администратор: тесты</h2>
       <div className="admin-tests-toolbar">
+        <div className="admin-list-filters">
+          <Input id="admin-tests-search" label="" placeholder="Поиск по тестам" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+          <label className="field" htmlFor="admin-tests-status-filter">
+            <span className="field__label">Статус</span>
+            <select id="admin-tests-status-filter" className="field__control" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | AdminCourseStatus)}>
+              <option value="all">Все статусы</option>
+              <option value="available">Доступен</option>
+              <option value="unavailable">Недоступен</option>
+            </select>
+          </label>
+        </div>
         <Button className="admin-tests-create-trigger" onClick={() => setCreateOpen(true)}>
           Создать тест
         </Button>
@@ -483,7 +505,7 @@ export const AdminTestsPage = () => {
 
       {!testsQuery.isLoading && !testsQuery.isError ? (
         <div className="stack-list admin-tests-list">
-          {tests.length === 0 ? <EmptyState message="Тесты пока не созданы." /> : null}
+          {tests.length === 0 ? <EmptyState message={search || statusFilter !== 'all' ? 'Тесты не найдены.' : 'Тесты пока не созданы.'} /> : null}
           {tests.map((test) => (
             <article
               id={`admin-test-${test.test_id}`}

@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -133,7 +134,20 @@ class AdminCourseTestListCreateView(generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
 
     def get_queryset(self):
-        return CourseTest.objects.select_related("course").order_by("-created_at", "id")
+        queryset = CourseTest.objects.select_related("course")
+
+        search = (self.request.query_params.get("search") or "").strip()
+        if search:
+            queryset = queryset.filter(Q(title__icontains=search) | Q(course__title__icontains=search))
+
+        status_filter = (self.request.query_params.get("status") or "").strip().lower()
+        if status_filter and status_filter != "all":
+            if status_filter in {"available", "unavailable"}:
+                queryset = queryset.filter(course__status=status_filter)
+            elif status_filter in {"active", "inactive"}:
+                queryset = queryset.filter(is_active=(status_filter == "active"))
+
+        return queryset.order_by("-created_at", "id")
 
     def get_serializer_class(self):
         if self.request.method == "POST":

@@ -141,7 +141,17 @@ class AdminCourseListCreateView(generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
 
     def get_queryset(self):
-        return Course.objects.all().order_by("-created_at", "id")
+        queryset = Course.objects.all()
+
+        search = (self.request.query_params.get("search") or "").strip()
+        if search:
+            queryset = queryset.filter(Q(title__icontains=search) | Q(short_description__icontains=search))
+
+        status_filter = (self.request.query_params.get("status") or "").strip().lower()
+        if status_filter and status_filter != "all":
+            queryset = queryset.filter(status=status_filter)
+
+        return queryset.order_by("-created_at", "id")
 
     def get_serializer_class(self):
         if self.request.method == "POST":

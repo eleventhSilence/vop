@@ -6,10 +6,12 @@ import type {
   AdminAnswerOptionUpdatePayload,
   AdminCourse,
   AdminCourseCreatePayload,
+  AdminCourseListParams,
   AdminCourseUpdatePayload,
   AdminDashboard,
   AdminTest,
   AdminTestCreatePayload,
+  AdminTestListParams,
   AdminTestQuestion,
   AdminTestQuestionCreatePayload,
   AdminTestQuestionUpdatePayload,
@@ -44,11 +46,14 @@ export const adminApi = {
   dashboard() {
     return http.get<AdminDashboard>('/admin/dashboard/').then((response) => response.data);
   },
-  courses(params?: Record<string, string | number>) {
+  courses(params?: AdminCourseListParams) {
     return http.get<PaginatedResponse<AdminCourseApiDto>>('/admin/courses/', { params }).then((response) => ({
       ...response.data,
       results: response.data.results.map(mapAdminCourseFromApi),
     }));
+  },
+  tests(params?: AdminTestListParams) {
+    return http.get<PaginatedResponse<AdminTest>>('/admin/tests/', { params }).then((response) => response.data);
   },
   courseDetail(courseId: string) {
     return http.get<AdminCourseApiDto>(`/admin/courses/${courseId}/`).then((response) => mapAdminCourseFromApi(response.data));
