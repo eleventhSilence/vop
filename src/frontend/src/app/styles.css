@@ -309,6 +309,38 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .state-box--error { border-style: solid; border-color: #f0c3c3; color: #a52828; }
 .state-box--success { border-style: solid; border-color: #bde5c8; color: #1f7a3f; background: #f6fffa; }
 .prose-block { white-space: pre-wrap; padding: 1rem 0; color: #1d2d40; }
+.course-media-figure {
+  margin: 12px 0;
+}
+.course-media-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  object-fit: contain;
+}
+.course-media-video {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  border-radius: 12px;
+  margin: 12px 0;
+  background: #000;
+}
+.course-media-caption {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #586779;
+}
+.course-media-document {
+  max-width: 100%;
+  border: 1px solid #dde7f2;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  overflow-wrap: anywhere;
+  background: #fff;
+}
 .description-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

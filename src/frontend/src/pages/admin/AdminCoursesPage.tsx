@@ -98,6 +98,11 @@ export const AdminCoursesPage = () => {
     onError: (error) => setToast({ type: 'error', message: extractApiError(error) }),
   });
   const mediaFiles = Array.isArray(mediaQuery.data) ? mediaQuery.data : [];
+  const mediaDisplayTitle = (item: CourseMedia) => {
+    if (item.title?.trim()) return item.title.trim();
+    if (item.original_name?.trim()) return item.original_name.replace(/\.[^.]+$/, '').trim();
+    return item.slug;
+  };
   const formErrorMessage = useMemo(() => {
     if (!Object.keys(validationErrors).length) {
       return null;
@@ -356,7 +361,7 @@ export const AdminCoursesPage = () => {
                 />
               </label>
 
-              <p className="muted">Markdown поддерживает заголовки, списки, ссылки. HTML запрещён. Изображение: <code>{'![Описание](media:slug)'}</code>. Видео/документ: <code>{'{{ media:slug }}'}</code>. Сначала загрузите файл в блоке «Файлы курса».</p>
+              <p className="muted">Markdown поддерживает заголовки, списки, ссылки. HTML запрещён. Изображение: <code>{'![Название изображения](media:slug)'}</code>. Видео/документ: <code>{'[Название материала](media:slug)'}</code>. Старый вариант <code>{'{{ media:slug }}'}</code> поддерживается. Сначала загрузите файл в блоке «Файлы курса».</p>
               {editCourseId ? (
                 <section className="card stack-list">
                   <h4>Файлы курса</h4>
@@ -377,7 +382,19 @@ export const AdminCoursesPage = () => {
                     <div key={item.id} className="list-item">
                       <div><strong>{item.title}</strong> ({item.media_type}) — {item.original_name} — {item.slug}</div>
                       <div className="actions-row">
-                        <Button type="button" variant="ghost" onClick={() => navigator.clipboard.writeText(item.markdown_image_snippet ?? item.markdown_embed_snippet)}>Скопировать вставку</Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            const title = mediaDisplayTitle(item);
+                            const snippet = item.media_type === 'image'
+                              ? `![${title}](media:${item.slug})`
+                              : `[${title}](media:${item.slug})`;
+                            navigator.clipboard.writeText(snippet);
+                          }}
+                        >
+                          Скопировать вставку
+                        </Button>
                         <Button type="button" variant="ghost" onClick={() => window.confirm('Удалить файл?') && deleteMediaMutation.mutate(item.id)}>Удалить</Button>
                       </div>
                     </div>
