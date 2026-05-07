@@ -2,16 +2,14 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
-import { reviewsApi } from '@/entities/review/api';
+import { CourseContentRenderer } from '@/entities/course/CourseContentRenderer';
 import { progressApi } from '@/entities/progress/api';
+import { reviewsApi } from '@/entities/review/api';
 import { extractApiError } from '@/shared/api/client';
-import { formatDateTime, formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
-import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
-import { CourseContentRenderer } from '@/entities/course/CourseContentRenderer';
 
 export const CourseLearningPage = () => {
   const { courseId = '' } = useParams();
@@ -32,13 +30,12 @@ export const CourseLearningPage = () => {
   });
 
   const myCourseReview = useMemo(() => {
-    if (!myReviewsQuery.data) {
-      return undefined;
-    }
+    if (!myReviewsQuery.data) return undefined;
     return ensurePaginated(myReviewsQuery.data).results.find((review) => review.course_id === courseId);
   }, [courseId, myReviewsQuery.data]);
 
   const [reviewDraft, setReviewDraft] = useState({ comment: '', rating: 5 });
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     if (myCourseReview) {
@@ -57,19 +54,9 @@ export const CourseLearningPage = () => {
 
   const reviewMutation = useMutation({
     mutationFn: () => {
-      if (!courseId) {
-        throw new Error('Не удалось определить курс для отзыва.');
-      }
-
-      if (myCourseReview) {
-        return reviewsApi.update(myCourseReview.review_id, reviewDraft);
-      }
-
-      return reviewsApi.create({
-        course_id: courseId,
-        comment: reviewDraft.comment,
-        rating: reviewDraft.rating,
-      });
+      if (!courseId) throw new Error('Не удалось определить курс для отзыва.');
+      if (myCourseReview) return reviewsApi.update(myCourseReview.review_id, reviewDraft);
+      return reviewsApi.create({ course_id: courseId, comment: reviewDraft.comment, rating: reviewDraft.rating });
     },
     onSuccess: async (updatedReview) => {
       setReviewDraft({ comment: updatedReview.comment, rating: updatedReview.rating });
@@ -79,37 +66,61 @@ export const CourseLearningPage = () => {
 
   const handleReviewSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (reviewDraft.rating < 1 || reviewDraft.rating > 5) {
+      setReviewError('Выберите оценку от 1 до 5 звёзд.');
+      return;
+    }
+    setReviewError(null);
     reviewMutation.mutate();
   };
 
   const pageError = courseQuery.isError ? courseQuery.error : progressQuery.isError ? progressQuery.error : null;
+  const getProgressStage = () => {
+    if (!progressQuery.data) return '';
+    if (progressQuery.data.progress_status === 'completed' || progressQuery.data.progress_percent >= 100) return 'Курс завершён';
+    if (progressQuery.data.progress_percent >= 75) return 'Предприняты попытки прохождения теста, тест пока не завершён';
+    if (progressQuery.data.is_theory_completed || progressQuery.data.progress_percent >= 50) return 'Теория завершена';
+    if (progressQuery.data.progress_percent > 0) return 'Теория не завершена';
+    return 'Записан на курс';
+  };
 
   return (
     <PageSection>
       {(courseQuery.isLoading || progressQuery.isLoading) ? <LoadingState message="Загружаем учебные материалы..." /> : null}
       {pageError ? <ErrorState message={extractApiError(pageError)} /> : null}
       {courseQuery.data && progressQuery.data ? (
-        <div className="details-layout">
-          <article className="card card--wide">
+        <div className="stack-list">
+          <article className="card card--wide form-stack">
             <h2>{courseQuery.data.title}</h2>
-            <p className="lead">{courseQuery.data.short_description}</p>
+
+            <div className="learning-progress-card">
+              <div className="card__row">
+                <h3>Прогресс</h3>
+                <strong>{progressQuery.data.progress_percent}%</strong>
+              </div>
+              <div className="learning-progress-card__bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressQuery.data.progress_percent}>
+                <span style={{ width: `${progressQuery.data.progress_percent}%` }} />
+              </div>
+              <p className="muted">{getProgressStage()}</p>
+            </div>
+
             <CourseContentRenderer content={courseQuery.data.content} media={courseQuery.data.media} />
-          </article>
-          <aside className="card form-stack">
-            <h3>Прогресс</h3>
-            <p>Статус: {formatStatus(progressQuery.data.progress_status)}</p>
-            <p>Выполнено: {progressQuery.data.progress_percent}%</p>
-            <p>Теория завершена: {progressQuery.data.is_theory_completed ? 'Да' : 'Нет'}</p>
-            <p>Дата завершения теории: {formatDateTime(progressQuery.data.theory_completed_at)}</p>
-            <p>Попыток теста: {progressQuery.data.total_attempts}</p>
-            <Button onClick={() => completeTheoryMutation.mutate()} disabled={completeTheoryMutation.isPending || progressQuery.data.is_theory_completed} fullWidth>
-              {progressQuery.data.is_theory_completed ? 'Теория отмечена как завершённая' : 'Завершить теорию'}
-            </Button>
+
+            {!progressQuery.data.is_theory_completed ? (
+              <Button onClick={() => completeTheoryMutation.mutate()} disabled={completeTheoryMutation.isPending}>Завершить теорию</Button>
+            ) : null}
             {completeTheoryMutation.isError ? <ErrorState message={extractApiError(completeTheoryMutation.error)} /> : null}
             {completeTheoryMutation.isSuccess ? <SuccessState message="Теория отмечена как завершённая. Прогресс курса обновлён." /> : null}
-            <Link to={`/account/courses/${courseId}/test`} className="text-link">Перейти к тестированию →</Link>
 
-            <hr />
+            {progressQuery.data.is_theory_completed ? (
+              <div className="form-stack">
+                <p className="muted">Тестирование доступно.</p>
+                <Link to={`/account/courses/${courseId}/test`} className="button button--secondary">Перейти к тестированию</Link>
+              </div>
+            ) : null}
+          </article>
+
+          <section className="card form-stack">
             <div>
               <h3>{myCourseReview ? 'Ваш отзыв по курсу' : 'Оставить отзыв по курсу'}</h3>
               <p className="muted">Напишите отзыв сразу после прохождения теории или завершения курса.</p>
@@ -120,35 +131,47 @@ export const CourseLearningPage = () => {
 
             {!myReviewsQuery.isLoading && !myReviewsQuery.isError ? (
               <form className="form-stack" onSubmit={handleReviewSubmit}>
-                <Input
-                  id="course-review-comment"
-                  label="Комментарий"
-                  value={reviewDraft.comment}
-                  onChange={(event) => setReviewDraft((current) => ({ ...current, comment: event.target.value }))}
-                  required
-                  disabled={reviewMutation.isPending}
-                />
-                <Input
-                  id="course-review-rating"
-                  label="Оценка"
-                  type="number"
-                  min={1}
-                  max={5}
-                  value={reviewDraft.rating}
-                  onChange={(event) => setReviewDraft((current) => ({ ...current, rating: Number(event.target.value) }))}
-                  required
-                  disabled={reviewMutation.isPending}
-                />
+                <label className="field">
+                  <span className="field__label">Комментарий</span>
+                  <textarea
+                    id="course-review-comment"
+                    className="field__control"
+                    value={reviewDraft.comment}
+                    onChange={(event) => setReviewDraft((current) => ({ ...current, comment: event.target.value }))}
+                    required
+                    disabled={reviewMutation.isPending}
+                  />
+                </label>
+
+                <div className="field">
+                  <span className="field__label">Оценка</span>
+                  <div className="star-rating" role="group" aria-label="Выбор рейтинга">
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`star-rating__star ${value <= reviewDraft.rating ? 'star-rating__star--active' : ''}`}
+                        aria-label={`Оценка ${value}`}
+                        title={`Оценка ${value}`}
+                        onClick={() => setReviewDraft((current) => ({ ...current, rating: value }))}
+                        disabled={reviewMutation.isPending}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <Button type="submit" disabled={reviewMutation.isPending} fullWidth>
                   {myCourseReview ? 'Обновить отзыв' : 'Оставить отзыв'}
                 </Button>
+                {reviewError ? <ErrorState message={reviewError} /> : null}
                 {reviewMutation.isError ? <ErrorState message={extractApiError(reviewMutation.error)} /> : null}
                 {reviewMutation.isSuccess ? <SuccessState message="Отзыв сохранён. После модерации он появится на публичной странице курса." /> : null}
                 {!myCourseReview ? <EmptyState message="Вы ещё не оставляли отзыв по этому курсу." /> : null}
-                {myCourseReview ? <Link to={`/account/reviews/${myCourseReview.review_id}/edit`} className="text-link">Открыть отдельную страницу редактирования →</Link> : null}
               </form>
             ) : null}
-          </aside>
+          </section>
         </div>
       ) : null}
     </PageSection>
