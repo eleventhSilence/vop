@@ -213,12 +213,6 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .user-menu__logout {
   width: 100%;
   text-align: left;
-  border: 0;
-  box-shadow: none;
-}
-.user-menu__logout:hover,
-.user-menu__logout:focus-visible {
-  background: rgba(235, 226, 205, 0.35);
 }
 .content { padding: 2rem; }
 .content--public { max-width: 1280px; margin: 0 auto; width: 100%; }
@@ -333,6 +327,15 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .button--secondary:hover { background: rgba(238, 230, 210, 0.45); }
 .button--ghost { background: rgba(255, 252, 246, 0.72); color: #25364d; border: 1px solid var(--surface-border); }
 .button--ghost:hover { background: rgba(238, 230, 210, 0.4); }
+.button.user-menu__logout {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.button.user-menu__logout:hover,
+.button.user-menu__logout:focus-visible {
+  background: rgba(235, 226, 205, 0.35);
+}
 .button--full { width: 100%; }
 .button:disabled { opacity: 0.65; cursor: not-allowed; }
 .badge {
