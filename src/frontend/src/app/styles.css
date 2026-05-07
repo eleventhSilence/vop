@@ -102,6 +102,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   width: 260px;
   padding: 1.5rem;
   border-right: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--surface-border);
   background: var(--surface-main);
   position: sticky;
   top: calc(85px + 1rem);
@@ -118,7 +119,8 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   padding: 0.5rem 0.35rem;
   overflow: hidden;
   background: transparent;
-  border-right-color: transparent;
+  border-right: none;
+  border-bottom: none;
 }
 .sidebar--collapsed .sidebar__group {
   opacity: 0;
