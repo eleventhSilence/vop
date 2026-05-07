@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { reviewsApi } from '@/entities/review/api';
 import type { ReviewStatus } from '@/entities/review/types';
@@ -6,13 +7,31 @@ import { formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
+import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
 
 export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolean }) => {
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | Extract<ReviewStatus, 'approved' | 'rejected'>>('all');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setSearch(searchInput.trim()), 400);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
   const reviewsQuery = useQuery({
-    queryKey: pendingOnly ? ['admin', 'reviews', 'pending'] : ['admin', 'reviews'],
-    queryFn: () => (pendingOnly ? reviewsApi.adminPending() : reviewsApi.adminList()),
+    queryKey: pendingOnly ? ['admin', 'reviews', 'pending', page, search] : ['admin', 'reviews', page, search, statusFilter],
+    queryFn: () =>
+      (pendingOnly
+        ? reviewsApi.adminPending({ page, search: search || undefined })
+        : reviewsApi.adminList({ page, search: search || undefined, status: statusFilter })),
   });
 
   const moderateMutation = useMutation({
@@ -39,6 +58,28 @@ export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolea
             Страница использует endpoint <code>{endpointLabel}</code>
             {pendingOnly ? ' и показывает только отзывы со статусом pending.' : ' и показывает все отзывы независимо от статуса.'}
           </p>
+        </div>
+      </div>
+      <div className="admin-users-toolbar">
+        <div className="admin-list-filters">
+          <Input
+            id="admin-review-search"
+            placeholder="Поиск по отзывам"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+          />
+          {!pendingOnly ? (
+            <select
+              id="admin-reviews-status-filter"
+              className="field__control"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as 'all' | Extract<ReviewStatus, 'approved' | 'rejected'>)}
+            >
+              <option value="all">Все статусы</option>
+              <option value="approved">Одобрен</option>
+              <option value="rejected">Отклонён</option>
+            </select>
+          ) : null}
         </div>
       </div>
       {reviewsQuery.isLoading ? <LoadingState /> : null}

@@ -24,6 +24,12 @@ export type AdminReview = {
   updated_at: string;
 };
 
+export type AdminReviewListParams = {
+  page?: number;
+  search?: string;
+  status?: 'all' | ReviewStatus;
+};
+
 export type ReviewWritePayload = {
   course_id: string;
   comment: string;

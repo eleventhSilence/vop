@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, IntegerField, Q, Value, When
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -68,15 +68,46 @@ class AdminReviewListView(generics.ListAPIView):
     def get_status_filter(self):
         return self.request.query_params.get("status")
 
+    def get_search_filter(self):
+        return self.request.query_params.get("search", "")
+
+    def apply_search_filter(self, queryset):
+        search = self.get_search_filter().strip()
+        if not search:
+            return queryset
+
+        search_query = (
+            Q(text__icontains=search)
+            | Q(user__email__icontains=search)
+            | Q(user__first_name__icontains=search)
+            | Q(user__last_name__icontains=search)
+            | Q(course__title__icontains=search)
+        )
+
+        if hasattr(Review.user.field.related_model, "username"):
+            search_query |= Q(user__username__icontains=search)
+
+        return queryset.filter(search_query)
+
+    def apply_status_filter(self, queryset):
+        status_filter = self.get_status_filter()
+        if status_filter is None:
+            return queryset
+
+        normalized_status = status_filter.strip().lower()
+        if not normalized_status or normalized_status == "all":
+            return queryset
+
+        valid_statuses = {choice for choice, _ in ReviewStatus.choices}
+        if normalized_status not in valid_statuses:
+            raise ValidationError({"status": "Invalid status."})
+
+        return queryset.filter(status=normalized_status)
+
     def get_queryset(self):
         queryset = Review.objects.select_related("user", "course")
-        status_filter = self.get_status_filter()
-
-        if status_filter is not None:
-            valid_statuses = {choice for choice, _ in ReviewStatus.choices}
-            if status_filter not in valid_statuses:
-                raise ValidationError({"status": "Invalid status."})
-            queryset = queryset.filter(status=status_filter)
+        queryset = self.apply_search_filter(queryset)
+        queryset = self.apply_status_filter(queryset)
 
         moderation_priority = Case(
             When(status=ReviewStatus.PENDING, then=Value(0)),
