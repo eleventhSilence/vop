@@ -19,8 +19,16 @@ https://localhost {
 	}
 
 	handle_path /api/static/* {
-		root A:\Works\vop\src\backend\staticfiles
+		root * /workspace/vop/src/backend/staticfiles
 		file_server
+	}
+
+	handle /media/* {
+		reverse_proxy 127.0.0.1:8000 {
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+		}
 	}
 
 	handle {

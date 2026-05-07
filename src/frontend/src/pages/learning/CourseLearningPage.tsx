@@ -11,6 +11,7 @@ import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
+import { CourseContentRenderer } from '@/entities/course/CourseContentRenderer';
 
 export const CourseLearningPage = () => {
   const { courseId = '' } = useParams();
@@ -92,7 +93,7 @@ export const CourseLearningPage = () => {
           <article className="card card--wide">
             <h2>{courseQuery.data.title}</h2>
             <p className="lead">{courseQuery.data.short_description}</p>
-            <div className="prose-block">{courseQuery.data.content}</div>
+            <CourseContentRenderer content={courseQuery.data.content} media={courseQuery.data.media} />
           </article>
           <aside className="card form-stack">
             <h3>Прогресс</h3>

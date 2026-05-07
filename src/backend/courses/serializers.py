@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from courses.models import Course, CourseEnrollment
+from courses.models import Course, CourseEnrollment, CourseMedia
 from progress.utils import build_progress_payload
 
 
@@ -12,8 +12,33 @@ class CourseListSerializer(serializers.ModelSerializer):
     course_id = serializers.UUIDField(source="id", read_only=True)
 
 
+class CourseMediaSerializer(serializers.ModelSerializer):
+    course_id = serializers.UUIDField(source="course.id", read_only=True)
+    file_url = serializers.SerializerMethodField()
+    markdown_image_snippet = serializers.SerializerMethodField()
+    markdown_embed_snippet = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CourseMedia
+        fields = ("id", "course_id", "title", "slug", "media_type", "original_name", "file_size", "file_url", "markdown_image_snippet", "markdown_embed_snippet", "uploaded_at")
+
+    def get_file_url(self, obj):
+        request = self.context.get("request")
+        url = obj.file.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_markdown_image_snippet(self, obj):
+        if obj.media_type == "image":
+            return f"![{obj.title}](media:{obj.slug})"
+        return None
+
+    def get_markdown_embed_snippet(self, obj):
+        return f"{{{{ media:{obj.slug} }}}}"
+
+
 class CourseDetailSerializer(serializers.ModelSerializer):
     course_id = serializers.UUIDField(source="id", read_only=True)
+    media = CourseMediaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Course
@@ -25,12 +50,14 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "status",
             "created_at",
             "updated_at",
+            "media",
         )
 
 
 class AdminCourseBaseSerializer(serializers.ModelSerializer):
     course_id = serializers.UUIDField(source="id", read_only=True)
     description = serializers.CharField(source="content")
+    media = CourseMediaSerializer(many=True, read_only=True)
     status = serializers.ChoiceField(
         choices=Course._meta.get_field("status").choices,
         help_text="Use status to manage course availability in admin API. Physical deletion is not supported.",
@@ -46,8 +73,9 @@ class AdminCourseBaseSerializer(serializers.ModelSerializer):
             "status",
             "created_at",
             "updated_at",
+            "media",
         )
-        read_only_fields = ("course_id", "created_at", "updated_at")
+        read_only_fields = ("course_id", "created_at", "updated_at", "media")
 
 
 class AdminCourseListSerializer(AdminCourseBaseSerializer):
@@ -60,7 +88,7 @@ class AdminCourseDetailSerializer(AdminCourseBaseSerializer):
 
 class AdminCourseWriteSerializer(AdminCourseBaseSerializer):
     class Meta(AdminCourseBaseSerializer.Meta):
-        read_only_fields = ("course_id", "created_at", "updated_at")
+        read_only_fields = ("course_id", "created_at", "updated_at", "media")
 
 
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
@@ -111,3 +139,4 @@ class MyCourseSerializer(serializers.ModelSerializer):
 
     def get_is_test_passed(self, obj):
         return self._progress_payload(obj)["is_test_passed"]
+

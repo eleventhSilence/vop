@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import os
 import uuid
+from pathlib import Path
 
 from django.conf import settings
 from django.db import models
+from django.utils.text import slugify
 
 
 class CourseStatus(models.TextChoices):
@@ -51,3 +54,61 @@ class CourseEnrollment(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id} -> {self.course_id}"
+
+
+class CourseMediaType(models.TextChoices):
+    IMAGE = "image", "Image"
+    VIDEO = "video", "Video"
+    DOCUMENT = "document", "Document"
+
+
+def course_media_upload_to(instance: "CourseMedia", filename: str) -> str:
+    ext = Path(filename).suffix.lower()
+    source_name = instance.title.strip() if instance.title else ""
+    if not source_name:
+        source_name = Path(instance.original_name or filename).stem
+    base_name = slugify(source_name) or "media-file"
+    candidate = f"{base_name}{ext}"
+    directory = f"courses/{instance.course_id}"
+    storage = instance.file.storage
+    path = f"{directory}/{candidate}"
+    index = 2
+    while storage.exists(path):
+        candidate = f"{base_name}-{index}{ext}"
+        path = f"{directory}/{candidate}"
+        index += 1
+    return path
+
+
+class CourseMedia(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course = models.ForeignKey(Course, related_name="media", on_delete=models.CASCADE)
+    file = models.FileField(upload_to=course_media_upload_to)
+    title = models.CharField(max_length=255)
+    slug = models.SlugField()
+    media_type = models.CharField(max_length=20, choices=CourseMediaType.choices)
+    original_name = models.CharField(max_length=255)
+    file_size = models.PositiveIntegerField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "course_media"
+        ordering = ("-uploaded_at",)
+        constraints = [models.UniqueConstraint(fields=("course", "slug"), name="unique_course_media_slug")]
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.title) or slugify(Path(self.original_name).stem) or "media"
+            slug = base
+            suffix = 1
+            while CourseMedia.objects.filter(course=self.course, slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{uuid.uuid4().hex[:6] if suffix == 1 else suffix}"
+                suffix += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        file_path = self.file.path if self.file else None
+        super().delete(*args, **kwargs)
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)

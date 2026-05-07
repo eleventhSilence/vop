@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Account, AccountRole, AccountStatus
-from courses.models import Course, CourseEnrollment, CourseStatus
+from courses.models import Course, CourseEnrollment, CourseMedia, CourseStatus
 from testing.models import CourseTest, TestAttempt
 
 
@@ -311,6 +311,24 @@ class AdminCoursesApiTests(APITestCase):
         self.assertEqual(created_course.status, CourseStatus.AVAILABLE)
         self.assertEqual(response.data["course_id"], str(created_course.id))
         self.assertEqual(response.data["description"], created_course.content)
+        self.assertEqual(response.data["media"], [])
+
+    def test_admin_can_create_course_without_media_payload(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.post(
+            self.get_admin_list_url(),
+            {
+                "title": "Course without media payload",
+                "short_description": "Short admin description",
+                "description": "Detailed admin description",
+                "status": CourseStatus.AVAILABLE,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["media"], [])
 
     def test_invalid_data_returns_400_on_course_create(self):
         self.client.force_authenticate(user=self.admin_user)
@@ -377,6 +395,19 @@ class AdminCoursesApiTests(APITestCase):
         self.assertEqual(self.course.short_description, original_short_description)
         self.assertEqual(self.course.status, original_status)
         self.assertEqual(self.course.content, "Full description")
+
+    def test_patch_course_without_media_payload_is_successful(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.patch(
+            self.get_admin_detail_url(self.course),
+            {"title": "Patched without media"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["title"], "Patched without media")
+        self.assertEqual(response.data["media"], [])
 
     def test_nonexistent_course_returns_404(self):
         self.client.force_authenticate(user=self.admin_user)
@@ -448,3 +479,55 @@ class AdminCoursesApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.headers["Allow"], "GET, PATCH, HEAD, OPTIONS")
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+import tempfile
+
+
+@override_settings(MEDIA_ROOT=tempfile.gettempdir())
+class AdminCourseMediaApiTests(APITestCase):
+    def setUp(self):
+        self.admin_user = Account.objects.create_user(email="admin-media@example.com", password="StrongPass123", role=AccountRole.ADMIN, is_staff=True)
+        self.user = Account.objects.create_user(email="user-media@example.com", password="StrongPass123")
+        self.course = Course.objects.create(title="Course", short_description="Desc desc desc", content="content")
+
+    def test_admin_can_upload_media(self):
+        self.client.force_authenticate(user=self.admin_user)
+        file = SimpleUploadedFile("image.jpg", b"filecontent", content_type="image/jpeg")
+        response = self.client.post(reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}), {"file": file}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_upload_unsupported_extension_fails(self):
+        self.client.force_authenticate(user=self.admin_user)
+        file = SimpleUploadedFile("bad.exe", b"abc", content_type="application/octet-stream")
+        response = self.client.post(reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}), {"file": file}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_non_admin_cannot_upload(self):
+        self.client.force_authenticate(user=self.user)
+        file = SimpleUploadedFile("image.jpg", b"filecontent", content_type="image/jpeg")
+        response = self.client.post(reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}), {"file": file}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_uploaded_file_name_is_human_readable_and_unique(self):
+        self.client.force_authenticate(user=self.admin_user)
+        first_file = SimpleUploadedFile("sample 5s.mp4", b"filecontent", content_type="video/mp4")
+        second_file = SimpleUploadedFile("sample 5s.mp4", b"filecontent", content_type="video/mp4")
+
+        first_response = self.client.post(
+            reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}),
+            {"file": first_file, "title": "Sample 5s"},
+            format="multipart",
+        )
+        second_response = self.client.post(
+            reverse("admin-course-media-list-create", kwargs={"course_id": self.course.id}),
+            {"file": second_file, "title": "Sample 5s"},
+            format="multipart",
+        )
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_201_CREATED)
+        first = CourseMedia.objects.get(id=first_response.data["id"])
+        second = CourseMedia.objects.get(id=second_response.data["id"])
+        self.assertIn(f"courses/{self.course.id}/sample-5s.mp4", first.file.name)
+        self.assertIn(f"courses/{self.course.id}/sample-5s-2.mp4", second.file.name)

@@ -1,3 +1,17 @@
+export type CourseMedia = {
+  id: string;
+  course_id: string;
+  title: string;
+  slug: string;
+  media_type: 'image' | 'video' | 'document';
+  original_name: string;
+  file_size: number;
+  file_url: string;
+  markdown_image_snippet: string | null;
+  markdown_embed_snippet: string;
+  uploaded_at: string;
+};
+
 export type CourseStatus = 'available' | 'unavailable';
 
 export type ProgressStatus = 'enrolled' | 'theory_completed' | 'testing_in_progress' | 'completed';
@@ -10,6 +24,7 @@ export type Course = {
 
 export type CourseDetail = Course & {
   content: string;
+  media?: CourseMedia[];
   status: CourseStatus;
   created_at: string;
   updated_at: string;
