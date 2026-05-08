@@ -2,7 +2,7 @@ import { Fragment } from 'react';
 import type { CourseMedia } from './types';
 
 type Props = { content: string; media?: CourseMedia[] };
-export type CourseHeading = { id: string; text: string; level: 1 | 2 | 3 };
+export type CourseHeading = { id: string; text: string; level: 1 | 2 };
 
 const mediaBySlug = (media?: CourseMedia[]) => new Map((media ?? []).map((m) => [m.slug, m]));
 
@@ -71,12 +71,11 @@ export const extractCourseHeadings = (content: string): CourseHeading[] => {
   return content
     .split('\n')
     .map((line) => {
-      if (line.startsWith('### ')) return { level: 3 as const, raw: line.slice(4) };
       if (line.startsWith('## ')) return { level: 2 as const, raw: line.slice(3) };
       if (line.startsWith('# ')) return { level: 1 as const, raw: line.slice(2) };
       return null;
     })
-    .filter((item): item is { level: 1 | 2 | 3; raw: string } => Boolean(item))
+    .filter((item): item is { level: 1 | 2; raw: string } => Boolean(item))
     .map((item) => {
       const text = stripInlineMarkdown(item.raw);
       const baseId = slugifyHeading(text);
@@ -108,10 +107,6 @@ export const CourseContentRenderer = ({ content, media }: Props) => {
     const mediaLink = line.trim().match(/^\[([^\]]+)\]\(media:([a-z0-9-]+)\)$/i);
     if (mediaLink) {
       return <div key={idx}>{renderEmbed(mediaLink[2], lookup.get(mediaLink[2]), mediaLink[1])}</div>;
-    }
-    if (line.startsWith('### ')) {
-      const heading = headings[headingIndex++];
-      return <h3 key={idx} id={heading?.id}>{renderInline(line.slice(4))}</h3>;
     }
     if (line.startsWith('## ')) {
       const heading = headings[headingIndex++];

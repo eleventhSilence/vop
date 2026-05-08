@@ -557,7 +557,6 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .course-toc__link:hover { text-decoration: none; background: rgba(235, 226, 205, 0.35); }
 .course-toc__link--h2 { padding-left: 0.85rem; font-size: 0.95rem; }
-.course-toc__link--h3 { padding-left: 1.25rem; font-size: 0.9rem; }
 .course-toc__link--active {
   background: rgba(49, 84, 244, 0.1);
   color: #3154f4;
