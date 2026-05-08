@@ -108,6 +108,7 @@ export const CourseContentRenderer = ({ content, media }: Props) => {
     if (mediaLink) {
       return <div key={idx}>{renderEmbed(mediaLink[2], lookup.get(mediaLink[2]), mediaLink[1])}</div>;
     }
+    if (line.startsWith('### ')) return <h3 key={idx}>{renderInline(line.slice(4))}</h3>;
     if (line.startsWith('## ')) {
       const heading = headings[headingIndex++];
       return <h2 key={idx} id={heading?.id}>{renderInline(line.slice(3))}</h2>;
