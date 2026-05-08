@@ -91,6 +91,26 @@ export const CoursesListPage = () => {
     }
   };
 
+  const getCatalogStatus = (course: (typeof courses)[number]) => {
+    if (!course.is_enrolled) {
+      return { label: 'Доступен', tone: 'available' } as const;
+    }
+
+    if (course.progress_percent === 50) {
+      return { label: 'Освоена теория', tone: 'theory-completed' } as const;
+    }
+
+    if (course.progress_percent === 75) {
+      return { label: 'На тестировании', tone: 'testing' } as const;
+    }
+
+    if (course.progress_percent === 100) {
+      return { label: 'Курс завершён', tone: 'completed' } as const;
+    }
+
+    return { label: 'Вы записаны', tone: 'enrolled' } as const;
+  };
+
   return (
     <PageSection className="public-page-stack public-page-stack--catalog">
       <div className="section-header public-section-header">
@@ -134,30 +154,34 @@ export const CoursesListPage = () => {
       ) : null}
 
       <div className="public-courses-list">
-        {courses.map((course) => (
-          <article key={course.course_id}>
-            <Link
-              to={`/courses/${course.course_id}`}
-              className={`public-course-link-card ${course.is_enrolled ? 'public-course-link-card--enrolled' : 'public-course-link-card--available'}`}
-              tabIndex={0}
-              onKeyDown={handleCardKeyDown}
-            >
-              <div className="public-course-card__header">
-                <span className="public-course-card__label">Учебный курс</span>
-                <span className={`public-course-card__badge ${course.is_enrolled ? 'public-course-card__badge--enrolled' : 'public-course-card__badge--available'}`}>
-                  {course.is_enrolled ? 'Вы записаны' : 'Доступен'}
-                </span>
-              </div>
-              <div className="stack-list public-course-card__content">
-                <h3>{course.title}</h3>
-                <p className="muted public-course-card__description">{course.short_description || 'Описание курса пока не добавлено'}</p>
-              </div>
-              <div className="public-course-card__footer" aria-hidden>
-                <span>Открыть страницу курса →</span>
-              </div>
-            </Link>
-          </article>
-        ))}
+        {courses.map((course) => {
+          const status = getCatalogStatus(course);
+
+          return (
+            <article key={course.course_id}>
+              <Link
+                to={`/courses/${course.course_id}`}
+                className={`public-course-link-card public-course-link-card--${status.tone}`}
+                tabIndex={0}
+                onKeyDown={handleCardKeyDown}
+              >
+                <div className="public-course-card__header">
+                  <span className="public-course-card__label">Учебный курс</span>
+                  <span className={`public-course-card__badge public-course-card__badge--${status.tone}`}>
+                    {status.label}
+                  </span>
+                </div>
+                <div className="stack-list public-course-card__content">
+                  <h3>{course.title}</h3>
+                  <p className="muted public-course-card__description">{course.short_description || 'Описание курса пока не добавлено'}</p>
+                </div>
+                <div className="public-course-card__footer" aria-hidden>
+                  <span>Открыть страницу курса →</span>
+                </div>
+              </Link>
+            </article>
+          );
+        })}
       </div>
 
       {shouldShowPagination && !coursesQuery.isError && !coursesQuery.isLoading ? (

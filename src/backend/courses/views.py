@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from pathlib import Path
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import BooleanField, Case, CharField, Exists, IntegerField, OuterRef, Q, Value, When
 
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
@@ -24,6 +24,12 @@ from courses.serializers import (
 from accounts.models import AccountRole
 from reviews.permissions import IsAdminUserRole
 from testing.models import TestAttempt
+from progress.utils import (
+    PROGRESS_STATUS_COMPLETED,
+    PROGRESS_STATUS_ENROLLED,
+    PROGRESS_STATUS_THEORY_COMPLETED,
+    PROGRESS_STATUS_TESTING_IN_PROGRESS,
+)
 
 
 class CourseListView(generics.ListAPIView):
@@ -34,7 +40,33 @@ class CourseListView(generics.ListAPIView):
         queryset = Course.objects.filter(status=CourseStatus.AVAILABLE)
         if self.request.user.is_authenticated:
             user_enrollment = CourseEnrollment.objects.filter(user=self.request.user, course_id=OuterRef("pk"))
-            queryset = queryset.annotate(is_enrolled=Exists(user_enrollment))
+            theory_completed_enrollment = user_enrollment.filter(is_theory_completed=True)
+            passed_attempts = TestAttempt.objects.filter(user=self.request.user, test__course_id=OuterRef("pk"), is_passed=True)
+            any_attempts = TestAttempt.objects.filter(user=self.request.user, test__course_id=OuterRef("pk"))
+
+            queryset = queryset.annotate(
+                is_enrolled=Exists(user_enrollment),
+                is_theory_completed=Exists(theory_completed_enrollment),
+                has_any_attempts=Exists(any_attempts),
+                has_passed_attempt=Exists(passed_attempts),
+            ).annotate(
+                progress_status=Case(
+                    When(is_enrolled=False, then=Value(None)),
+                    When(is_theory_completed=False, then=Value(PROGRESS_STATUS_ENROLLED)),
+                    When(has_passed_attempt=True, then=Value(PROGRESS_STATUS_COMPLETED)),
+                    When(has_any_attempts=True, then=Value(PROGRESS_STATUS_TESTING_IN_PROGRESS)),
+                    default=Value(PROGRESS_STATUS_THEORY_COMPLETED),
+                    output_field=CharField(),
+                ),
+                progress_percent=Case(
+                    When(is_enrolled=False, then=Value(None)),
+                    When(is_theory_completed=False, then=Value(25)),
+                    When(has_passed_attempt=True, then=Value(100)),
+                    When(has_any_attempts=True, then=Value(75)),
+                    default=Value(50),
+                    output_field=IntegerField(),
+                ),
+            )
 
         search = (self.request.query_params.get("search") or "").strip()
         if search:

@@ -844,6 +844,21 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     radial-gradient(130% 120% at 100% 0%, rgba(132, 156, 233, 0.16) 0%, rgba(132, 156, 233, 0) 58%),
     linear-gradient(180deg, #fdfbf8 0%, #f8f5ef 100%);
 }
+.public-course-link-card--theory-completed {
+  background:
+    radial-gradient(130% 120% at 100% 0%, rgba(120, 187, 197, 0.16) 0%, rgba(120, 187, 197, 0) 58%),
+    linear-gradient(180deg, #fdfbf8 0%, #f8f5ef 100%);
+}
+.public-course-link-card--testing {
+  background:
+    radial-gradient(130% 120% at 100% 0%, rgba(214, 182, 124, 0.16) 0%, rgba(214, 182, 124, 0) 58%),
+    linear-gradient(180deg, #fdfbf8 0%, #f8f5ef 100%);
+}
+.public-course-link-card--completed {
+  background:
+    radial-gradient(130% 120% at 100% 0%, rgba(108, 173, 125, 0.2) 0%, rgba(108, 173, 125, 0) 58%),
+    linear-gradient(180deg, #fdfbf8 0%, #f8f5ef 100%);
+}
 .public-course-card__header {
   display: flex;
   align-items: flex-start;
@@ -880,6 +895,21 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   background: #eef2ff;
   border-color: #d8defe;
 }
+.public-course-card__badge--theory-completed {
+  color: #255f71;
+  background: #e9f7f9;
+  border-color: #cdebef;
+}
+.public-course-card__badge--testing {
+  color: #7f5f20;
+  background: #fcf4e7;
+  border-color: #efdfbe;
+}
+.public-course-card__badge--completed {
+  color: #2a5e39;
+  background: #e8f5ec;
+  border-color: #cbe4d2;
+}
 .public-course-link-card:hover {
   text-decoration: none;
   border-color: rgba(165, 152, 122, 0.74);
@@ -896,6 +926,21 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .public-course-link-card--enrolled:hover {
   background:
     radial-gradient(135% 130% at 100% 0%, rgba(132, 156, 233, 0.2) 0%, rgba(132, 156, 233, 0) 62%),
+    linear-gradient(180deg, #fefcf8 0%, #f8f5ef 100%);
+}
+.public-course-link-card--theory-completed:hover {
+  background:
+    radial-gradient(135% 130% at 100% 0%, rgba(120, 187, 197, 0.22) 0%, rgba(120, 187, 197, 0) 62%),
+    linear-gradient(180deg, #fefcf8 0%, #f8f5ef 100%);
+}
+.public-course-link-card--testing:hover {
+  background:
+    radial-gradient(135% 130% at 100% 0%, rgba(214, 182, 124, 0.22) 0%, rgba(214, 182, 124, 0) 62%),
+    linear-gradient(180deg, #fefcf8 0%, #f8f5ef 100%);
+}
+.public-course-link-card--completed:hover {
+  background:
+    radial-gradient(135% 130% at 100% 0%, rgba(108, 173, 125, 0.24) 0%, rgba(108, 173, 125, 0) 62%),
     linear-gradient(180deg, #fefcf8 0%, #f8f5ef 100%);
 }
 .public-course-link-card:focus-visible {
@@ -947,11 +992,29 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .public-course-link-card--enrolled .public-course-card__footer {
   color: #4560ac;
 }
+.public-course-link-card--theory-completed .public-course-card__footer {
+  color: #2f7685;
+}
+.public-course-link-card--testing .public-course-card__footer {
+  color: #8c6f2f;
+}
+.public-course-link-card--completed .public-course-card__footer {
+  color: #2f6b41;
+}
 .public-course-link-card--available:hover .public-course-card__footer {
   color: #25593d;
 }
 .public-course-link-card--enrolled:hover .public-course-card__footer {
   color: #3a5397;
+}
+.public-course-link-card--theory-completed:hover .public-course-card__footer {
+  color: #276876;
+}
+.public-course-link-card--testing:hover .public-course-card__footer {
+  color: #7d6228;
+}
+.public-course-link-card--completed:hover .public-course-card__footer {
+  color: #285a37;
 }
 .public-pagination-card,
 .public-cta-card {

@@ -6,16 +6,32 @@ from progress.utils import build_progress_payload
 
 class CourseListSerializer(serializers.ModelSerializer):
     is_enrolled = serializers.SerializerMethodField()
+    progress_percent = serializers.SerializerMethodField()
+    progress_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
-        fields = ("course_id", "title", "short_description", "is_enrolled")
+        fields = ("course_id", "title", "short_description", "is_enrolled", "progress_percent", "progress_status")
 
     course_id = serializers.UUIDField(source="id", read_only=True)
 
     def get_is_enrolled(self, obj):
         return bool(getattr(obj, "is_enrolled", False))
 
+    def get_progress_percent(self, obj):
+        if not self.get_is_enrolled(obj):
+            return None
+        progress_percent = getattr(obj, "progress_percent", None)
+        return progress_percent if progress_percent in {25, 50, 75, 100} else 25
+
+    def get_progress_status(self, obj):
+        if not self.get_is_enrolled(obj):
+            return None
+
+        progress_status = getattr(obj, "progress_status", None)
+        if progress_status in {"enrolled", "theory_completed", "testing_in_progress", "completed"}:
+            return progress_status
+        return "enrolled"
 
 class CourseMediaSerializer(serializers.ModelSerializer):
     course_id = serializers.UUIDField(source="course.id", read_only=True)

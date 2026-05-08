@@ -21,6 +21,8 @@ export type Course = {
   title: string;
   short_description: string;
   is_enrolled: boolean;
+  progress_percent: number | null;
+  progress_status: ProgressStatus | null;
 };
 
 export type CourseDetail = Course & {
