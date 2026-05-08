@@ -96,6 +96,8 @@ export const TopNavigation = () => {
               src={logoUrl}
               alt="Логотип Вологодского объединения поисковиков"
               className="brand-link__logo-image"
+              width={84}
+              height={84}
               onError={() => {
                 if (logoUrl !== brandingConfig.defaultLogoUrl) {
                   setLogoUrl(brandingConfig.defaultLogoUrl);

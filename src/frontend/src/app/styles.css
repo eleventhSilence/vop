@@ -19,7 +19,7 @@
 
 
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; background: #f4f7fb; }
+body { margin: 0; min-width: 320px; background-color: #f4f7fb; background-image: linear-gradient(180deg, #f7f9fd 0%, #edf2fa 100%); }
 html { scroll-behavior: smooth; }
 a { color: #3557ff; text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -28,7 +28,10 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .app-shell {
   min-height: 100vh;
   background-color: #f4f7fb;
-  background-image: linear-gradient(var(--platform-bg-overlay), var(--platform-bg-overlay)), var(--app-bg-image, none);
+  background-image:
+    linear-gradient(var(--platform-bg-overlay), var(--platform-bg-overlay)),
+    linear-gradient(180deg, #f7f9fd 0%, #edf2fa 100%),
+    var(--app-bg-image, none);
   background-size: cover;
   background-position: center top;
   background-repeat: no-repeat;
@@ -717,6 +720,9 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .public-hero-card--photo {
   position: relative;
   overflow: hidden;
+  min-height: clamp(280px, 36vw, 420px);
+  background-color: var(--surface-main);
+  background-image: linear-gradient(120deg, #f8fbff 0%, #edf3ff 55%, #e6eeff 100%);
   background-size: cover;
   background-position: center;
   border-color: #d7e2ee;
@@ -732,7 +738,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   z-index: 1;
 }
 .public-hero-card--photo-fallback {
-  background: linear-gradient(120deg, #f8fbff 0%, #edf3ff 55%, #e6eeff 100%);
+  background-image: linear-gradient(120deg, #f8fbff 0%, #edf3ff 55%, #e6eeff 100%);
 }
 .public-cta-card__actions--wrap {
   display: flex;
