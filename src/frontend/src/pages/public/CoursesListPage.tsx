@@ -125,7 +125,7 @@ export const CoursesListPage = () => {
           <article key={course.course_id}>
             <Link
               to={`/courses/${course.course_id}`}
-              className="public-course-link-card"
+              className={`public-course-link-card ${course.is_enrolled ? 'public-course-link-card--enrolled' : 'public-course-link-card--available'}`}
               tabIndex={0}
               onKeyDown={handleCardKeyDown}
             >
