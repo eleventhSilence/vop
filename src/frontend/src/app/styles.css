@@ -596,11 +596,16 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .course-toc {
   position: sticky;
-  top: 96px;
+  top: calc(var(--header-height, 96px) + 24px);
   align-self: start;
   padding: 1rem;
+  min-width: 0;
 }
 .course-toc h3 { margin-bottom: 0.75rem; }
+.course-toc__empty {
+  margin: 0;
+  font-size: 0.95rem;
+}
 .course-toc__nav {
   display: grid;
   gap: 0.35rem;
@@ -612,7 +617,6 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .course-toc__link:hover { text-decoration: none; background: rgba(235, 226, 205, 0.35); }
 .course-toc__link--h2 { padding-left: 0.85rem; font-size: 0.95rem; }
-.course-toc__link--h3 { padding-left: 1.25rem; font-size: 0.9rem; }
 .course-toc__link--active {
   background: rgba(49, 84, 244, 0.1);
   color: #3154f4;
@@ -1417,7 +1421,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 
 .course-content h1,
 .course-content h2,
-.course-content h3 { scroll-margin-top: 96px; }
+.course-content h3 { scroll-margin-top: calc(var(--header-height, 96px) + 24px); }
 .course-content h1 { margin: 1.35rem 0 0.8rem; font-size: 2rem; }
 .course-content h2 { margin: 1.1rem 0 0.7rem; font-size: 1.55rem; }
 .course-content h3 { margin: 0.95rem 0 0.6rem; font-size: 1.25rem; }
@@ -1443,15 +1447,31 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   border: 1px solid #dce4f3;
   border-radius: 0.4rem;
   padding: 0.05rem 0.35rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .course-content pre {
   background: #f7f9fd;
   border: 1px solid #dce4f3;
   border-radius: 0.65rem;
   padding: 0.8rem;
+  max-width: 100%;
   overflow-x: auto;
 }
-.course-content pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.course-content pre code {
+  display: block;
+  min-width: 0;
+  white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.course-content ul.contains-task-list,
+.course-content li.task-list-item {
+  list-style: none;
+}
+.course-content ul.contains-task-list {
+  padding-left: 0;
+}
 .course-content a { color: #3154f4; text-decoration: underline; }
 .course-content a:hover { text-decoration-thickness: 2px; }
 .course-content input[type='checkbox'] {

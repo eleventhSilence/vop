@@ -58,8 +58,15 @@ export const CourseLearningPage = () => {
       const visible = entries
         .filter((entry) => entry.isIntersecting)
         .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      if (visible?.target.id) setActiveHeadingId(visible.target.id);
-    }, { rootMargin: '-90px 0px -60% 0px', threshold: [0.1, 0.35, 0.7] });
+      if (visible?.target.id) {
+        setActiveHeadingId(visible.target.id);
+        return;
+      }
+      const passed = elements
+        .filter((element) => element.getBoundingClientRect().top <= 140)
+        .at(-1);
+      if (passed?.id) setActiveHeadingId(passed.id);
+    }, { rootMargin: '-120px 0px -55% 0px', threshold: [0, 0.2, 0.5] });
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
   }, [headings]);
@@ -138,9 +145,9 @@ export const CourseLearningPage = () => {
               </div>
             ) : null}
           </article>
-          {headings.length ? (
-            <aside className="course-toc card">
-              <h3>Содержание</h3>
+          <aside className="course-toc card">
+            <h3>Содержание</h3>
+            {headings.length ? (
               <nav className="course-toc__nav" aria-label="Содержание курса">
                 {headings.map((heading) => (
                   <a
@@ -153,8 +160,10 @@ export const CourseLearningPage = () => {
                   </a>
                 ))}
               </nav>
-            </aside>
-          ) : null}
+            ) : (
+              <p className="course-toc__empty muted">Содержание отсутствует</p>
+            )}
+          </aside>
 
           <section className="card form-stack">
             <div>
