@@ -15,6 +15,7 @@
   --surface-border: rgba(180, 170, 140, 0.22);
   --surface-shadow: 0 8px 24px rgba(31, 36, 48, 0.06);
   --surface-shadow-raised: 0 12px 30px rgba(31, 36, 48, 0.08);
+  --header-height: 112px;
 }
 
 
@@ -597,7 +598,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .course-side-panel {
   position: sticky;
-  top: calc(var(--header-height, 96px) + 24px);
+  top: calc(var(--header-height, 112px) + 32px);
   align-self: flex-start;
   display: grid;
   gap: 1rem;
@@ -1427,7 +1428,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 
 .course-content h1,
 .course-content h2,
-.course-content h3 { scroll-margin-top: calc(var(--header-height, 96px) + 24px); }
+.course-content h3 { scroll-margin-top: calc(var(--header-height, 112px) + 40px); }
 .course-content h1 { margin: 1.35rem 0 0.8rem; font-size: 2rem; }
 .course-content h2 { margin: 1.1rem 0 0.7rem; font-size: 1.55rem; }
 .course-content h3 { margin: 0.95rem 0 0.6rem; font-size: 1.25rem; }

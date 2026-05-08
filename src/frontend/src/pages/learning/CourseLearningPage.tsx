@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
@@ -39,7 +39,8 @@ export const CourseLearningPage = () => {
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
   const [visualProgressPercent, setVisualProgressPercent] = useState<number | null>(null);
   const courseContentRef = useRef<HTMLDivElement | null>(null);
-  const headings = useMemo(() => extractCourseHeadings(courseQuery.data?.content ?? ''), [courseQuery.data?.content]);
+  const courseContent = courseQuery.data?.content ?? '';
+  const headings = useMemo(() => extractCourseHeadings(courseContent), [courseContent]);
 
   useEffect(() => {
     if (myCourseReview) {
@@ -49,29 +50,75 @@ export const CourseLearningPage = () => {
     setReviewDraft({ comment: '', rating: 5 });
   }, [myCourseReview]);
 
-  useEffect(() => {
-    setActiveHeadingId(headings[0]?.id ?? null);
-    if (!headings.length) return;
-    const elements = headings
+  const getHeaderOffset = useCallback(() => {
+    const topBar = document.querySelector('.topbar');
+    const headerHeight = topBar instanceof HTMLElement ? topBar.offsetHeight : 112;
+    return headerHeight + 40;
+  }, []);
+
+  const updateActiveHeading = useCallback(() => {
+    if (!headings.length) {
+      setActiveHeadingId(null);
+      return;
+    }
+
+    const headingElements = headings
       .map((heading) => document.getElementById(heading.id))
       .filter((element): element is HTMLElement => Boolean(element));
-    if (!elements.length) return;
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      if (visible?.target.id) {
-        setActiveHeadingId(visible.target.id);
-        return;
+
+    if (!headingElements.length) return;
+
+    const offset = getHeaderOffset();
+    let currentId = headingElements[0].id;
+
+    for (const element of headingElements) {
+      if (element.getBoundingClientRect().top <= offset) {
+        currentId = element.id;
+      } else {
+        break;
       }
-      const passed = elements
-        .filter((element) => element.getBoundingClientRect().top <= 140)
-        .at(-1);
-      if (passed?.id) setActiveHeadingId(passed.id);
-    }, { rootMargin: '-120px 0px -55% 0px', threshold: [0, 0.2, 0.5] });
-    elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
-  }, [headings]);
+    }
+
+    setActiveHeadingId((previous) => (previous === currentId ? previous : currentId));
+  }, [getHeaderOffset, headings]);
+
+  useEffect(() => {
+    if (courseQuery.isLoading || !courseContent || !headings.length) {
+      setActiveHeadingId(headings[0]?.id ?? null);
+      return;
+    }
+
+    let raf1 = 0;
+    let raf2 = 0;
+    let timeoutId: number | null = null;
+    let scrollRafId: number | null = null;
+
+    const scheduleUpdate = () => {
+      if (scrollRafId !== null) return;
+      scrollRafId = window.requestAnimationFrame(() => {
+        scrollRafId = null;
+        updateActiveHeading();
+      });
+    };
+
+    raf1 = window.requestAnimationFrame(() => {
+      updateActiveHeading();
+      raf2 = window.requestAnimationFrame(updateActiveHeading);
+    });
+    timeoutId = window.setTimeout(updateActiveHeading, 0);
+
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
+      if (scrollRafId !== null) window.cancelAnimationFrame(scrollRafId);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      window.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+    };
+  }, [courseContent, courseId, courseQuery.isLoading, headings, updateActiveHeading]);
 
   useEffect(() => {
     const progress = progressQuery.data;
