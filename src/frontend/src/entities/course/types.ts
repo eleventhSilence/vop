@@ -20,6 +20,7 @@ export type Course = {
   course_id: string;
   title: string;
   short_description: string;
+  is_enrolled: boolean;
 };
 
 export type CourseDetail = Course & {

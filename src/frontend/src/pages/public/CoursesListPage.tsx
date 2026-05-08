@@ -129,12 +129,18 @@ export const CoursesListPage = () => {
               tabIndex={0}
               onKeyDown={handleCardKeyDown}
             >
+              <div className="public-course-card__header">
+                <span className="public-course-card__label">Учебный курс</span>
+                <span className={`public-course-card__badge ${course.is_enrolled ? 'public-course-card__badge--enrolled' : 'public-course-card__badge--available'}`}>
+                  {course.is_enrolled ? 'Вы записаны' : 'Доступен'}
+                </span>
+              </div>
               <div className="stack-list public-course-card__content">
                 <h3>{course.title}</h3>
-                <p className="muted">{course.short_description || 'Описание курса будет добавлено позднее.'}</p>
+                <p className="muted public-course-card__description">{course.short_description || 'Описание курса пока не добавлено'}</p>
               </div>
               <div className="public-course-card__footer" aria-hidden>
-                <span>Подробнее →</span>
+                <span>Открыть страницу курса →</span>
               </div>
             </Link>
           </article>

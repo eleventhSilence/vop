@@ -32,6 +32,9 @@ class CourseListView(generics.ListAPIView):
 
     def get_queryset(self):
         queryset = Course.objects.filter(status=CourseStatus.AVAILABLE)
+        if self.request.user.is_authenticated:
+            user_enrollment = CourseEnrollment.objects.filter(user=self.request.user, course_id=OuterRef("pk"))
+            queryset = queryset.annotate(is_enrolled=Exists(user_enrollment))
 
         search = (self.request.query_params.get("search") or "").strip()
         if search:
@@ -39,8 +42,6 @@ class CourseListView(generics.ListAPIView):
 
         enrollment = (self.request.query_params.get("enrollment") or "all").strip().lower()
         if self.request.user.is_authenticated and enrollment in {"enrolled", "not_enrolled"}:
-            user_enrollment = CourseEnrollment.objects.filter(user=self.request.user, course_id=OuterRef("pk"))
-            queryset = queryset.annotate(is_enrolled=Exists(user_enrollment))
             if enrollment == "enrolled":
                 queryset = queryset.filter(is_enrolled=True)
             else:

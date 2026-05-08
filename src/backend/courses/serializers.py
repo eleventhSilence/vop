@@ -5,11 +5,16 @@ from progress.utils import build_progress_payload
 
 
 class CourseListSerializer(serializers.ModelSerializer):
+    is_enrolled = serializers.SerializerMethodField()
+
     class Meta:
         model = Course
-        fields = ("course_id", "title", "short_description")
+        fields = ("course_id", "title", "short_description", "is_enrolled")
 
     course_id = serializers.UUIDField(source="id", read_only=True)
+
+    def get_is_enrolled(self, obj):
+        return bool(getattr(obj, "is_enrolled", False))
 
 
 class CourseMediaSerializer(serializers.ModelSerializer):
@@ -139,4 +144,3 @@ class MyCourseSerializer(serializers.ModelSerializer):
 
     def get_is_test_passed(self, obj):
         return self._progress_payload(obj)["is_test_passed"]
-

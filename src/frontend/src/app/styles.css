@@ -777,8 +777,8 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .public-courses-list {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 .courses-filters {
   display: grid;
@@ -801,6 +801,40 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   color: inherit;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
+.public-course-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.public-course-card__label {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.public-course-card__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.public-course-card__badge--available {
+  color: #2e5b3f;
+  background: #ebf8ef;
+  border-color: #cde8d5;
+}
+.public-course-card__badge--enrolled {
+  color: #314f9e;
+  background: #eef2ff;
+  border-color: #d8defe;
+}
 .public-course-link-card:hover {
   text-decoration: none;
   border-color: rgba(180, 170, 140, 0.3);
@@ -815,6 +849,21 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .public-course-card__content {
   min-height: 100%;
+}
+.public-course-card__content h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.public-course-card__description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  line-height: 1.45;
 }
 .public-course-card__footer {
   margin-top: auto;
@@ -891,6 +940,9 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   }
 
   .courses-filters {
+    grid-template-columns: 1fr;
+  }
+  .public-courses-list {
     grid-template-columns: 1fr;
   }
   .public-hero-card--photo::before {
