@@ -9,7 +9,7 @@ import { ensurePaginated } from '@/shared/lib/pagination';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 10;
 
 export const CoursesListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,6 +49,19 @@ export const CoursesListPage = () => {
   const paginatedCourses = coursesQuery.data ? ensurePaginated(coursesQuery.data) : null;
   const courses = paginatedCourses?.results ?? [];
   const totalPages = paginatedCourses ? Math.max(1, Math.ceil(paginatedCourses.count / PAGE_SIZE)) : 1;
+  const shouldShowPagination = Boolean(paginatedCourses && paginatedCourses.count > 0);
+
+  useEffect(() => {
+    if (!paginatedCourses) {
+      return;
+    }
+
+    if (currentPage > totalPages) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('page');
+      setSearchParams(nextParams);
+    }
+  }, [currentPage, paginatedCourses, searchParams, setSearchParams, totalPages]);
 
   const setPage = (page: number) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -147,21 +160,19 @@ export const CoursesListPage = () => {
         ))}
       </div>
 
-      {paginatedCourses && totalPages > 1 ? (
+      {shouldShowPagination && !coursesQuery.isError && !coursesQuery.isLoading ? (
         <div className="card public-pagination-card">
-          <div>
-            <p className="eyebrow">Навигация по каталогу</p>
-            <p className="muted">
-              Страница {currentPage} из {totalPages}
-            </p>
-          </div>
+          <p className="muted">
+            Страница {currentPage} из {totalPages}. Сейчас показано {courses.length} записей.
+          </p>
 
-          <div className="hero-card__actions">
-            <button type="button" className="button button--ghost" onClick={() => setPage(currentPage - 1)} disabled={!paginatedCourses.previous}>
-              Предыдущая
+          <div className="public-pagination-card__actions">
+            <button type="button" className="button button--ghost" onClick={() => setPage(currentPage - 1)} disabled={currentPage <= 1}>
+              Назад
             </button>
-            <button type="button" className="button button--primary" onClick={() => setPage(currentPage + 1)} disabled={!paginatedCourses.next}>
-              Следующая
+            <span className="public-pagination-card__page-indicator">Страница {currentPage}</span>
+            <button type="button" className="button button--ghost" onClick={() => setPage(currentPage + 1)} disabled={currentPage >= totalPages}>
+              Вперёд
             </button>
           </div>
         </div>

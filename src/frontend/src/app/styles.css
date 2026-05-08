@@ -958,6 +958,23 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   border: 1px solid rgba(203, 194, 171, 0.62);
   background: linear-gradient(180deg, #fbfaf7 0%, #f7f4ed 100%);
 }
+.public-pagination-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.public-pagination-card__page-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4rem;
+  padding: 0 0.9rem;
+  border: 1px solid rgba(186, 178, 156, 0.8);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.72);
+  color: #2e3647;
+  font-weight: 600;
+}
 .public-cta-card__actions {
   display: flex;
   justify-content: flex-end;
