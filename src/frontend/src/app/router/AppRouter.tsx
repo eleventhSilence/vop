@@ -44,8 +44,8 @@ export const AppRouter = () => {
 
         <Route element={<ProtectedRoute />}>
           <Route path="account" element={<AccountLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
+            <Route index element={<Navigate to="profile" replace />} />
+            <Route path="dashboard" element={<Navigate to="/account/profile" replace />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="courses" element={<MyCoursesPage />} />
             <Route path="courses/:courseId" element={<CourseLearningPage />} />
