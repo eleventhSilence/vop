@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
@@ -50,87 +50,75 @@ export const CourseLearningPage = () => {
     setReviewDraft({ comment: '', rating: 5 });
   }, [myCourseReview]);
 
+  const getHeaderOffset = useCallback(() => {
+    const topBar = document.querySelector('.topbar');
+    const headerHeight = topBar instanceof HTMLElement ? topBar.offsetHeight : 112;
+    return headerHeight + 40;
+  }, []);
+
+  const updateActiveHeading = useCallback(() => {
+    if (!headings.length) {
+      setActiveHeadingId(null);
+      return;
+    }
+
+    const headingElements = headings
+      .map((heading) => document.getElementById(heading.id))
+      .filter((element): element is HTMLElement => Boolean(element));
+
+    if (!headingElements.length) return;
+
+    const offset = getHeaderOffset();
+    let currentId = headingElements[0].id;
+
+    for (const element of headingElements) {
+      if (element.getBoundingClientRect().top <= offset) {
+        currentId = element.id;
+      } else {
+        break;
+      }
+    }
+
+    setActiveHeadingId((previous) => (previous === currentId ? previous : currentId));
+  }, [getHeaderOffset, headings]);
+
   useEffect(() => {
     if (courseQuery.isLoading || !courseContent || !headings.length) {
       setActiveHeadingId(headings[0]?.id ?? null);
       return;
     }
 
-    let observer: IntersectionObserver | null = null;
+    let raf1 = 0;
+    let raf2 = 0;
+    let timeoutId: number | null = null;
     let scrollRafId: number | null = null;
-    let retryTimeoutId: number | null = null;
-    let isDestroyed = false;
-    let headingElements: HTMLElement[] = [];
-    const activateFirstHeading = () => setActiveHeadingId((current) => current ?? headings[0]?.id ?? null);
 
-    const updateByScrollPosition = () => {
-      if (!headingElements.length) return;
-      const offset = 160;
-      let nextId = headingElements[0].id;
-      for (const element of headingElements) {
-        if (element.getBoundingClientRect().top <= offset) {
-          nextId = element.id;
-          continue;
-        }
-        break;
-      }
-      setActiveHeadingId(nextId);
-    };
-
-    const scheduleScrollUpdate = () => {
+    const scheduleUpdate = () => {
       if (scrollRafId !== null) return;
       scrollRafId = window.requestAnimationFrame(() => {
         scrollRafId = null;
-        updateByScrollPosition();
+        updateActiveHeading();
       });
     };
 
-    const initializeObserver = (attempt = 0) => {
-      headingElements = headings
-        .map((heading) => document.getElementById(heading.id))
-        .filter((element): element is HTMLElement => Boolean(element));
+    raf1 = window.requestAnimationFrame(() => {
+      updateActiveHeading();
+      raf2 = window.requestAnimationFrame(updateActiveHeading);
+    });
+    timeoutId = window.setTimeout(updateActiveHeading, 0);
 
-      if (!headingElements.length) {
-        if (attempt < 5 && !isDestroyed) {
-          retryTimeoutId = window.setTimeout(() => initializeObserver(attempt + 1), 0);
-          return;
-        }
-        setActiveHeadingId(headings[0]?.id ?? null);
-        return;
-      }
-
-      activateFirstHeading();
-      updateByScrollPosition();
-
-      observer = new IntersectionObserver((entries) => {
-        const visibleEntries = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visibleEntries[0]?.target.id) {
-          setActiveHeadingId(visibleEntries[0].target.id);
-          return;
-        }
-        updateByScrollPosition();
-      }, { root: null, rootMargin: '-120px 0px -50% 0px', threshold: [0, 0.1, 0.25, 0.5] });
-
-      headingElements.forEach((element) => observer?.observe(element));
-    };
-
-    const rafId = window.requestAnimationFrame(initializeObserver);
-    window.addEventListener('scroll', scheduleScrollUpdate, { passive: true });
-    window.addEventListener('resize', scheduleScrollUpdate);
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
 
     return () => {
-      isDestroyed = true;
-      window.cancelAnimationFrame(rafId);
-      if (retryTimeoutId !== null) window.clearTimeout(retryTimeoutId);
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
       if (scrollRafId !== null) window.cancelAnimationFrame(scrollRafId);
-      window.removeEventListener('scroll', scheduleScrollUpdate);
-      window.removeEventListener('resize', scheduleScrollUpdate);
-      observer?.disconnect();
-      observer = null;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      window.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
     };
-  }, [courseId, courseContent, headings, courseQuery.isLoading]);
+  }, [courseContent, courseId, courseQuery.isLoading, headings, updateActiveHeading]);
 
   useEffect(() => {
     const progress = progressQuery.data;
