@@ -287,7 +287,7 @@ export const AdminCoursesPage = () => {
 
   return (
     <PageSection>
-      <h2>Администратор: курсы</h2>
+      <h2>Администрирование курсов</h2>
       <div className="admin-courses-toolbar">
         <div className="admin-list-filters">
           <Input id="admin-courses-search" label="" placeholder="Поиск по курсам" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />

@@ -229,7 +229,7 @@ export const AdminUsersPage = () => {
       <div className="section-header">
         <div>
           <p className="eyebrow">Администрирование</p>
-          <h2>Пользователи</h2>
+          <h2>Администрирование пользователей</h2>
           <p className="muted">
             Управляйте ролями, статусами и именами через существующий admin API без перезагрузки страницы.
           </p>

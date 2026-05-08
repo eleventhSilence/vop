@@ -10,12 +10,12 @@ import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
 
-export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolean }) => {
+export const AdminReviewsPage = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | Extract<ReviewStatus, 'approved' | 'rejected'>>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | Extract<ReviewStatus, 'pending' | 'approved' | 'rejected'>>('all');
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setSearch(searchInput.trim()), 400);
@@ -27,37 +27,25 @@ export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolea
   }, [search, statusFilter]);
 
   const reviewsQuery = useQuery({
-    queryKey: pendingOnly ? ['admin', 'reviews', 'pending', page, search] : ['admin', 'reviews', page, search, statusFilter],
-    queryFn: () =>
-      (pendingOnly
-        ? reviewsApi.adminPending({ page, search: search || undefined })
-        : reviewsApi.adminList({ page, search: search || undefined, status: statusFilter })),
+    queryKey: ['admin', 'reviews', page, search, statusFilter],
+    queryFn: () => reviewsApi.adminList({ page, search: search || undefined, status: statusFilter }),
   });
 
   const moderateMutation = useMutation({
     mutationFn: ({ reviewId, status }: { reviewId: string; status: Extract<ReviewStatus, 'approved' | 'rejected'> }) => reviewsApi.adminModerate(reviewId, status),
     onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['admin', 'reviews'], exact: true }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'reviews', 'pending'], exact: true }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'reviews'] });
     },
   });
 
   const reviews = reviewsQuery.data ? ensurePaginated(reviewsQuery.data).results : [];
-  const pageTitle = pendingOnly ? 'Отзывы на модерации' : 'Все отзывы';
-  const endpointLabel = pendingOnly ? '/api/admin/reviews/pending/' : '/api/admin/reviews/';
 
   return (
     <PageSection>
       <div className="section-header">
         <div>
           <p className="eyebrow">Администрирование</p>
-          <h2>{pageTitle}</h2>
-          <p className="muted">
-            Страница использует endpoint <code>{endpointLabel}</code>
-            {pendingOnly ? ' и показывает только отзывы со статусом pending.' : ' и показывает все отзывы независимо от статуса.'}
-          </p>
+          <h2>Администрирование отзывов</h2>
         </div>
       </div>
       <div className="admin-users-toolbar">
@@ -68,18 +56,17 @@ export const AdminReviewsPage = ({ pendingOnly = false }: { pendingOnly?: boolea
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
           />
-          {!pendingOnly ? (
-            <select
-              id="admin-reviews-status-filter"
-              className="field__control"
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as 'all' | Extract<ReviewStatus, 'approved' | 'rejected'>)}
-            >
-              <option value="all">Все статусы</option>
-              <option value="approved">Одобрен</option>
-              <option value="rejected">Отклонён</option>
-            </select>
-          ) : null}
+          <select
+            id="admin-reviews-status-filter"
+            className="field__control"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as 'all' | Extract<ReviewStatus, 'pending' | 'approved' | 'rejected'>)}
+          >
+            <option value="all">Все статусы</option>
+            <option value="pending">На модерации</option>
+            <option value="approved">Одобрен</option>
+            <option value="rejected">Отклонён</option>
+          </select>
         </div>
       </div>
       {reviewsQuery.isLoading ? <LoadingState /> : null}
