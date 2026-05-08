@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
+import { AccountDashboardSection } from '@/pages/account/components/AccountDashboardSection';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -228,6 +229,7 @@ export const ProfilePage = () => {
               {changePasswordMutation.isPending ? 'Сохраняем...' : 'Изменить пароль'}
             </Button>
           </form>
+          <AccountDashboardSection />
         </>
       ) : null}
     </PageSection>

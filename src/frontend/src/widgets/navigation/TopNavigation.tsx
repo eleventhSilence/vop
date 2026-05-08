@@ -49,36 +49,7 @@ export const TopNavigation = () => {
 
   return (
     <header className="topbar">
-      <div className="topbar__brand-wrap">
-        <NavLink to="/" className="brand-link" aria-label="Перейти на главную страницу">
-          {isLogoBroken ? (
-            <span className="brand-link__logo-fallback" role="img" aria-label="Логотип Вологодского объединения поисковиков">
-              ВОП
-            </span>
-          ) : (
-            <img
-              src={logoUrl}
-              alt="Логотип Вологодского объединения поисковиков"
-              className="brand-link__logo-image"
-              onError={() => {
-                if (logoUrl !== brandingConfig.defaultLogoUrl) {
-                  // Debug note: внешний источник может блокировать загрузку (hotlink/403), переключаемся на локальный fallback-asset.
-                  setLogoUrl(brandingConfig.defaultLogoUrl);
-                  return;
-                }
-
-                setIsLogoBroken(true);
-              }}
-            />
-          )}
-          <span className="brand-link__text">
-            <span className="eyebrow">ВОП</span>
-            <strong className="brand-link__title">Онлайн-платформа «Вологодское Объединение Поисковиков»</strong>
-          </span>
-        </NavLink>
-      </div>
-
-      <div className="topbar__actions">
+      <div className="topbar__actions topbar__actions--left">
         {isAuthenticated && user ? (
           <details className="user-menu" ref={menuRef}>
             <summary className="user-menu__trigger">
@@ -87,13 +58,14 @@ export const TopNavigation = () => {
                 <span className="user-menu__name">{fullName || user.email}</span>
                 <span className="user-menu__role">{isAdmin ? 'Администратор' : 'Пользователь'}</span>
               </span>
+              <span className="user-menu__caret" aria-hidden="true">▾</span>
             </summary>
 
             <div className="user-menu__dropdown">
               {menuItems.map((item) => (
-                <Link key={item.to} to={item.to} className="user-menu__link" onClick={closeMenu}>
+                <NavLink key={item.to} to={item.to} className="user-menu__link" onClick={closeMenu}>
                   {item.label}
-                </Link>
+                </NavLink>
               ))}
               <Button variant="ghost" className="user-menu__logout" onClick={() => { closeMenu(); void logout(); }}>
                 Выйти
@@ -107,6 +79,34 @@ export const TopNavigation = () => {
             </NavLink>
           ))
         )}
+      </div>
+
+      <div className="topbar__brand-wrap topbar__brand-wrap--right">
+        <Link to="/" className="brand-link" aria-label="Перейти на главную страницу">
+          <span className="brand-link__text">
+            <span className="eyebrow">ВОП</span>
+            <strong className="brand-link__title">Онлайн-платформа «Вологодское Объединение Поисковиков»</strong>
+          </span>
+          {isLogoBroken ? (
+            <span className="brand-link__logo-fallback" role="img" aria-label="Логотип Вологодского объединения поисковиков">
+              ВОП
+            </span>
+          ) : (
+            <img
+              src={logoUrl}
+              alt="Логотип Вологодского объединения поисковиков"
+              className="brand-link__logo-image"
+              onError={() => {
+                if (logoUrl !== brandingConfig.defaultLogoUrl) {
+                  setLogoUrl(brandingConfig.defaultLogoUrl);
+                  return;
+                }
+
+                setIsLogoBroken(true);
+              }}
+            />
+          )}
+        </Link>
       </div>
     </header>
   );
