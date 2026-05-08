@@ -1404,3 +1404,74 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     width: 100%;
   }
 }
+
+.markdown-help__section {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+.markdown-help__section h4 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.course-content h1,
+.course-content h2,
+.course-content h3 { scroll-margin-top: 96px; }
+.course-content h1 { margin: 1.35rem 0 0.8rem; font-size: 2rem; }
+.course-content h2 { margin: 1.1rem 0 0.7rem; font-size: 1.55rem; }
+.course-content h3 { margin: 0.95rem 0 0.6rem; font-size: 1.25rem; }
+.course-content p { margin: 0.6rem 0; line-height: 1.7; }
+.course-content ul,
+.course-content ol { margin: 0.65rem 0 0.8rem; padding-left: 1.35rem; }
+.course-content li { margin: 0.35rem 0; }
+.course-content blockquote {
+  margin: 0.9rem 0;
+  padding: 0.6rem 0.9rem;
+  border-left: 3px solid #ccd8f8;
+  background: #f7f9ff;
+  border-radius: 0.55rem;
+}
+.course-content hr {
+  border: none;
+  border-top: 1px solid #dbe3ef;
+  margin: 1.1rem 0;
+}
+.course-content :not(pre) > code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: #f3f6fb;
+  border: 1px solid #dce4f3;
+  border-radius: 0.4rem;
+  padding: 0.05rem 0.35rem;
+}
+.course-content pre {
+  background: #f7f9fd;
+  border: 1px solid #dce4f3;
+  border-radius: 0.65rem;
+  padding: 0.8rem;
+  overflow-x: auto;
+}
+.course-content pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.course-content a { color: #3154f4; text-decoration: underline; }
+.course-content a:hover { text-decoration-thickness: 2px; }
+.course-content input[type='checkbox'] {
+  margin-right: 0.45rem;
+  vertical-align: middle;
+  pointer-events: none;
+}
+.course-content__table-wrap {
+  overflow-x: auto;
+  margin: 0.9rem 0;
+}
+.course-content table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 440px;
+}
+.course-content th,
+.course-content td {
+  border: 1px solid #dce4f3;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+}
+.course-content th { background: #f4f7ff; }

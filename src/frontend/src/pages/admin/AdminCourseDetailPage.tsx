@@ -20,6 +20,32 @@ type ValidationErrors = Partial<Record<keyof CourseFormValues, string>>;
 
 const SHORT_DESCRIPTION_MIN_LENGTH = 10;
 
+
+const MarkdownHelp = () => (
+  <details className="markdown-help">
+    <summary className="markdown-help__summary">Подсказка по оформлению</summary>
+    <div className="markdown-help__content">
+      <p className="muted">Поддерживаются #, ##, ###, выделение, списки, чек-листы, цитаты, разделители, таблицы и код-блоки. HTML-теги запрещены.</p>
+      <pre className="markdown-help__code">{`# Заголовок
+## Раздел
+### Подраздел
+
+**жирный** *курсив* ***жирный курсив*** ~~зачёркнутый~~ \`код\`
+
+- [ ] задача
+- [x] выполнено
+
+| Раздел | Описание |
+| --- | --- |
+| Теория | Материал |
+
+![Описание изображения](media\:slug)
+[Описание материала](media:slug)
+{{ media:slug }}`}</pre>
+    </div>
+  </details>
+);
+
 export const AdminCourseDetailPage = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -183,6 +209,7 @@ export const AdminCourseDetailPage = () => {
               rows={12}
             />
           </label>
+          <MarkdownHelp />
           <label className="field" htmlFor="admin-course-status">
             <span className="field__label">Статус</span>
             <select

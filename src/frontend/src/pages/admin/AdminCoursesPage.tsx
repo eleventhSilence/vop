@@ -35,25 +35,54 @@ const MarkdownHelp = () => (
     <summary className="markdown-help__summary">Подсказка по оформлению</summary>
     <div className="markdown-help__content">
       <p className="muted">Сначала загрузите файл в блоке «Файлы курса», затем используйте его <code>slug</code> в поле контента. HTML-теги запрещены и не обрабатываются.</p>
-      <pre className="markdown-help__code">{`# Главный заголовок
-## Раздел
-### Подраздел
-
-**важный текст**
+      <div className="markdown-help__section">
+        <h4>Заголовки</h4>
+        <pre className="markdown-help__code">{`# Заголовок 1 уровня
+## Заголовок 2 уровня
+### Заголовок 3 уровня`}</pre>
+        <p className="muted"># и ## попадают в содержание курса. ### используется как внутренний подзаголовок и в содержание не попадает.</p>
+      </div>
+      <div className="markdown-help__section">
+        <h4>Выделение текста</h4>
+        <pre className="markdown-help__code">{`**жирный текст**
 *курсивный текст*
-
-- пункт списка
+***жирный курсив***
+~~зачёркнутый текст~~
+\`инлайн-код\``}</pre>
+      </div>
+      <div className="markdown-help__section">
+        <h4>Списки и чек-листы</h4>
+        <pre className="markdown-help__code">{`- пункт списка
 - пункт списка
 
 1. первый пункт
 2. второй пункт
 
-> Важная информация
+- [ ] невыполненный пункт
+- [x] выполненный пункт`}</pre>
+      </div>
+      <div className="markdown-help__section">
+        <h4>Цитата, разделитель, таблица, код-блок</h4>
+        <pre className="markdown-help__code">{`> Важная информация
 
-[Текст ссылки](https://example.com)
-![Описание изображения](media:slug)
+---
+
+| Раздел | Описание         |
+| ------ | ---------------- |
+| Теория | Учебный материал |
+| Тест   | Проверка знаний  |
+
+\`\`\`text
+Текстовый блок или пример кода
+\`\`\``}</pre>
+      </div>
+      <div className="markdown-help__section">
+        <h4>Ссылки и материалы курса</h4>
+        <pre className="markdown-help__code">{`[Текст ссылки](https://example.com)
+![Описание изображения](media\:slug)
 [Описание материала](media:slug)
 {{ media:slug }}`}</pre>
+      </div>
     </div>
   </details>
 );
