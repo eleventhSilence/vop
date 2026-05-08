@@ -54,30 +54,36 @@ export const CourseLearningPage = () => {
       .map((heading) => document.getElementById(heading.id))
       .filter((element): element is HTMLElement => Boolean(element));
     if (!elements.length) return;
+    let frameId = 0;
     const resolveActiveByScrollPosition = () => {
-      const anchorOffset = 110;
-      const current = elements
-        .filter((element) => element.getBoundingClientRect().top - anchorOffset <= 0)
-        .at(-1);
-      if (current?.id) {
-        setActiveHeadingId(current.id);
-        return;
+      const anchorOffset = 120;
+      const pageY = window.scrollY + anchorOffset;
+      let currentId = elements[0]?.id ?? null;
+      for (const element of elements) {
+        if (element.offsetTop <= pageY) {
+          currentId = element.id;
+        } else {
+          break;
+        }
       }
-      setActiveHeadingId(elements[0]?.id ?? null);
+      setActiveHeadingId(currentId);
     };
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      if (visible?.target.id) setActiveHeadingId(visible.target.id);
-    }, { rootMargin: '-96px 0px -50% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
-    elements.forEach((element) => observer.observe(element));
-    const onScroll = () => resolveActiveByScrollPosition();
+    const onScroll = () => {
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(() => {
+        resolveActiveByScrollPosition();
+        frameId = 0;
+      });
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
-    resolveActiveByScrollPosition();
+    window.addEventListener('resize', onScroll);
+    window.addEventListener('hashchange', onScroll);
+    onScroll();
     return () => {
-      observer.disconnect();
+      if (frameId) window.cancelAnimationFrame(frameId);
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('hashchange', onScroll);
     };
   }, [headings]);
 
@@ -163,7 +169,6 @@ export const CourseLearningPage = () => {
                   <a
                     key={heading.id}
                     href={`#${heading.id}`}
-                    onClick={() => setActiveHeadingId(heading.id)}
                     className={`course-toc__link course-toc__link--h${heading.level} ${activeHeadingId === heading.id ? 'course-toc__link--active' : ''}`}
                   >
                     {heading.text}
