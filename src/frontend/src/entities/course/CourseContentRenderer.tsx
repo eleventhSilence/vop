@@ -2,7 +2,6 @@ import { Fragment } from 'react';
 import type { CourseMedia } from './types';
 
 type Props = { content: string; media?: CourseMedia[] };
-export type CourseHeading = { id: string; text: string; level: 1 | 2 };
 
 const mediaBySlug = (media?: CourseMedia[]) => new Map((media ?? []).map((m) => [m.slug, m]));
 
@@ -50,50 +49,9 @@ const renderInline = (text: string) => {
   });
 };
 
-const stripInlineMarkdown = (text: string) => text
-  .replace(/\*\*([^*]+)\*\*/g, '$1')
-  .replace(/\*([^*]+)\*/g, '$1')
-  .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
-  .trim();
-
-const slugifyHeading = (text: string) => {
-  const normalized = text.toLowerCase().trim();
-  const cleaned = normalized
-    .replace(/[^\p{L}\p{N}\s-]/gu, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return cleaned || 'section';
-};
-
-export const extractCourseHeadings = (content: string): CourseHeading[] => {
-  const counters = new Map<string, number>();
-  return content
-    .split('\n')
-    .map((line) => {
-      if (line.startsWith('## ')) return { level: 2 as const, raw: line.slice(3) };
-      if (line.startsWith('# ')) return { level: 1 as const, raw: line.slice(2) };
-      return null;
-    })
-    .filter((item): item is { level: 1 | 2; raw: string } => Boolean(item))
-    .map((item) => {
-      const text = stripInlineMarkdown(item.raw);
-      const baseId = slugifyHeading(text);
-      const count = (counters.get(baseId) ?? 0) + 1;
-      counters.set(baseId, count);
-      return {
-        id: count > 1 ? `${baseId}-${count}` : baseId,
-        level: item.level,
-        text: text || 'Раздел',
-      };
-    });
-};
-
 export const CourseContentRenderer = ({ content, media }: Props) => {
   const lookup = mediaBySlug(media);
   const lines = content.split('\n');
-  const headings = extractCourseHeadings(content);
-  let headingIndex = 0;
   return <div className="prose-block">{lines.map((line, idx) => {
     const embed = line.trim().match(/^\{\{\s*media:([a-z0-9-]+)\s*\}\}$/i);
     if (embed) return <div key={idx}>{renderEmbed(embed[1], lookup.get(embed[1]))}</div>;
@@ -108,15 +66,9 @@ export const CourseContentRenderer = ({ content, media }: Props) => {
     if (mediaLink) {
       return <div key={idx}>{renderEmbed(mediaLink[2], lookup.get(mediaLink[2]), mediaLink[1])}</div>;
     }
-    if (line.startsWith('### ')) return <h3 key={idx}>{renderInline(line.slice(4))}</h3>;
-    if (line.startsWith('## ')) {
-      const heading = headings[headingIndex++];
-      return <h2 key={idx} id={heading?.id}>{renderInline(line.slice(3))}</h2>;
-    }
-    if (line.startsWith('# ')) {
-      const heading = headings[headingIndex++];
-      return <h1 key={idx} id={heading?.id}>{renderInline(line.slice(2))}</h1>;
-    }
+    if (line.startsWith('### ')) return <h4 key={idx}>{renderInline(line.slice(4))}</h4>;
+    if (line.startsWith('## ')) return <h3 key={idx}>{renderInline(line.slice(3))}</h3>;
+    if (line.startsWith('# ')) return <h2 key={idx}>{renderInline(line.slice(2))}</h2>;
     if (line.startsWith('- ')) return <li key={idx}>{renderInline(line.slice(2))}</li>;
     return <p key={idx}>{renderInline(line)}</p>;
   })}</div>;

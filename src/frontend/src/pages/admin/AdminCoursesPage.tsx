@@ -30,34 +30,6 @@ const defaultFormValues: CreateCourseFormValues = {
   status: 'unavailable',
 };
 
-const MarkdownHelp = () => (
-  <details className="markdown-help">
-    <summary className="markdown-help__summary">Подсказка по оформлению</summary>
-    <div className="markdown-help__content">
-      <p className="muted">Сначала загрузите файл в блоке «Файлы курса», затем используйте его <code>slug</code> в поле контента. HTML-теги запрещены и не обрабатываются.</p>
-      <pre className="markdown-help__code">{`# Главный заголовок
-## Раздел
-### Подраздел
-
-**важный текст**
-*курсивный текст*
-
-- пункт списка
-- пункт списка
-
-1. первый пункт
-2. второй пункт
-
-> Важная информация
-
-[Текст ссылки](https://example.com)
-![Описание изображения](media:slug)
-[Описание материала](media:slug)
-{{ media:slug }}`}</pre>
-    </div>
-  </details>
-);
-
 export const AdminCoursesPage = () => {
   const queryClient = useQueryClient();
   const [formValues, setFormValues] = useState<CreateCourseFormValues>(defaultFormValues);
@@ -344,7 +316,6 @@ export const AdminCoursesPage = () => {
                   onChange={(event) => setFormValues((current) => ({ ...current, content: event.target.value }))}
                   rows={8}
                 />
-                <MarkdownHelp />
               </label>
               <p className="muted">Файлы курса можно будет добавить после создания курса в режиме редактирования.</p>
               <label className="field" htmlFor="admin-course-create-status">
@@ -411,8 +382,9 @@ export const AdminCoursesPage = () => {
                   onChange={(event) => setEditFormValues((current) => ({ ...current, content: event.target.value }))}
                   rows={8}
                 />
-                <MarkdownHelp />
               </label>
+
+              <p className="muted">Markdown поддерживает заголовки, списки, ссылки. HTML запрещён. Изображение: <code>{'![Описание изображения](media:slug)'}</code> — описание используется как alt/подсказка. Видео/документ: <code>{'[Описание материала](media:slug)'}</code> — описание используется как подсказка, сам файл отображается стандартным блоком. Старый вариант <code>{'{{ media:slug }}'}</code> поддерживается.</p>
               {editCourseId ? (
                 <section className="card stack-list">
                   <h4>Файлы курса</h4>
