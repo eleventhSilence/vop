@@ -227,7 +227,7 @@ export const AdminQuestionOptionsPage = () => {
           <div className="admin-question-context-card__content">
             <p className="eyebrow">Администрирование</p>
             <h2 className="admin-question-context-card__heading">
-              {questionQuery.data ? `Варианты ответа для вопроса «${questionQuery.data.text}»` : 'Варианты ответа'}
+              {questionQuery.data ? `Администрирование вариантов ответа · «${questionQuery.data.text}»` : 'Администрирование вариантов ответа'}
             </h2>
             {questionQuery.data ? (
               <>

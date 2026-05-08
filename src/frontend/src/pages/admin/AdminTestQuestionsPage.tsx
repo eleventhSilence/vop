@@ -222,7 +222,7 @@ export const AdminTestQuestionsPage = () => {
           <div className="admin-question-context-card__content">
             <p className="eyebrow">Администрирование</p>
             <h2 className="admin-question-context-card__heading">
-              {testQuery.data ? `Вопросы теста «${testQuery.data.title}»` : 'Вопросы теста'}
+              {testQuery.data ? `Администрирование вопросов теста · «${testQuery.data.title}»` : 'Администрирование вопросов теста'}
             </h2>
             {testQuery.data ? (
               <div className="admin-question-context-card__meta">

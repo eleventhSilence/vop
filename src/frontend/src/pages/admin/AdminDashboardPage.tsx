@@ -12,7 +12,7 @@ export const AdminDashboardPage = () => {
 
   return (
     <PageSection>
-      <div className="section-header"><div><p className="eyebrow">Admin UI</p><h2>Административный dashboard</h2></div></div>
+      <div className="section-header"><div><p className="eyebrow">Администрирование</p><h2>Администрирование: обзор</h2></div></div>
       {dashboardQuery.isLoading ? <LoadingState /> : null}
       {dashboardQuery.isError ? <ErrorState message={extractApiError(dashboardQuery.error)} /> : null}
       {dashboardQuery.data ? (

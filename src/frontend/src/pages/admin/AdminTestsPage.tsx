@@ -306,7 +306,7 @@ export const AdminTestsPage = () => {
 
   return (
     <PageSection>
-      <h2>Администратор: тесты</h2>
+      <h2>Администрирование тестов</h2>
       <div className="admin-tests-toolbar">
         <div className="admin-list-filters">
           <Input id="admin-tests-search" label="" placeholder="Поиск по тестам" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />

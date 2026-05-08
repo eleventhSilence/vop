@@ -68,7 +68,6 @@ export const AppRouter = () => {
             <Route path="questions/:questionId" element={<AdminQuestionDetailPage />} />
             <Route path="questions/:questionId/options" element={<AdminQuestionOptionsPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
-            <Route path="reviews/pending" element={<AdminReviewsPage pendingOnly />} />
           </Route>
         </Route>
 
