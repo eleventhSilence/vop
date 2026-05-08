@@ -67,8 +67,8 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .brand-link:hover { text-decoration: none; }
 .brand-link__logo-image,
 .brand-link__logo-fallback {
-  width: 3rem;
-  height: 3rem;
+  width: clamp(3.75rem, 6vw, 5.25rem);
+  height: clamp(3.75rem, 6vw, 5.25rem);
   border-radius: 999px;
   border: 1px solid #d2deec;
   background: #fff;
@@ -92,7 +92,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .brand-link__title {
   display: block;
   margin-top: 0.15rem;
-  font-size: 1rem;
+  font-size: 1.08rem;
   line-height: 1.25;
 }
 .topbar__actions { margin-right: auto; }
@@ -206,7 +206,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .user-menu__caret {
   color: #637287;
-  font-size: 0.9rem;
+  font-size: 0.98rem;
 }
 .user-menu__avatar {
   display: inline-flex;
@@ -223,12 +223,13 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   display: grid;
   text-align: left;
 }
-.user-menu__name { font-weight: 600; }
-.user-menu__role { font-size: 0.82rem; color: #637287; }
+.user-menu__name { font-weight: 600; font-size: 1rem; }
+.user-menu__role { font-size: 0.9rem; color: #637287; }
 .user-menu__dropdown {
   position: absolute;
   top: calc(100% + 0.6rem);
-  right: 0;
+  left: 0;
+  right: auto;
   min-width: 220px;
   padding: 0.4rem;
   border: 1px solid var(--surface-border);
@@ -823,8 +824,8 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 
   .brand-link__logo-image,
   .brand-link__logo-fallback {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: clamp(3.25rem, 10vw, 4.5rem);
+    height: clamp(3.25rem, 10vw, 4.5rem);
   }
 
   .brand-link__title {
