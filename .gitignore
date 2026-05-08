@@ -39,3 +39,5 @@ logs
 .env
 .env.*
 !.env.example
+# Backend local environment
+src/backend/.env
