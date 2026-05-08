@@ -23,17 +23,24 @@ export const extractCourseHeadings = (content: string): CourseHeading[] => {
 };
 
 const resolveDownloadName = (media: CourseMedia) => {
-  const original = media.original_name?.trim();
-  if (original) return original;
-  try {
-    const pathname = new URL(media.file_url, window.location.origin).pathname;
-    const fileName = pathname.split('/').pop();
-    if (fileName) return decodeURIComponent(fileName);
-  } catch {
-    const fileName = media.file_url.split('/').pop();
-    if (fileName) return decodeURIComponent(fileName);
-  }
-  return media.title?.trim() || 'media-file';
+  const explicitName = [media.original_name, media.original_filename, media.filename, media.file_name, media.display_name, media.name]
+    .map((value) => value?.trim())
+    .find(Boolean);
+  if (explicitName) return explicitName as string;
+
+  const fromUrl = (() => {
+    try {
+      const pathname = new URL(media.file_url, window.location.origin).pathname;
+      return pathname.split('/').pop();
+    } catch {
+      return media.file_url.split('/').pop();
+    }
+  })();
+
+  if (fromUrl) return decodeURIComponent(fromUrl);
+
+  const extension = media.media_type === 'document' ? '.bin' : '';
+  return `media-file${extension}`;
 };
 
 const renderEmbed = (slug: string, media?: CourseMedia, preferredTitle?: string) => {
@@ -42,7 +49,7 @@ const renderEmbed = (slug: string, media?: CourseMedia, preferredTitle?: string)
   const visualTitle = resolveTitle(media);
   if (media.media_type === 'image') return <figure className="course-media-figure"><img src={media.file_url} alt={title || visualTitle} title={title} className="course-media-image" /></figure>;
   if (media.media_type === 'video') return <figure className="course-media-figure"><video controls src={media.file_url} title={title} aria-label={title} className="course-media-video" /></figure>;
-  return <article className="course-media-document" title={title} aria-label={title}><strong>{visualTitle}</strong>{media.original_name ? <p className="muted">{media.original_name}</p> : null}<a href={media.file_url} target="_blank" rel="noreferrer" download={resolveDownloadName(media)}>Открыть</a></article>;
+  return <article className="course-media-document" title={title} aria-label={title}><strong>{visualTitle}</strong>{media.original_name ? <p className="muted">{media.original_name}</p> : null}<a href={media.file_url} rel="noreferrer" download={resolveDownloadName(media)}>Открыть</a></article>;
 };
 
 const renderInline = (text: string, lookup: Map<string, CourseMedia>) : ReactNode[] => text.split(/(`[^`]+`|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|\[[^\]]+\]\([^\)]+\))/g).filter(Boolean).map((part, i) => {

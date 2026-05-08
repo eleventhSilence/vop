@@ -593,7 +593,13 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
   gap: 1rem;
   align-items: start;
+  min-width: 0;
 }
+
+.course-main-column {
+  min-width: 0;
+}
+
 .course-toc {
   position: sticky;
   top: calc(var(--header-height, 96px) + 24px);
@@ -1419,6 +1425,11 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   font-size: 0.92rem;
 }
 
+.course-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .course-content h1,
 .course-content h2,
 .course-content h3 { scroll-margin-top: calc(var(--header-height, 96px) + 24px); }
@@ -1450,6 +1461,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
+  max-width: 100%;
 }
 .course-content pre {
   background: #f7f9fd;
@@ -1458,11 +1470,16 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   padding: 0.8rem;
   max-width: 100%;
   overflow-x: auto;
+  box-sizing: border-box;
+  white-space: pre-wrap;
 }
 .course-content pre code {
   display: block;
   min-width: 0;
-  white-space: pre;
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 .course-content ul.contains-task-list,

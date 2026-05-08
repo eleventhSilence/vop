@@ -5,6 +5,11 @@ export type CourseMedia = {
   slug: string;
   media_type: 'image' | 'video' | 'document';
   original_name: string;
+  original_filename?: string;
+  filename?: string;
+  file_name?: string;
+  display_name?: string;
+  name?: string;
   file_size: number;
   file_url: string;
   markdown_image_snippet: string | null;

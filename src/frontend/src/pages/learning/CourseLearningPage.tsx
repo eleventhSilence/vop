@@ -116,7 +116,7 @@ export const CourseLearningPage = () => {
       {pageError ? <ErrorState message={extractApiError(pageError)} /> : null}
       {courseQuery.data && progressQuery.data ? (
         <div className="learning-layout">
-          <article className="card card--wide form-stack">
+          <article className="card card--wide form-stack course-main-column">
             <h2>{courseQuery.data.title}</h2>
 
             <div className="learning-progress-card">
