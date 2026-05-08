@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
-import { CourseContentRenderer } from '@/entities/course/CourseContentRenderer';
+import { CourseContentRenderer, extractCourseHeadings } from '@/entities/course/CourseContentRenderer';
 import { progressApi } from '@/entities/progress/api';
 import { reviewsApi } from '@/entities/review/api';
 import { extractApiError } from '@/shared/api/client';
@@ -36,6 +36,8 @@ export const CourseLearningPage = () => {
 
   const [reviewDraft, setReviewDraft] = useState({ comment: '', rating: 5 });
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
+  const headings = useMemo(() => extractCourseHeadings(courseQuery.data?.content ?? ''), [courseQuery.data?.content]);
 
   useEffect(() => {
     if (myCourseReview) {
@@ -44,6 +46,23 @@ export const CourseLearningPage = () => {
     }
     setReviewDraft({ comment: '', rating: 5 });
   }, [myCourseReview]);
+
+  useEffect(() => {
+    setActiveHeadingId(headings[0]?.id ?? null);
+    if (!headings.length) return;
+    const elements = headings
+      .map((heading) => document.getElementById(heading.id))
+      .filter((element): element is HTMLElement => Boolean(element));
+    if (!elements.length) return;
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+      if (visible?.target.id) setActiveHeadingId(visible.target.id);
+    }, { rootMargin: '-90px 0px -60% 0px', threshold: [0.1, 0.35, 0.7] });
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [headings]);
 
   const completeTheoryMutation = useMutation({
     mutationFn: () => progressApi.completeTheory(courseId),
@@ -89,7 +108,7 @@ export const CourseLearningPage = () => {
       {(courseQuery.isLoading || progressQuery.isLoading) ? <LoadingState message="Загружаем учебные материалы..." /> : null}
       {pageError ? <ErrorState message={extractApiError(pageError)} /> : null}
       {courseQuery.data && progressQuery.data ? (
-        <div className="stack-list">
+        <div className="learning-layout">
           <article className="card card--wide form-stack">
             <h2>{courseQuery.data.title}</h2>
 
@@ -119,6 +138,23 @@ export const CourseLearningPage = () => {
               </div>
             ) : null}
           </article>
+          {headings.length ? (
+            <aside className="course-toc card">
+              <h3>Содержание</h3>
+              <nav className="course-toc__nav" aria-label="Содержание курса">
+                {headings.map((heading) => (
+                  <a
+                    key={heading.id}
+                    href={`#${heading.id}`}
+                    onClick={() => setActiveHeadingId(heading.id)}
+                    className={`course-toc__link course-toc__link--h${heading.level} ${activeHeadingId === heading.id ? 'course-toc__link--active' : ''}`}
+                  >
+                    {heading.text}
+                  </a>
+                ))}
+              </nav>
+            </aside>
+          ) : null}
 
           <section className="card form-stack">
             <div>
