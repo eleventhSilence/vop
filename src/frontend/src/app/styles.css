@@ -694,7 +694,10 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   gap: 1.5rem;
 }
 .public-page-stack--catalog {
-  gap: 1rem;
+  gap: 1.5rem;
+}
+.public-page-stack--catalog .courses-filters {
+  margin-top: -0.5rem;
 }
 .public-hero-card {
   grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
