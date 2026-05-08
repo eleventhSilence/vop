@@ -22,13 +22,27 @@ export const extractCourseHeadings = (content: string): CourseHeading[] => {
     });
 };
 
+const resolveDownloadName = (media: CourseMedia) => {
+  const original = media.original_name?.trim();
+  if (original) return original;
+  try {
+    const pathname = new URL(media.file_url, window.location.origin).pathname;
+    const fileName = pathname.split('/').pop();
+    if (fileName) return decodeURIComponent(fileName);
+  } catch {
+    const fileName = media.file_url.split('/').pop();
+    if (fileName) return decodeURIComponent(fileName);
+  }
+  return media.title?.trim() || 'media-file';
+};
+
 const renderEmbed = (slug: string, media?: CourseMedia, preferredTitle?: string) => {
   if (!media) return <div className="muted">Материал недоступен</div>;
   const title = preferredTitle?.trim() || undefined;
   const visualTitle = resolveTitle(media);
   if (media.media_type === 'image') return <figure className="course-media-figure"><img src={media.file_url} alt={title || visualTitle} title={title} className="course-media-image" /></figure>;
   if (media.media_type === 'video') return <figure className="course-media-figure"><video controls src={media.file_url} title={title} aria-label={title} className="course-media-video" /></figure>;
-  return <article className="course-media-document" title={title} aria-label={title}><strong>{visualTitle}</strong>{media.original_name ? <p className="muted">{media.original_name}</p> : null}<a href={media.file_url} target="_blank" rel="noreferrer">Открыть</a></article>;
+  return <article className="course-media-document" title={title} aria-label={title}><strong>{visualTitle}</strong>{media.original_name ? <p className="muted">{media.original_name}</p> : null}<a href={media.file_url} target="_blank" rel="noreferrer" download={resolveDownloadName(media)}>Открыть</a></article>;
 };
 
 const renderInline = (text: string, lookup: Map<string, CourseMedia>) : ReactNode[] => text.split(/(`[^`]+`|\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|\[[^\]]+\]\([^\)]+\))/g).filter(Boolean).map((part, i) => {
@@ -78,14 +92,19 @@ export const CourseContentRenderer = ({ content, media }: Props) => {
     }
     if (trimmed.match(/^(- |\* |\d+\. )/)) {
       const ordered = Boolean(trimmed.match(/^\d+\. /)); const items: ReactNode[]=[];
+      const orderedStart = ordered ? Number(trimmed.match(/^(\d+)\. /)?.[1] ?? '1') : undefined;
+      let hasTaskItems = false;
       while (i<lines.length && lines[i].trim().match(/^(- |\* |\d+\. )/)) {
         const cur = lines[i].trim();
         const task = cur.match(/^[-*] \[([ xX])\] (.+)$/);
-        if (task) items.push(<li key={`li-${i}`} className="task-list-item"><input type="checkbox" checked={task[1].toLowerCase()==='x'} disabled readOnly />{renderInline(task[2], lookup)}</li>);
+        if (task) {
+          hasTaskItems = true;
+          items.push(<li key={`li-${i}`} className="task-list-item"><input type="checkbox" checked={task[1].toLowerCase()==='x'} disabled readOnly />{renderInline(task[2], lookup)}</li>);
+        }
         else items.push(<li key={`li-${i}`}>{renderInline(cur.replace(/^(- |\* |\d+\. )/, ''), lookup)}</li>);
         i+=1;
       }
-      nodes.push(ordered ? <ol key={`ol-${i}`}>{items}</ol> : <ul key={`ul-${i}`}>{items}</ul>); continue;
+      nodes.push(ordered ? <ol key={`ol-${i}`} start={orderedStart}>{items}</ol> : <ul key={`ul-${i}`} className={hasTaskItems ? 'contains-task-list' : undefined}>{items}</ul>); continue;
     }
     nodes.push(<p key={`p-${i}`}>{renderInline(line, lookup)}</p>); i+=1;
   }
