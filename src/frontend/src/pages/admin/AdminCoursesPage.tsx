@@ -47,8 +47,7 @@ const MarkdownHelp = () => (
         <pre className="markdown-help__code">{`**жирный текст**
 *курсивный текст*
 ***жирный курсив***
-~~зачёркнутый текст~~
-\`инлайн-код\``}</pre>
+~~зачёркнутый текст~~`}</pre>
       </div>
       <div className="markdown-help__section">
         <h4>Списки и чек-листы</h4>
@@ -62,7 +61,7 @@ const MarkdownHelp = () => (
 - [x] выполненный пункт`}</pre>
       </div>
       <div className="markdown-help__section">
-        <h4>Цитата, разделитель, таблица, код-блок</h4>
+        <h4>Цитата, разделитель, таблица</h4>
         <pre className="markdown-help__code">{`> Важная информация
 
 ---
@@ -70,11 +69,7 @@ const MarkdownHelp = () => (
 | Раздел | Описание         |
 | ------ | ---------------- |
 | Теория | Учебный материал |
-| Тест   | Проверка знаний  |
-
-\`\`\`text
-Текстовый блок или пример кода
-\`\`\``}</pre>
+| Тест   | Проверка знаний  |`}</pre>
       </div>
       <div className="markdown-help__section">
         <h4>Ссылки и материалы курса</h4>
@@ -96,7 +91,6 @@ export const AdminCoursesPage = () => {
   const [editFormValues, setEditFormValues] = useState<CreateCourseFormValues>(defaultFormValues);
   const [editValidationErrors, setEditValidationErrors] = useState<ValidationErrors>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [mediaTitle, setMediaTitle] = useState('');
 
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -149,10 +143,9 @@ export const AdminCoursesPage = () => {
   });
 
   const uploadMediaMutation = useMutation({
-    mutationFn: ({ file, title }: { file: File; title?: string }) => adminApi.uploadCourseMedia(editCourseId as string, { file, title }),
+    mutationFn: ({ file }: { file: File }) => adminApi.uploadCourseMedia(editCourseId as string, { file }),
     onSuccess: async () => {
       setToast({ type: 'success', message: 'Файл загружен.' });
-      setMediaTitle('');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'course-media', editCourseId] });
     },
     onError: (error) => setToast({ type: 'error', message: extractApiError(error) }),
@@ -445,7 +438,6 @@ export const AdminCoursesPage = () => {
               {editCourseId ? (
                 <section className="card stack-list">
                   <h4>Файлы курса</h4>
-                  <Input id="media-title" label="Название файла (опционально)" value={mediaTitle} onChange={(e) => setMediaTitle(e.target.value)} />
                   <input
                     type="file"
                     onChange={(e) => {
@@ -454,7 +446,7 @@ export const AdminCoursesPage = () => {
                         e.currentTarget.value = '';
                         return;
                       }
-                      uploadMediaMutation.mutate({ file, title: mediaTitle || undefined });
+                      uploadMediaMutation.mutate({ file });
                       e.currentTarget.value = '';
                     }}
                   />
