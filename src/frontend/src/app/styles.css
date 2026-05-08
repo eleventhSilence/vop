@@ -583,21 +583,27 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .learning-progress-card {
   display: grid;
   gap: 0.5rem;
-  padding: 1rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 0.85rem;
-  background: var(--surface-main-solid);
+  padding: 0.9rem;
+  min-width: 0;
 }
 .learning-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 1.25rem;
   align-items: start;
 }
-.course-toc {
+.learning-course-content {
+  min-width: 0;
+}
+.course-side-panel {
   position: sticky;
   top: calc(var(--header-height, 96px) + 24px);
-  align-self: start;
+  align-self: flex-start;
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.course-toc {
   padding: 1rem;
   min-width: 0;
 }
@@ -647,7 +653,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 @media (max-width: 980px) {
   .learning-layout { grid-template-columns: minmax(0, 1fr); }
-  .course-toc {
+  .course-side-panel {
     position: static;
     top: auto;
     order: -1;

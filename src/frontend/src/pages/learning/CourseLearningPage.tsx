@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
@@ -37,6 +37,8 @@ export const CourseLearningPage = () => {
   const [reviewDraft, setReviewDraft] = useState({ comment: '', rating: 5 });
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
+  const [visualProgressPercent, setVisualProgressPercent] = useState<number | null>(null);
+  const courseContentRef = useRef<HTMLDivElement | null>(null);
   const headings = useMemo(() => extractCourseHeadings(courseQuery.data?.content ?? ''), [courseQuery.data?.content]);
 
   useEffect(() => {
@@ -71,6 +73,55 @@ export const CourseLearningPage = () => {
     return () => observer.disconnect();
   }, [headings]);
 
+  useEffect(() => {
+    const progress = progressQuery.data;
+    if (!progress || progress.is_theory_completed || progress.progress_percent >= 50) {
+      setVisualProgressPercent(null);
+      return;
+    }
+
+    const baseProgress = 25;
+    const targetProgress = 50;
+    let animationFrameId: number | null = null;
+
+    const updateVisualProgress = () => {
+      const contentElement = courseContentRef.current;
+      if (!contentElement) return;
+
+      const rect = contentElement.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || 1;
+      const maxTravel = rect.height + viewportHeight;
+
+      if (maxTravel <= 0) {
+        setVisualProgressPercent(baseProgress);
+        return;
+      }
+
+      const travelled = viewportHeight - rect.top;
+      const scrollRatio = Math.min(1, Math.max(0, travelled / maxTravel));
+      const nextProgress = Math.round(baseProgress + scrollRatio * (targetProgress - baseProgress));
+      setVisualProgressPercent(Math.min(targetProgress, Math.max(baseProgress, nextProgress)));
+    };
+
+    const scheduleUpdate = () => {
+      if (animationFrameId !== null) return;
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = null;
+        updateVisualProgress();
+      });
+    };
+
+    updateVisualProgress();
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+
+    return () => {
+      if (animationFrameId !== null) window.cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+    };
+  }, [progressQuery.data]);
+
   const completeTheoryMutation = useMutation({
     mutationFn: () => progressApi.completeTheory(courseId),
     onSuccess: async () => {
@@ -101,13 +152,18 @@ export const CourseLearningPage = () => {
   };
 
   const pageError = courseQuery.isError ? courseQuery.error : progressQuery.isError ? progressQuery.error : null;
+  const displayProgressPercent = useMemo(() => {
+    if (!progressQuery.data) return 0;
+    if (progressQuery.data.is_theory_completed || progressQuery.data.progress_percent >= 50) return progressQuery.data.progress_percent;
+    return visualProgressPercent ?? Math.max(25, progressQuery.data.progress_percent);
+  }, [progressQuery.data, visualProgressPercent]);
+
   const getProgressStage = () => {
     if (!progressQuery.data) return '';
     if (progressQuery.data.progress_status === 'completed' || progressQuery.data.progress_percent >= 100) return 'Курс завершён';
-    if (progressQuery.data.progress_percent >= 75) return 'Предприняты попытки прохождения теста, тест пока не завершён';
+    if (progressQuery.data.progress_percent >= 75) return 'Тестирование начато';
     if (progressQuery.data.is_theory_completed || progressQuery.data.progress_percent >= 50) return 'Теория завершена';
-    if (progressQuery.data.progress_percent > 0) return 'Теория не завершена';
-    return 'Записан на курс';
+    return 'Теория не завершена';
   };
 
   return (
@@ -119,18 +175,9 @@ export const CourseLearningPage = () => {
           <article className="card card--wide form-stack">
             <h2>{courseQuery.data.title}</h2>
 
-            <div className="learning-progress-card">
-              <div className="card__row">
-                <h3>Прогресс</h3>
-                <strong>{progressQuery.data.progress_percent}%</strong>
-              </div>
-              <div className="learning-progress-card__bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressQuery.data.progress_percent}>
-                <span style={{ width: `${progressQuery.data.progress_percent}%` }} />
-              </div>
-              <p className="muted">{getProgressStage()}</p>
+            <div ref={courseContentRef} className="learning-course-content">
+              <CourseContentRenderer content={courseQuery.data.content} media={courseQuery.data.media} />
             </div>
-
-            <CourseContentRenderer content={courseQuery.data.content} media={courseQuery.data.media} />
 
             {!progressQuery.data.is_theory_completed ? (
               <Button onClick={() => completeTheoryMutation.mutate()} disabled={completeTheoryMutation.isPending}>Завершить теорию</Button>
@@ -145,24 +192,37 @@ export const CourseLearningPage = () => {
               </div>
             ) : null}
           </article>
-          <aside className="course-toc card">
-            <h3>Содержание</h3>
-            {headings.length ? (
-              <nav className="course-toc__nav" aria-label="Содержание курса">
-                {headings.map((heading) => (
-                  <a
-                    key={heading.id}
-                    href={`#${heading.id}`}
-                    onClick={() => setActiveHeadingId(heading.id)}
-                    className={`course-toc__link course-toc__link--h${heading.level} ${activeHeadingId === heading.id ? 'course-toc__link--active' : ''}`}
-                  >
-                    {heading.text}
-                  </a>
-                ))}
-              </nav>
-            ) : (
-              <p className="course-toc__empty muted">Содержание отсутствует</p>
-            )}
+          <aside className="course-side-panel">
+            <div className="learning-progress-card card">
+              <div className="card__row">
+                <h3>Прогресс</h3>
+                <strong>{displayProgressPercent}%</strong>
+              </div>
+              <div className="learning-progress-card__bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={displayProgressPercent}>
+                <span style={{ width: `${displayProgressPercent}%` }} />
+              </div>
+              <p className="muted">{getProgressStage()}</p>
+            </div>
+
+            <div className="course-toc card">
+              <h3>Содержание</h3>
+              {headings.length ? (
+                <nav className="course-toc__nav" aria-label="Содержание курса">
+                  {headings.map((heading) => (
+                    <a
+                      key={heading.id}
+                      href={`#${heading.id}`}
+                      onClick={() => setActiveHeadingId(heading.id)}
+                      className={`course-toc__link course-toc__link--h${heading.level} ${activeHeadingId === heading.id ? 'course-toc__link--active' : ''}`}
+                    >
+                      {heading.text}
+                    </a>
+                  ))}
+                </nav>
+              ) : (
+                <p className="course-toc__empty muted">Содержание отсутствует</p>
+              )}
+            </div>
           </aside>
 
           <section className="card form-stack">
