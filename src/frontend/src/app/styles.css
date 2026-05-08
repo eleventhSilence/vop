@@ -7,11 +7,11 @@
   --platform-bg-overlay: rgb(245 248 252 / 72%);
   --hero-overlay: linear-gradient(118deg, rgb(255 255 255 / 70%) 47%, rgb(255 255 255 / 50%) 50%, rgb(71 71 71 / 45%) 90%);
   --hero-overlay-mobile: linear-gradient(130deg, rgb(255 255 255 / 95%) 35%, rgb(255 255 255 / 88%) 65%, rgb(230 236 244 / 76%) 100%);
-  --surface-main: rgba(255, 252, 246, 0.92);
+  --surface-main: rgb(255, 252, 246);
   --surface-main-solid: #fcfaf5;
   --surface-muted: rgba(250, 246, 238, 0.88);
-  --surface-header: rgba(255, 252, 246, 0.94);
-  --surface-dropdown: rgba(255, 252, 246, 0.96);
+  --surface-header: rgb(255, 252, 246);
+  --surface-dropdown: rgb(255, 252, 246);
   --surface-border: rgba(180, 170, 140, 0.22);
   --surface-shadow: 0 8px 24px rgba(31, 36, 48, 0.06);
   --surface-shadow-raised: 0 12px 30px rgba(31, 36, 48, 0.08);
