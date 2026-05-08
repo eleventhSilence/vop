@@ -57,53 +57,76 @@ export const CourseLearningPage = () => {
     }
 
     let observer: IntersectionObserver | null = null;
-    let resizeTimeoutId: number | null = null;
+    let scrollRafId: number | null = null;
+    let retryTimeoutId: number | null = null;
+    let isDestroyed = false;
+    let headingElements: HTMLElement[] = [];
     const activateFirstHeading = () => setActiveHeadingId((current) => current ?? headings[0]?.id ?? null);
 
-    const initializeObserver = () => {
-      const elements = headings
+    const updateByScrollPosition = () => {
+      if (!headingElements.length) return;
+      const offset = 160;
+      let nextId = headingElements[0].id;
+      for (const element of headingElements) {
+        if (element.getBoundingClientRect().top <= offset) {
+          nextId = element.id;
+          continue;
+        }
+        break;
+      }
+      setActiveHeadingId(nextId);
+    };
+
+    const scheduleScrollUpdate = () => {
+      if (scrollRafId !== null) return;
+      scrollRafId = window.requestAnimationFrame(() => {
+        scrollRafId = null;
+        updateByScrollPosition();
+      });
+    };
+
+    const initializeObserver = (attempt = 0) => {
+      headingElements = headings
         .map((heading) => document.getElementById(heading.id))
         .filter((element): element is HTMLElement => Boolean(element));
 
-      if (!elements.length) {
-        setActiveHeadingId(null);
+      if (!headingElements.length) {
+        if (attempt < 5 && !isDestroyed) {
+          retryTimeoutId = window.setTimeout(() => initializeObserver(attempt + 1), 0);
+          return;
+        }
+        setActiveHeadingId(headings[0]?.id ?? null);
         return;
       }
 
       activateFirstHeading();
+      updateByScrollPosition();
 
       observer = new IntersectionObserver((entries) => {
-        const visible = entries
+        const visibleEntries = entries
           .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible?.target.id) {
-          setActiveHeadingId(visible.target.id);
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visibleEntries[0]?.target.id) {
+          setActiveHeadingId(visibleEntries[0].target.id);
           return;
         }
-        const passed = elements
-          .filter((element) => element.getBoundingClientRect().top <= 160)
-          .at(-1);
-        if (passed?.id) setActiveHeadingId(passed.id);
-      }, { rootMargin: '-140px 0px -60% 0px', threshold: [0, 0.2, 0.5] });
+        updateByScrollPosition();
+      }, { root: null, rootMargin: '-120px 0px -50% 0px', threshold: [0, 0.1, 0.25, 0.5] });
 
-      elements.forEach((element) => observer?.observe(element));
+      headingElements.forEach((element) => observer?.observe(element));
     };
 
     const rafId = window.requestAnimationFrame(initializeObserver);
-    const handleResize = () => {
-      if (resizeTimeoutId !== null) window.clearTimeout(resizeTimeoutId);
-      resizeTimeoutId = window.setTimeout(() => {
-        observer?.disconnect();
-        observer = null;
-        initializeObserver();
-      }, 0);
-    };
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', scheduleScrollUpdate, { passive: true });
+    window.addEventListener('resize', scheduleScrollUpdate);
 
     return () => {
+      isDestroyed = true;
       window.cancelAnimationFrame(rafId);
-      if (resizeTimeoutId !== null) window.clearTimeout(resizeTimeoutId);
-      window.removeEventListener('resize', handleResize);
+      if (retryTimeoutId !== null) window.clearTimeout(retryTimeoutId);
+      if (scrollRafId !== null) window.cancelAnimationFrame(scrollRafId);
+      window.removeEventListener('scroll', scheduleScrollUpdate);
+      window.removeEventListener('resize', scheduleScrollUpdate);
       observer?.disconnect();
       observer = null;
     };
