@@ -92,7 +92,7 @@ export const CoursesListPage = () => {
   };
 
   return (
-    <PageSection className="public-page-stack">
+    <PageSection className="public-page-stack public-page-stack--catalog">
       <div className="section-header public-section-header">
         <div>
           <p className="eyebrow">Каталог курсов</p>
