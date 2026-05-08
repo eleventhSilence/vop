@@ -54,14 +54,31 @@ export const CourseLearningPage = () => {
       .map((heading) => document.getElementById(heading.id))
       .filter((element): element is HTMLElement => Boolean(element));
     if (!elements.length) return;
+    const resolveActiveByScrollPosition = () => {
+      const anchorOffset = 110;
+      const current = elements
+        .filter((element) => element.getBoundingClientRect().top - anchorOffset <= 0)
+        .at(-1);
+      if (current?.id) {
+        setActiveHeadingId(current.id);
+        return;
+      }
+      setActiveHeadingId(elements[0]?.id ?? null);
+    };
     const observer = new IntersectionObserver((entries) => {
       const visible = entries
         .filter((entry) => entry.isIntersecting)
         .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
       if (visible?.target.id) setActiveHeadingId(visible.target.id);
-    }, { rootMargin: '-90px 0px -60% 0px', threshold: [0.1, 0.35, 0.7] });
+    }, { rootMargin: '-96px 0px -50% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] });
     elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
+    const onScroll = () => resolveActiveByScrollPosition();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    resolveActiveByScrollPosition();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', onScroll);
+    };
   }, [headings]);
 
   const completeTheoryMutation = useMutation({
