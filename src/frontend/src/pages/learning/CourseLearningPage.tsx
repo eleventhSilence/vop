@@ -39,7 +39,8 @@ export const CourseLearningPage = () => {
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
   const [visualProgressPercent, setVisualProgressPercent] = useState<number | null>(null);
   const courseContentRef = useRef<HTMLDivElement | null>(null);
-  const headings = useMemo(() => extractCourseHeadings(courseQuery.data?.content ?? ''), [courseQuery.data?.content]);
+  const courseContent = courseQuery.data?.content ?? '';
+  const headings = useMemo(() => extractCourseHeadings(courseContent), [courseContent]);
 
   useEffect(() => {
     if (myCourseReview) {
@@ -50,28 +51,63 @@ export const CourseLearningPage = () => {
   }, [myCourseReview]);
 
   useEffect(() => {
-    setActiveHeadingId(headings[0]?.id ?? null);
-    if (!headings.length) return;
-    const elements = headings
-      .map((heading) => document.getElementById(heading.id))
-      .filter((element): element is HTMLElement => Boolean(element));
-    if (!elements.length) return;
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      if (visible?.target.id) {
-        setActiveHeadingId(visible.target.id);
+    if (courseQuery.isLoading || !courseContent || !headings.length) {
+      setActiveHeadingId(headings[0]?.id ?? null);
+      return;
+    }
+
+    let observer: IntersectionObserver | null = null;
+    let resizeTimeoutId: number | null = null;
+    const activateFirstHeading = () => setActiveHeadingId((current) => current ?? headings[0]?.id ?? null);
+
+    const initializeObserver = () => {
+      const elements = headings
+        .map((heading) => document.getElementById(heading.id))
+        .filter((element): element is HTMLElement => Boolean(element));
+
+      if (!elements.length) {
+        setActiveHeadingId(null);
         return;
       }
-      const passed = elements
-        .filter((element) => element.getBoundingClientRect().top <= 140)
-        .at(-1);
-      if (passed?.id) setActiveHeadingId(passed.id);
-    }, { rootMargin: '-120px 0px -55% 0px', threshold: [0, 0.2, 0.5] });
-    elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
-  }, [headings]);
+
+      activateFirstHeading();
+
+      observer = new IntersectionObserver((entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible?.target.id) {
+          setActiveHeadingId(visible.target.id);
+          return;
+        }
+        const passed = elements
+          .filter((element) => element.getBoundingClientRect().top <= 160)
+          .at(-1);
+        if (passed?.id) setActiveHeadingId(passed.id);
+      }, { rootMargin: '-140px 0px -60% 0px', threshold: [0, 0.2, 0.5] });
+
+      elements.forEach((element) => observer?.observe(element));
+    };
+
+    const rafId = window.requestAnimationFrame(initializeObserver);
+    const handleResize = () => {
+      if (resizeTimeoutId !== null) window.clearTimeout(resizeTimeoutId);
+      resizeTimeoutId = window.setTimeout(() => {
+        observer?.disconnect();
+        observer = null;
+        initializeObserver();
+      }, 0);
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      if (resizeTimeoutId !== null) window.clearTimeout(resizeTimeoutId);
+      window.removeEventListener('resize', handleResize);
+      observer?.disconnect();
+      observer = null;
+    };
+  }, [courseId, courseContent, headings, courseQuery.isLoading]);
 
   useEffect(() => {
     const progress = progressQuery.data;
