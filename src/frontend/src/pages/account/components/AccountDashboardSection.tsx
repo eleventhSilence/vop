@@ -45,7 +45,7 @@ export const AccountDashboardSection = () => {
                       </div>
                       <p>{course.short_description}</p>
                       <p className="muted">Статус: {formatStatus(course.progress_status)}</p>
-                      <Link to={`/account/courses/${course.course_id}`} className="text-link">Перейти к обучению →</Link>
+                      <Link to={`/account/courses/${course.course_id}`} state={{ from: 'my-courses' }} className="text-link">Перейти к обучению →</Link>
                     </div>
                   ))}
                 </div>

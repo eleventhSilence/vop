@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
 import { CourseContentRenderer, extractCourseHeadings } from '@/entities/course/CourseContentRenderer';
 import { progressApi } from '@/entities/progress/api';
@@ -13,6 +13,12 @@ import { PageSection } from '@/shared/ui/PageSection';
 
 export const CourseLearningPage = () => {
   const { courseId = '' } = useParams();
+
+  const location = useLocation();
+  const fromSource = (location.state as { from?: string } | null)?.from;
+  const isFromCourseDetail = fromSource === 'course-detail';
+  const backTarget = isFromCourseDetail ? `/courses/${courseId}` : '/account/courses';
+  const backLabel = isFromCourseDetail ? '← К курсу' : '← Мои курсы';
   const courseQuery = useQuery({
     queryKey: ['courses', 'my-detail', courseId],
     queryFn: () => coursesApi.myDetail(courseId),
@@ -214,7 +220,10 @@ export const CourseLearningPage = () => {
   };
 
   return (
-    <PageSection>
+    <PageSection className="learning-page-stack">
+      <Link to={backTarget} className="button button--ghost public-course-details-back-link">
+        {backLabel}
+      </Link>
       {(courseQuery.isLoading || progressQuery.isLoading) ? <LoadingState message="Загружаем учебные материалы..." /> : null}
       {pageError ? <ErrorState message={extractApiError(pageError)} /> : null}
       {courseQuery.data && progressQuery.data ? (
