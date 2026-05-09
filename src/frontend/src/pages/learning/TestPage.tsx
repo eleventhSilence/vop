@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { testingApi } from '@/entities/testing/api';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
@@ -18,6 +18,7 @@ export const TestPage = () => {
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [isTestVisible, setIsTestVisible] = useState(false);
   const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
+  const locationState = (location.state as { from?: string; returnTo?: string } | null) ?? null;
 
   const testQuery = useQuery({ queryKey: ['testing', 'my-course', courseId], queryFn: () => testingApi.myCourseTest(courseId), enabled: Boolean(courseId) });
   const activeAttemptQuery = useQuery({ queryKey: ['testing', 'active', testQuery.data?.test_id], queryFn: () => testingApi.activeAttempt(testQuery.data?.test_id ?? ''), enabled: Boolean(testQuery.data?.test_id) });
@@ -26,21 +27,43 @@ export const TestPage = () => {
 
   const startMutation = useMutation({ mutationFn: () => testingApi.startAttempt(testQuery.data?.test_id ?? ''), onSuccess: (d) => { setAttemptId(d.attempt_id); setIsTestVisible(true); } });
   const submitMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.submit(testQuery.data?.test_id ?? '', payload, attemptId ?? undefined), onSuccess: async () => { setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); } });
-  const interruptMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.interruptAttempt(attemptId ?? '', payload), onSuccess: async () => { setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); navigate(returnTo); } });
+  const interruptMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.interruptAttempt(attemptId ?? '', payload), onSuccess: async () => { setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); navigate(backTarget); } });
 
   const attempts = attemptsQuery.data ? ensurePaginated(attemptsQuery.data).results : [];
   const submitPayload = useMemo(() => testQuery.data?.questions.map((q) => q.question_type === 'single_choice' ? { question_id: q.question_id, selected_option_id: (answers[q.question_id] ?? [])[0] } : { question_id: q.question_id, selected_option_ids: answers[q.question_id] ?? [] }) ?? [], [answers, testQuery.data?.questions]);
   const interruptPayload = useMemo(() => (testQuery.data?.questions ?? []).flatMap((q) => { const selected = answers[q.question_id] ?? []; if (selected.length === 0) return []; return q.question_type === 'single_choice' ? [{ question_id: q.question_id, selected_option_id: selected[0] }] : [{ question_id: q.question_id, selected_option_ids: selected }]; }), [answers, testQuery.data?.questions]);
 
   const activeAttemptId = activeAttemptQuery.data?.active_attempt?.attempt_id;
-  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? `/account/courses/${courseId}`;
+  const fallbackBackTarget = '/account/courses';
+  const inferredBackTarget = locationState?.from === 'course-learning' || locationState?.from === 'course-theory-blocked-by-active-attempt'
+    ? `/account/courses/${courseId}`
+    : locationState?.from === 'my-courses'
+      ? '/account/courses'
+      : fallbackBackTarget;
+  const backTarget = locationState?.returnTo ?? inferredBackTarget;
+  const backLabel = (locationState?.from === 'course-learning' || locationState?.from === 'course-theory-blocked-by-active-attempt' || backTarget === `/account/courses/${courseId}`)
+    ? '← К теории'
+    : '← Мои курсы';
   const finalizedAttempts = attempts.filter((a) => a.status === "completed" || a.status === "interrupted");
   const attemptsUsed = finalizedAttempts.length;
   const attemptsMax = testQuery.data?.max_attempts ?? 0;
   const attemptsLeft = Math.max(attemptsMax - attemptsUsed, 0);
   const canStartAttempt = !activeAttemptId && attemptsLeft > 0;
 
+  const handleBackNavigation = async () => {
+    if (!activeAttemptId) {
+      navigate(backTarget);
+      return;
+    }
+    if (!window.confirm('Вы действительно хотите покинуть тест? Активная попытка будет завершена с текущими ответами. Вопросы без ответа будут оценены в 0 баллов.')) return;
+    setAttemptId(activeAttemptId);
+    await interruptMutation.mutateAsync(interruptPayload);
+  };
+
   return <PageSection>
+    <Link to={backTarget} onClick={async (event) => { event.preventDefault(); await handleBackNavigation(); }} className="button button--ghost public-course-details-back-link">
+      {backLabel}
+    </Link>
     {testQuery.isLoading ? <LoadingState message="Загружаем тест..." /> : null}
     {testQuery.isError ? <ErrorState message={extractApiError(testQuery.error)} /> : null}
     {testQuery.data && !testQuery.data.has_test ? <EmptyState message="Для этого курса тест пока не настроен." /> : null}
@@ -55,7 +78,7 @@ export const TestPage = () => {
           return <label key={option.option_id} className="option-row"><input type={question.question_type === 'single_choice' ? 'radio' : 'checkbox'} checked={selected.includes(option.option_id)} onChange={(event) => setAnswers((current) => { if (question.question_type === 'single_choice') return { ...current, [question.question_id]: [option.option_id] }; const next = new Set(current[question.question_id] ?? []); if (event.target.checked) next.add(option.option_id); else next.delete(option.option_id); return { ...current, [question.question_id]: Array.from(next) }; })} /><span>{option.text}</span></label>;
         })}</fieldset>)}
         <Button type="submit" disabled={submitMutation.isPending}>Отправить попытку</Button>
-        <Button type="button" variant="ghost" disabled={interruptMutation.isPending} onClick={async () => { if (!window.confirm('Вы действительно хотите покинуть тест? Активная попытка будет завершена с текущими ответами. Вопросы без ответа будут оценены в 0 баллов.')) return; await interruptMutation.mutateAsync(interruptPayload); }}>Вернуться к теории</Button>
+        <Button type="button" variant="ghost" disabled={interruptMutation.isPending} onClick={async () => { await handleBackNavigation(); }}>{backLabel.replace('← ', '')}</Button>
       </> : null}
       {submitMutation.isSuccess ? <SuccessState message="Попытка успешно завершена." /> : null}
       {submitMutation.isError ? <ErrorState message="Не удалось отправить попытку. Проверьте соединение и попробуйте снова." /> : null}
