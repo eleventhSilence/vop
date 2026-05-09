@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
 import type { CourseEnrollment, EnrolledCourse } from '@/entities/course/types';
@@ -38,6 +38,7 @@ export const CourseDetailPage = () => {
   const [selectedRating, setSelectedRating] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all');
   const [reviewsPage, setReviewsPage] = useState(1);
   const [reviewsItems, setReviewsItems] = useState<Review[]>([]);
+  const [reviewsNext, setReviewsNext] = useState<string | null>(null);
 
   const courseQuery = useQuery({
     queryKey: ['courses', 'detail', courseId],
@@ -45,7 +46,7 @@ export const CourseDetailPage = () => {
     enabled: Boolean(courseId),
   });
 
-  const reviewsQuery = useQuery({
+  const reviewsQuery = useQuery<PaginatedResponse<Review>, Error>({
     queryKey: ['courses', 'reviews', courseId, selectedRating, reviewsPage],
     queryFn: () =>
       reviewsApi.listByCourse(courseId, {
@@ -54,11 +55,22 @@ export const CourseDetailPage = () => {
         rating: selectedRating,
       }),
     enabled: Boolean(courseId),
-    onSuccess: (data) => {
-      const pageReviews = ensurePaginated(data).results;
-      setReviewsItems((current) => (reviewsPage === 1 ? pageReviews : [...current, ...pageReviews]));
-    },
   });
+
+  useEffect(() => {
+    const data = reviewsQuery.data;
+    if (!data) {
+      return;
+    }
+
+    setReviewsNext(data.next);
+    if (reviewsPage === 1) {
+      setReviewsItems(data.results);
+      return;
+    }
+
+    setReviewsItems((current) => [...current, ...data.results]);
+  }, [reviewsPage, reviewsQuery.data]);
 
   const myCoursesQuery = useQuery({
     queryKey: ['courses', 'my'],
@@ -110,8 +122,7 @@ export const CourseDetailPage = () => {
     },
   });
 
-  const reviewsMeta = reviewsQuery.data ? ensurePaginated(reviewsQuery.data) : null;
-  const hasNextReviewsPage = Boolean(reviewsMeta?.next);
+  const hasNextReviewsPage = Boolean(reviewsNext);
   const myCourses = myCoursesQuery.data ? ensurePaginated(myCoursesQuery.data).results : [];
   const enrolledCourse = myCourses.find((course) => course.course_id === courseId);
   const isCourseAvailable = courseQuery.data?.status === 'available';
@@ -238,7 +249,7 @@ export const CourseDetailPage = () => {
                 </div>
                 <div>
                   <dt>Отзывы</dt>
-                  <dd>{courseQuery.data.review_count ?? reviewsMeta?.count ?? reviewsItems.length}</dd>
+                  <dd>{courseQuery.data.review_count ?? reviewsQuery.data?.count ?? reviewsItems.length}</dd>
                 </div>
               </dl>
             </section>
@@ -258,6 +269,7 @@ export const CourseDetailPage = () => {
                   onChange={(event) => {
                     setSelectedRating(event.target.value as 'all' | '1' | '2' | '3' | '4' | '5');
                     setReviewsItems([]);
+                    setReviewsNext(null);
                     setReviewsPage(1);
                   }}
                 >
