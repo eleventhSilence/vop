@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PropsWithChildren } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { LoginPayload, RegisterPayload, SessionUser, TokenPair } from '@/entities/auth/types';
 import type { AuthState } from '@/features/auth/model/types';
 import { AuthContext } from '@/features/auth/model/auth-context';
@@ -9,6 +10,7 @@ import { tokenStorage } from '@/shared/lib/auth/tokenStorage';
 import type { AuthContextValue } from '@/features/auth/model/auth-context';
 
 export const AuthProvider = ({ children }: PropsWithChildren) => {
+  const queryClient = useQueryClient();
   const [state, setState] = useState<AuthState>({
     user: null,
     tokens: tokenStorage.getTokens(),
@@ -26,12 +28,14 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
   const clearSession = useCallback(() => {
     tokenStorage.clear();
+    sessionStorage.removeItem('postLoginRedirect');
+    queryClient.clear();
     setState({
       user: null,
       tokens: null,
       isInitialized: true,
     });
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     setHttpAuthHandlers({

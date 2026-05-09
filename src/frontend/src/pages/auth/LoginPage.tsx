@@ -15,6 +15,24 @@ export const LoginPage = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const resolveSafeRedirect = (target: string | null | undefined, isAdmin: boolean) => {
+    if (!target) return isAdmin ? '/admin/dashboard' : '/account/profile';
+
+    if (target.startsWith('/admin')) {
+      return isAdmin ? target : '/account/profile';
+    }
+
+    if (target.startsWith('/account/courses/') && (target.includes('/test') || /^\/account\/courses\/[^/]+$/.test(target))) {
+      return '/account/courses';
+    }
+
+    if (target.startsWith('/account/profile') || target.startsWith('/account/courses') || target.startsWith('/account/reviews') || target.startsWith('/account/dashboard')) {
+      return target;
+    }
+
+    return isAdmin ? '/admin/dashboard' : '/account/profile';
+  };
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
@@ -22,8 +40,11 @@ export const LoginPage = () => {
 
     try {
       const user = await login({ email, password });
-      const target = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname;
-      navigate(target ?? (user.role === 'ADMIN' ? '/admin/dashboard' : '/account/dashboard'), { replace: true });
+      const stateTarget = (location.state as { from?: string } | null)?.from;
+      const storageTarget = sessionStorage.getItem('postLoginRedirect');
+      sessionStorage.removeItem('postLoginRedirect');
+      const target = resolveSafeRedirect(stateTarget ?? storageTarget, user.role === 'ADMIN');
+      navigate(target, { replace: true });
     } catch (submitError) {
       setError(extractApiError(submitError));
     } finally {

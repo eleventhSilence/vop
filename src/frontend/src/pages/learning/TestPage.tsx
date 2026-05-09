@@ -1,8 +1,8 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { testingApi } from '@/entities/testing/api';
-import { extractApiError } from '@/shared/api/client';
+import { extractApiError, isEnrollmentAccessError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
@@ -10,6 +10,7 @@ import { PageSection } from '@/shared/ui/PageSection';
 
 export const TestPage = () => {
   const { courseId = '' } = useParams();
+  const navigate = useNavigate();
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
 
@@ -55,6 +56,13 @@ export const TestPage = () => {
     event.preventDefault();
     submitMutation.mutate(submitPayload);
   };
+
+  useEffect(() => {
+    if (!courseId || !testQuery.isError) return;
+    if (isEnrollmentAccessError(testQuery.error)) {
+      navigate(`/courses/${courseId}`, { replace: true });
+    }
+  }, [courseId, navigate, testQuery.error, testQuery.isError]);
 
   return (
     <PageSection>

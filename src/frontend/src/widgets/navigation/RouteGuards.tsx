@@ -13,7 +13,9 @@ export const ProtectedRoute = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    const redirectPath = `${location.pathname}${location.search}${location.hash}`;
+    sessionStorage.setItem('postLoginRedirect', redirectPath);
+    return <Navigate to="/login" replace state={{ from: redirectPath }} />;
   }
 
   return <Outlet />;
@@ -28,7 +30,9 @@ export const AdminRoute = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    const redirectPath = `${location.pathname}${location.search}${location.hash}`;
+    sessionStorage.setItem('postLoginRedirect', redirectPath);
+    return <Navigate to="/login" replace state={{ from: redirectPath }} />;
   }
 
   if (!isAdmin) {
