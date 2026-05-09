@@ -18,8 +18,6 @@ class CourseTest(models.Model):
     passing_score = models.PositiveIntegerField()
     max_attempts = models.PositiveIntegerField()
     is_active = models.BooleanField(default=True)
-    started_at = models.DateTimeField(auto_now_add=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -44,8 +42,6 @@ class TestQuestion(models.Model):
         choices=QuestionType.choices,
         default=QuestionType.SINGLE_CHOICE,
     )
-    started_at = models.DateTimeField(auto_now_add=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -120,8 +116,6 @@ class AnswerOption(models.Model):
     text = models.TextField()
     is_correct = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
-    started_at = models.DateTimeField(auto_now_add=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
