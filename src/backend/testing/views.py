@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
+from django.utils import timezone
 from rest_framework.response import Response
 
 from courses.models import Course, CourseEnrollment, CourseStatus
@@ -24,7 +25,9 @@ from testing.serializers import (
     TestAttemptDetailSerializer,
     TestSubmitResultSerializer,
     TestSubmitSerializer,
+    TestInterruptSerializer,
     create_attempt_with_answers,
+    finalize_attempt,
 )
 
 
@@ -82,6 +85,41 @@ class MyCourseTestInfoView(generics.GenericAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+
+
+class TestAttemptStartView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        test = get_object_or_404(CourseTest, id=self.kwargs["test_id"], is_active=True)
+        enrollment = CourseEnrollment.objects.filter(user=request.user, course=test.course).first()
+        if enrollment is None:
+            return Response({"detail": "User is not enrolled in this course."}, status=status.HTTP_400_BAD_REQUEST)
+        if not enrollment.is_theory_completed:
+            return Response({"detail": "Theory must be completed before testing"}, status=status.HTTP_400_BAD_REQUEST)
+
+        active = TestAttempt.objects.filter(user=request.user, test=test, status=TestAttempt.AttemptStatus.IN_PROGRESS).first()
+        if active is not None:
+            return Response({"attempt_id": active.id, "status": active.status}, status=status.HTTP_200_OK)
+
+        completed_count = TestAttempt.objects.filter(user=request.user, test=test, status__in=[TestAttempt.AttemptStatus.COMPLETED, TestAttempt.AttemptStatus.INTERRUPTED]).count()
+        if completed_count >= test.max_attempts:
+            return Response({"detail": "Max attempts exceeded."}, status=status.HTTP_400_BAD_REQUEST)
+
+        attempt = TestAttempt.objects.create(user=request.user, test=test, attempt_number=completed_count+1, status=TestAttempt.AttemptStatus.IN_PROGRESS, score=0, is_passed=False)
+        return Response({"attempt_id": attempt.id, "status": attempt.status}, status=status.HTTP_201_CREATED)
+
+
+class TestActiveAttemptView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        test = get_object_or_404(CourseTest, id=self.kwargs["test_id"], is_active=True)
+        attempt = TestAttempt.objects.filter(user=request.user, test=test, status=TestAttempt.AttemptStatus.IN_PROGRESS).first()
+        if attempt is None:
+            return Response({"active_attempt": None}, status=status.HTTP_200_OK)
+        return Response({"active_attempt": {"attempt_id": attempt.id, "status": attempt.status}}, status=status.HTTP_200_OK)
+
 class TestSubmitView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TestSubmitSerializer
@@ -91,24 +129,21 @@ class TestSubmitView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         test = get_object_or_404(CourseTest, id=self.kwargs["test_id"], is_active=True)
-        enrollment = CourseEnrollment.objects.filter(user=request.user, course=test.course).first()
+        attempt_id = request.data.get("attempt_id")
+        if attempt_id:
+            attempt = get_object_or_404(TestAttempt, id=attempt_id, user=request.user, test=test)
+            if attempt.status != TestAttempt.AttemptStatus.IN_PROGRESS:
+                return Response({"detail": "Attempt already finalized."}, status=status.HTTP_400_BAD_REQUEST)
+            result = finalize_attempt(attempt=attempt, answers_data=serializer.validated_data["answers"], status_value=TestAttempt.AttemptStatus.COMPLETED)
+            return Response(TestSubmitResultSerializer(result).data, status=status.HTTP_200_OK)
 
+        enrollment = CourseEnrollment.objects.filter(user=request.user, course=test.course).first()
         if enrollment is None:
             return Response({"detail": "User is not enrolled in this course."}, status=status.HTTP_400_BAD_REQUEST)
-
         if not enrollment.is_theory_completed:
-            return Response(
-                {"detail": "Theory must be completed before testing"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        result = create_attempt_with_answers(
-            user=request.user,
-            test=test,
-            answers_data=serializer.validated_data["answers"],
-        )
-        output = TestSubmitResultSerializer(result)
-        return Response(output.data, status=status.HTTP_201_CREATED)
+            return Response({"detail": "Theory must be completed before testing"}, status=status.HTTP_400_BAD_REQUEST)
+        result = create_attempt_with_answers(user=request.user, test=test, answers_data=serializer.validated_data["answers"])
+        return Response(TestSubmitResultSerializer(result).data, status=status.HTTP_201_CREATED)
 
 
 class TestAttemptHistoryView(generics.ListAPIView):
@@ -317,3 +352,18 @@ class AdminAnswerOptionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyA
             return Response({"detail": exc.messages[0]}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TestAttemptInterruptView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = TestInterruptSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        attempt = get_object_or_404(TestAttempt, id=self.kwargs["attempt_id"], user=request.user)
+        if attempt.status != TestAttempt.AttemptStatus.IN_PROGRESS:
+            result = {"attempt_id": attempt.id, "score": attempt.score, "is_passed": attempt.is_passed, "attempt_number": attempt.attempt_number, "remaining_attempts": max(attempt.test.max_attempts - attempt.attempt_number, 0)}
+            return Response(TestSubmitResultSerializer(result).data, status=status.HTTP_200_OK)
+        result = finalize_attempt(attempt=attempt, answers_data=serializer.validated_data.get("answers", []), status_value=TestAttempt.AttemptStatus.INTERRUPTED)
+        return Response(TestSubmitResultSerializer(result).data, status=status.HTTP_200_OK)
