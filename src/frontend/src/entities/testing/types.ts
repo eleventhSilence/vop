@@ -25,6 +25,7 @@ export type CourseTestInfo = {
 
 export type TestAttempt = {
   attempt_id: string;
+  status: string;
   score: number;
   is_passed: boolean;
   attempt_number: number;
@@ -64,4 +65,13 @@ export type TestAttemptDetail = {
   is_passed: boolean;
   attempt_number: number;
   questions: TestAttemptDetailQuestion[];
+};
+
+export type ActiveAttemptResponse = {
+  active_attempt: { attempt_id: string; status: string } | null;
+};
+
+export type StartedAttempt = {
+  attempt_id: string;
+  status: string;
 };

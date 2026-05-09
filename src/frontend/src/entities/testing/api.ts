@@ -1,5 +1,5 @@
 import { http } from '@/shared/api/http';
-import type { CourseTestInfo, TestAttempt, TestAttemptDetail, TestSubmitResult } from '@/entities/testing/types';
+import type { ActiveAttemptResponse, CourseTestInfo, StartedAttempt, TestAttempt, TestAttemptDetail, TestSubmitResult } from '@/entities/testing/types';
 import type { PaginatedResponse } from '@/shared/lib/pagination';
 import type { AdminTest } from '@/entities/admin/types';
 
@@ -10,8 +10,17 @@ export const testingApi = {
   myCourseTest(courseId: string) {
     return http.get<CourseTestInfo>(`/testing/my/course/${courseId}/`).then((response) => response.data);
   },
-  submit(testId: string, answers: unknown[]) {
-    return http.post<TestSubmitResult>(`/testing/${testId}/submit/`, { answers }).then((response) => response.data);
+  submit(testId: string, answers: unknown[], attemptId?: string) {
+    return http.post<TestSubmitResult>(`/testing/${testId}/submit/`, { answers, attempt_id: attemptId }).then((response) => response.data);
+  },
+  startAttempt(testId: string) {
+    return http.post<StartedAttempt>(`/testing/${testId}/attempts/start/`).then((response) => response.data);
+  },
+  activeAttempt(testId: string) {
+    return http.get<ActiveAttemptResponse>(`/testing/${testId}/attempts/active/`).then((response) => response.data);
+  },
+  interruptAttempt(attemptId: string, answers: unknown[]) {
+    return http.post<TestSubmitResult>(`/testing/attempts/${attemptId}/interrupt/`, { answers }).then((response) => response.data);
   },
   attempts(testId: string) {
     return http.get<PaginatedResponse<TestAttempt>>(`/testing/${testId}/attempts/`).then((response) => response.data);

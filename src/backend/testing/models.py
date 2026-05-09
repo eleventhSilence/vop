@@ -18,6 +18,8 @@ class CourseTest(models.Model):
     passing_score = models.PositiveIntegerField()
     max_attempts = models.PositiveIntegerField()
     is_active = models.BooleanField(default=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -42,6 +44,8 @@ class TestQuestion(models.Model):
         choices=QuestionType.choices,
         default=QuestionType.SINGLE_CHOICE,
     )
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -116,6 +120,8 @@ class AnswerOption(models.Model):
     text = models.TextField()
     is_correct = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -181,12 +187,20 @@ class AnswerOption(models.Model):
 
 
 class TestAttempt(models.Model):
+    class AttemptStatus(models.TextChoices):
+        IN_PROGRESS = "in_progress", "In progress"
+        COMPLETED = "completed", "Completed"
+        INTERRUPTED = "interrupted", "Interrupted"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="test_attempts")
     test = models.ForeignKey(CourseTest, on_delete=models.CASCADE, related_name="attempts")
-    score = models.PositiveIntegerField()
+    status = models.CharField(max_length=20, choices=AttemptStatus.choices, default=AttemptStatus.COMPLETED)
+    score = models.PositiveIntegerField(default=0)
     is_passed = models.BooleanField(default=False)
     attempt_number = models.PositiveIntegerField()
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

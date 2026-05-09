@@ -330,7 +330,12 @@ class SubmitAnswerItemSerializer(serializers.Serializer):
 
 
 class TestSubmitSerializer(serializers.Serializer):
-    answers = SubmitAnswerItemSerializer(many=True, allow_empty=False)
+    answers = SubmitAnswerItemSerializer(many=True, allow_empty=True)
+
+
+class TestAttemptStartSerializer(serializers.Serializer):
+    attempt_id = serializers.UUIDField(source="id")
+    status = serializers.CharField()
 
 
 class TestSubmitResultSerializer(serializers.Serializer):
@@ -342,11 +347,13 @@ class TestSubmitResultSerializer(serializers.Serializer):
 
 
 class TestAttemptSerializer(serializers.ModelSerializer):
+    status = serializers.CharField()
+
     attempt_id = serializers.UUIDField(source="id", read_only=True)
 
     class Meta:
         model = TestAttempt
-        fields = ("attempt_id", "score", "is_passed", "attempt_number", "created_at")
+        fields = ("attempt_id", "status", "score", "is_passed", "attempt_number", "created_at", "started_at", "completed_at")
 
 
 class AttemptDetailOptionSerializer(serializers.Serializer):
@@ -375,6 +382,8 @@ class AttemptDetailQuestionSerializer(serializers.Serializer):
         correct_option_ids_map = self.context.get("correct_option_ids_map", {})
         answers_map = self.context.get("answers_map", {})
         selected_ids = {answer.selected_option_id for answer in answers_map.get(obj.id, [])}
+        if not selected_ids:
+            return "error"
         return "success" if selected_ids == correct_option_ids_map.get(obj.id, set()) else "error"
 
 
@@ -385,7 +394,7 @@ class TestAttemptDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TestAttempt
-        fields = ("attempt_id", "created_at", "score", "percent", "is_passed", "attempt_number", "questions")
+        fields = ("attempt_id", "status", "created_at", "started_at", "completed_at", "score", "percent", "is_passed", "attempt_number", "questions")
 
     def get_percent(self, obj):
         total_questions = obj.test.questions.count()
@@ -432,31 +441,29 @@ def _normalize_selected_option_ids(item: dict, *, question: TestQuestion) -> lis
     return selected_option_ids
 
 
-def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[dict]):
-    existing_attempts = TestAttempt.objects.filter(user=user, test=test).count()
-    if existing_attempts >= test.max_attempts:
-        raise serializers.ValidationError({"detail": "Max attempts exceeded."})
-
-    attempt_number = existing_attempts + 1
-
+def _validate_and_score_answers(*, test: CourseTest, answers_data: list[dict]):
     question_ids = [item["question"] for item in answers_data]
     if len(question_ids) != len(set(question_ids)):
         raise serializers.ValidationError({"answers": "Duplicate answers for the same question."})
-    if len(question_ids) != test.questions.count():
-        raise serializers.ValidationError({"answers": "All test questions must be answered."})
 
     questions = {
         question.id: question
-        for question in TestQuestion.objects.filter(test=test, id__in=question_ids).prefetch_related("answer_options")
+        for question in TestQuestion.objects.filter(test=test).prefetch_related("answer_options")
     }
 
-    all_option_ids = []
-    normalized_answers = []
-    for item in answers_data:
-        question = questions.get(item["question"])
-        if question is None:
-            raise serializers.ValidationError({"question_id": "Question does not belong to test."})
+    provided_ids = set(question_ids)
+    unknown_ids = [qid for qid in provided_ids if qid not in questions]
+    if unknown_ids:
+        raise serializers.ValidationError({"question_id": "Question does not belong to test."})
 
+    all_option_ids = []
+    by_question = {item["question"]: item for item in answers_data}
+    normalized_answers = []
+    for question in questions.values():
+        item = by_question.get(question.id)
+        if item is None:
+            normalized_answers.append((question, []))
+            continue
         selected_option_ids = _normalize_selected_option_ids(item, question=question)
         all_option_ids.extend(selected_option_ids)
         normalized_answers.append((question, selected_option_ids))
@@ -474,39 +481,46 @@ def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[di
             selected_options.append(option)
 
         correct_option_ids = set(question.answer_options.filter(is_correct=True).values_list("id", flat=True))
-        question.validate_answer_configuration(
-            total_options=question.answer_options.count(),
-            correct_options=len(correct_option_ids),
-        )
+        question.validate_answer_configuration(total_options=question.answer_options.count(), correct_options=len(correct_option_ids))
 
-        selected_option_id_set = {option.id for option in selected_options}
-        if selected_option_id_set == correct_option_ids:
+        if {option.id for option in selected_options} == correct_option_ids:
             score += 1
 
-        user_answers_payload.extend(
-            UserAnswer(attempt=None, question=question, selected_option=option)
-            for option in selected_options
-        )
+        user_answers_payload.extend(UserAnswer(attempt=None, question=question, selected_option=option) for option in selected_options)
 
+    return score, user_answers_payload
+
+
+def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[dict]):
+    existing_attempts = TestAttempt.objects.filter(user=user, test=test, status__in=[TestAttempt.AttemptStatus.COMPLETED, TestAttempt.AttemptStatus.INTERRUPTED]).count()
+    if existing_attempts >= test.max_attempts:
+        raise serializers.ValidationError({"detail": "Max attempts exceeded."})
+
+    attempt_number = existing_attempts + 1
+    score, user_answers_payload = _validate_and_score_answers(test=test, answers_data=answers_data)
     is_passed = score >= test.passing_score
 
     with transaction.atomic():
-        attempt = TestAttempt.objects.create(
-            user=user,
-            test=test,
-            score=score,
-            is_passed=is_passed,
-            attempt_number=attempt_number,
-        )
+        attempt = TestAttempt.objects.create(user=user, test=test, score=score, is_passed=is_passed, attempt_number=attempt_number, status=TestAttempt.AttemptStatus.COMPLETED)
         for user_answer in user_answers_payload:
             user_answer.attempt = attempt
         UserAnswer.objects.bulk_create(user_answers_payload)
 
+    return {"attempt_id": attempt.id, "score": score, "is_passed": is_passed, "attempt_number": attempt_number, "remaining_attempts": max(test.max_attempts - attempt_number, 0)}
 
-    return {
-        "attempt_id": attempt.id,
-        "score": score,
-        "is_passed": is_passed,
-        "attempt_number": attempt_number,
-        "remaining_attempts": max(test.max_attempts - attempt_number, 0),
-    }
+
+def finalize_attempt(*, attempt: TestAttempt, answers_data: list[dict], status_value: str):
+    score, user_answers_payload = _validate_and_score_answers(test=attempt.test, answers_data=answers_data)
+    is_passed = score >= attempt.test.passing_score
+    from django.utils import timezone
+    with transaction.atomic():
+        attempt.answers.all().delete()
+        attempt.score = score
+        attempt.is_passed = is_passed
+        attempt.status = status_value
+        attempt.completed_at = timezone.now()
+        attempt.save(update_fields=["score", "is_passed", "status", "completed_at"])
+        for user_answer in user_answers_payload:
+            user_answer.attempt = attempt
+        UserAnswer.objects.bulk_create(user_answers_payload)
+    return {"attempt_id": attempt.id, "score": score, "is_passed": is_passed, "attempt_number": attempt.attempt_number, "remaining_attempts": max(attempt.test.max_attempts - attempt.attempt_number, 0)}

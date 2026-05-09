@@ -5,6 +5,7 @@ import { coursesApi } from '@/entities/course/api';
 import { CourseContentRenderer, extractCourseHeadings } from '@/entities/course/CourseContentRenderer';
 import { progressApi } from '@/entities/progress/api';
 import { reviewsApi } from '@/entities/review/api';
+import { testingApi } from '@/entities/testing/api';
 import { extractApiError, isEnrollmentAccessError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
@@ -29,6 +30,17 @@ export const CourseLearningPage = () => {
     queryKey: ['progress', 'course', courseId],
     queryFn: () => progressApi.courseProgress(courseId),
     enabled: Boolean(courseId),
+  });
+
+  const courseTestQuery = useQuery({
+    queryKey: ['testing', 'my-course', courseId, 'learning-guard'],
+    queryFn: () => testingApi.myCourseTest(courseId),
+    enabled: Boolean(courseId),
+  });
+  const activeAttemptGuardQuery = useQuery({
+    queryKey: ['testing', 'active', courseTestQuery.data?.test_id, 'learning-guard'],
+    queryFn: () => testingApi.activeAttempt(courseTestQuery.data?.test_id ?? ''),
+    enabled: Boolean(courseTestQuery.data?.test_id),
   });
   const myReviewsQuery = useQuery({
     queryKey: ['reviews', 'my'],
@@ -213,6 +225,12 @@ export const CourseLearningPage = () => {
       navigate(`/courses/${courseId}`, { replace: true });
     }
   }, [courseId, navigate, pageError]);
+  useEffect(() => {
+    if (activeAttemptGuardQuery.data?.active_attempt && courseId) {
+      navigate(`/account/courses/${courseId}/test`, { replace: true });
+    }
+  }, [activeAttemptGuardQuery.data, courseId, navigate]);
+
   const displayProgressPercent = useMemo(() => {
     if (!progressQuery.data) return 0;
     if (progressQuery.data.is_theory_completed || progressQuery.data.progress_percent >= 50) return progressQuery.data.progress_percent;
