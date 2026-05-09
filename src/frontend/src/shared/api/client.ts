@@ -1,5 +1,21 @@
 import { isAxiosError } from 'axios';
 
+export const isEnrollmentAccessError = (error: unknown) => {
+  if (!isAxiosError(error)) return false;
+
+  const detail = error.response?.data;
+  const message = typeof detail === 'string'
+    ? detail
+    : detail && typeof detail === 'object' && 'detail' in detail && typeof detail.detail === 'string'
+      ? detail.detail
+      : '';
+
+  const normalizedMessage = message.toLowerCase();
+  return normalizedMessage.includes('courseenrollment')
+    || normalizedMessage.includes('не запис')
+    || normalizedMessage.includes('enroll');
+};
+
 export const extractApiError = (error: unknown) => {
   if (isAxiosError(error)) {
     const detail = error.response?.data;

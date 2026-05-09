@@ -1,11 +1,11 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
 import { CourseContentRenderer, extractCourseHeadings } from '@/entities/course/CourseContentRenderer';
 import { progressApi } from '@/entities/progress/api';
 import { reviewsApi } from '@/entities/review/api';
-import { extractApiError } from '@/shared/api/client';
+import { extractApiError, isEnrollmentAccessError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
@@ -13,6 +13,7 @@ import { PageSection } from '@/shared/ui/PageSection';
 
 export const CourseLearningPage = () => {
   const { courseId = '' } = useParams();
+  const navigate = useNavigate();
 
   const location = useLocation();
   const fromSource = (location.state as { from?: string } | null)?.from;
@@ -205,6 +206,13 @@ export const CourseLearningPage = () => {
   };
 
   const pageError = courseQuery.isError ? courseQuery.error : progressQuery.isError ? progressQuery.error : null;
+
+  useEffect(() => {
+    if (!courseId || !pageError) return;
+    if (isEnrollmentAccessError(pageError)) {
+      navigate(`/courses/${courseId}`, { replace: true });
+    }
+  }, [courseId, navigate, pageError]);
   const displayProgressPercent = useMemo(() => {
     if (!progressQuery.data) return 0;
     if (progressQuery.data.is_theory_completed || progressQuery.data.progress_percent >= 50) return progressQuery.data.progress_percent;
