@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from pathlib import Path
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Count, Exists, OuterRef, Q
 
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
@@ -82,7 +82,7 @@ class MyCourseListView(generics.ListAPIView):
 class CourseDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = CourseDetailSerializer
-    queryset = Course.objects.filter(status=CourseStatus.AVAILABLE)
+    queryset = Course.objects.filter(status=CourseStatus.AVAILABLE).annotate(participants_count=Count("enrollments", distinct=True))
 
 
 class MyCourseDetailView(generics.RetrieveAPIView):

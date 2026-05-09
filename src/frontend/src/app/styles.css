@@ -988,6 +988,11 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .public-course-details-layout {
   align-items: start;
 }
+.public-course-details-back-link {
+  width: fit-content;
+  min-height: 2rem;
+  padding: 0.4rem 0.75rem;
+}
 .public-course-details-card,
 .public-course-cta-card {
   display: grid;
@@ -1007,6 +1012,9 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .public-review-item p {
   margin-bottom: 0;
+}
+.public-course-reviews-section {
+  margin-top: 1.1rem;
 }
 @media (max-width: 900px) {
   .public-hero-card,

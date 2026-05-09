@@ -29,6 +29,7 @@ export type CourseDetail = Course & {
   status: CourseStatus;
   created_at: string;
   updated_at: string;
+  participants_count: number;
 };
 
 export type EnrolledCourse = {
