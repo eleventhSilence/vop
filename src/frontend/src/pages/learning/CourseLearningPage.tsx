@@ -270,7 +270,7 @@ export const CourseLearningPage = () => {
             {progressQuery.data.is_theory_completed ? (
               <div className="form-stack">
                 <p className="muted">Тестирование доступно.</p>
-                <Link to={`/account/courses/${courseId}/test`} className="button button--secondary">Перейти к тестированию</Link>
+                <Link to={`/account/courses/${courseId}/test`} state={{ from: 'course-learning', returnTo: `/account/courses/${courseId}` }} className="button button--secondary">Перейти к тестированию</Link>
               </div>
             ) : null}
           </article>
