@@ -100,6 +100,19 @@ export const CourseDetailPage = () => {
   const myCourses = myCoursesQuery.data ? ensurePaginated(myCoursesQuery.data).results : [];
   const enrolledCourse = myCourses.find((course) => course.course_id === courseId);
   const isCourseAvailable = courseQuery.data?.status === 'available';
+  const isEnrolled = Boolean(enrolledCourse || enrollMutation.isSuccess);
+  const enrolledProgressPercent = enrolledCourse?.progress_percent ?? 25;
+  const enrolledProgressStatus = enrolledCourse?.progress_status ?? 'enrolled';
+  const mainStatusLabel = isEnrolled ? 'Вы записаны' : 'Доступен';
+  const progressLabel = !isEnrolled
+    ? 'Доступен'
+    : enrolledCourse?.progress_percent === 50
+      ? 'Теория завершена'
+      : enrolledCourse?.progress_percent === 75
+        ? 'На тестировании'
+        : enrolledCourse?.progress_percent === 100
+          ? 'Курс завершён'
+          : 'Записан на курс';
 
   return (
     <PageSection className="public-page-stack">
@@ -107,7 +120,12 @@ export const CourseDetailPage = () => {
       {courseQuery.isError ? <ErrorState message={extractApiError(courseQuery.error)} /> : null}
 
       {courseQuery.data ? (
-        <div className="details-layout public-course-details-layout">
+        <>
+          <Link to="/courses" className="button button--ghost public-course-details-back-link">
+            ← К каталогу
+          </Link>
+
+          <div className="details-layout public-course-details-layout">
           <article className="card card--wide public-course-details-card">
             <div className="card__row public-course-details-card__heading">
               <div>
@@ -115,8 +133,9 @@ export const CourseDetailPage = () => {
                 <h2>{courseQuery.data.title}</h2>
               </div>
               <StatusBadge
-                status={courseQuery.data.status}
-                tone={isCourseAvailable ? 'success' : 'neutral'}
+                status={isEnrolled ? 'enrolled' : 'available'}
+                label={mainStatusLabel}
+                tone={isEnrolled ? 'accent' : 'success'}
               />
             </div>
 
@@ -125,14 +144,16 @@ export const CourseDetailPage = () => {
             <div className="card public-course-cta-card">
               <div>
                 <p className="eyebrow">Действие по курсу</p>
-                <h3>{enrolledCourse ? 'Можно продолжить обучение' : 'Готово к записи'}</h3>
+                <h3>{!isAuthenticated || isEnrolled ? 'Можно продолжить обучение' : 'Готово к записи'}</h3>
                 <p className="muted">
                   {!isAuthenticated
                     ? 'Авторизуйтесь, чтобы записаться и продолжить обучение в личном кабинете.'
                     : isAdmin
-                      ? 'Вы вошли как администратор. Можно открыть учебную страницу или перейти в панель управления.'
-                    : enrolledCourse
-                      ? `Статус: ${formatStatus(enrolledCourse.progress_status)}. Прогресс: ${enrolledCourse.progress_percent}%.`
+                      ? isEnrolled
+                        ? `Статус: Записан. Прогресс: ${enrolledCourse?.progress_percent ?? 25}%.`
+                        : 'Вы вошли как администратор. Можно записаться на курс или перейти в панель управления.'
+                    : isEnrolled
+                      ? `Статус: ${formatStatus(enrolledProgressStatus)}. Прогресс: ${enrolledProgressPercent}%.`
                       : isCourseAvailable
                         ? 'После записи курс появится в разделе «Мои курсы».'
                         : 'Сейчас запись на курс недоступна.'}
@@ -146,11 +167,17 @@ export const CourseDetailPage = () => {
                   </Link>
                 ) : isAdmin ? (
                   <>
-                    <Link to={`/account/courses/${courseId}`} className="button button--primary">
-                      Перейти к обучению
-                    </Link>
+                    {isEnrolled ? (
+                      <Link to={`/account/courses/${courseId}`} className="button button--primary">
+                        Перейти к обучению
+                      </Link>
+                    ) : (
+                      <Button onClick={() => enrollMutation.mutate()} disabled={enrollMutation.isPending || !isCourseAvailable}>
+                        {enrollMutation.isPending ? ENROLL_PENDING_TEXT : 'Записаться на курс'}
+                      </Button>
+                    )}
                     <Link to="/admin/courses" className="button button--ghost">
-                      Перейти в админку
+                      Перейти в админ-панель
                     </Link>
                   </>
                 ) : enrollMutation.isSuccess ? (
@@ -183,12 +210,16 @@ export const CourseDetailPage = () => {
               <h3>Краткая информация</h3>
               <dl className="description-list">
                 <div>
-                  <dt>Статус</dt>
-                  <dd>{formatStatus(courseQuery.data.status)}</dd>
+                  <dt>Прогресс</dt>
+                  <dd>{progressLabel}</dd>
                 </div>
                 <div>
                   <dt>Обновлён</dt>
                   <dd>{formatDateTime(courseQuery.data.updated_at)}</dd>
+                </div>
+                <div>
+                  <dt>Участники</dt>
+                  <dd>{courseQuery.data.participants_count}</dd>
                 </div>
                 <div>
                   <dt>Отзывы</dt>
@@ -196,31 +227,32 @@ export const CourseDetailPage = () => {
                 </div>
               </dl>
             </section>
-
-            <section className="card">
-              <div className="section-header">
-                <div>
-                  <p className="eyebrow">Отзывы</p>
-                  <h3>Одобренные отзывы участников</h3>
-                </div>
-              </div>
-              {reviewsQuery.isLoading ? <LoadingState message="Загружаем отзывы..." /> : null}
-              {reviewsQuery.isError ? <ErrorState message={extractApiError(reviewsQuery.error)} /> : null}
-              {!reviewsQuery.isLoading && !reviewsQuery.isError && !reviews.length ? <EmptyState message="Пока нет одобренных отзывов по этому курсу." /> : null}
-              <div className="stack-list">
-                {reviews.map((review) => (
-                  <div key={review.review_id} className="list-item public-review-item">
-                    <div className="card__row">
-                      <strong>Оценка: {review.rating}/5</strong>
-                      <span className="muted">{formatDateTime(review.created_at)}</span>
-                    </div>
-                    <p>{review.comment}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
           </aside>
-        </div>
+          </div>
+
+          <section className="card public-course-reviews-section">
+            <div className="section-header">
+              <div>
+                <p className="eyebrow">Отзывы</p>
+                <h3>Одобренные отзывы участников</h3>
+              </div>
+            </div>
+            {reviewsQuery.isLoading ? <LoadingState message="Загружаем отзывы..." /> : null}
+            {reviewsQuery.isError ? <ErrorState message={extractApiError(reviewsQuery.error)} /> : null}
+            {!reviewsQuery.isLoading && !reviewsQuery.isError && !reviews.length ? <EmptyState message="Пока нет одобренных отзывов по этому курсу." /> : null}
+            <div className="stack-list">
+              {reviews.map((review) => (
+                <div key={review.review_id} className="list-item public-review-item">
+                  <div className="card__row">
+                    <strong>Оценка: {review.rating}/5</strong>
+                    <span className="muted">{formatDateTime(review.created_at)}</span>
+                  </div>
+                  <p>{review.comment}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
       ) : null}
     </PageSection>
   );

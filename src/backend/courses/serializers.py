@@ -44,6 +44,7 @@ class CourseMediaSerializer(serializers.ModelSerializer):
 class CourseDetailSerializer(serializers.ModelSerializer):
     course_id = serializers.UUIDField(source="id", read_only=True)
     media = CourseMediaSerializer(many=True, read_only=True)
+    participants_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Course
@@ -56,6 +57,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "media",
+            "participants_count",
         )
 
 
