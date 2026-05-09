@@ -91,7 +91,7 @@ export const MyCoursesPage = () => {
             </div>
             <div className="card__row">
               <Link to={`/account/courses/${course.course_id}`} state={{ from: 'my-courses' }} className="text-link">Учебная страница →</Link>
-              <Link to={`/account/courses/${course.course_id}/test`} className="text-link">Тестирование →</Link>
+              <Link to={`/account/courses/${course.course_id}/test`} state={{ from: 'my-courses', returnTo: '/account/courses' }} className="text-link">Тестирование →</Link>
             </div>
           </div>
         ))}

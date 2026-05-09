@@ -997,6 +997,9 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   min-height: 2rem;
   padding: 0.4rem 0.75rem;
 }
+.test-page-back-link {
+  margin-bottom: 0.9rem;
+}
 .public-course-details-card,
 .public-course-cta-card {
   display: grid;
