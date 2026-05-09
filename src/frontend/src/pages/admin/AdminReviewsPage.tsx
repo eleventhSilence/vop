@@ -52,6 +52,7 @@ export const AdminReviewsPage = () => {
         <div className="admin-list-filters">
           <Input
             id="admin-review-search"
+            label="Поиск"
             placeholder="Поиск по отзывам"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}

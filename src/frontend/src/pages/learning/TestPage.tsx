@@ -10,6 +10,17 @@ import { PageSection } from '@/shared/ui/PageSection';
 
 const getAttemptStatusLabel = (status?: string) => status === 'in_progress' ? 'Активна' : status === 'completed' ? 'Завершена' : status === 'interrupted' ? 'Прервана' : 'Неизвестный статус';
 
+
+type AttemptAnswerPayload =
+  | {
+      question_id: string;
+      selected_option_id: string;
+    }
+  | {
+      question_id: string;
+      selected_option_ids: string[];
+    };
+
 export const TestPage = () => {
   const { courseId = '' } = useParams();
   const navigate = useNavigate();
@@ -30,7 +41,7 @@ export const TestPage = () => {
 
   const attempts = attemptsQuery.data ? ensurePaginated(attemptsQuery.data).results : [];
   const submitPayload = useMemo(() => testQuery.data?.questions.map((q) => q.question_type === 'single_choice' ? { question_id: q.question_id, selected_option_id: (answers[q.question_id] ?? [])[0] } : { question_id: q.question_id, selected_option_ids: answers[q.question_id] ?? [] }) ?? [], [answers, testQuery.data?.questions]);
-  const interruptPayload = useMemo(() => (testQuery.data?.questions ?? []).flatMap((q) => { const selected = answers[q.question_id] ?? []; if (selected.length === 0) return []; return q.question_type === 'single_choice' ? [{ question_id: q.question_id, selected_option_id: selected[0] }] : [{ question_id: q.question_id, selected_option_ids: selected }]; }), [answers, testQuery.data?.questions]);
+  const interruptPayload = useMemo<AttemptAnswerPayload[]>(() => { const payload: AttemptAnswerPayload[] = []; for (const question of testQuery.data?.questions ?? []) { const selected = answers[question.question_id] ?? []; if (selected.length === 0) { continue; } if (question.question_type === 'single_choice') { payload.push({ question_id: question.question_id, selected_option_id: selected[0] }); } else { payload.push({ question_id: question.question_id, selected_option_ids: selected }); } } return payload; }, [answers, testQuery.data?.questions]);
 
   const activeAttemptId = activeAttemptQuery.data?.active_attempt?.attempt_id;
   const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? `/account/courses/${courseId}`;
