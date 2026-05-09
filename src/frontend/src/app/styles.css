@@ -587,6 +587,10 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   padding: 0.9rem;
   min-width: 0;
 }
+.learning-page-stack {
+  display: grid;
+  gap: 0.85rem;
+}
 .learning-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);

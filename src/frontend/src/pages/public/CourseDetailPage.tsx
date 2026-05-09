@@ -194,7 +194,7 @@ export const CourseDetailPage = () => {
                 ) : isAdmin ? (
                   <>
                     {isEnrolled ? (
-                      <Link to={`/account/courses/${courseId}`} className="button button--primary">
+                      <Link to={`/account/courses/${courseId}`} state={{ from: 'course-detail' }} className="button button--primary">
                         Перейти к обучению
                       </Link>
                     ) : (
@@ -208,7 +208,7 @@ export const CourseDetailPage = () => {
                   </>
                 ) : enrollMutation.isSuccess ? (
                   <>
-                    <Link to={`/account/courses/${courseId}`} className="button button--primary">
+                    <Link to={`/account/courses/${courseId}`} state={{ from: 'course-detail' }} className="button button--primary">
                       Перейти к обучению
                     </Link>
                     <Link to="/account/courses" className="button button--ghost">
@@ -216,7 +216,7 @@ export const CourseDetailPage = () => {
                     </Link>
                   </>
                 ) : enrolledCourse ? (
-                  <Link to={`/account/courses/${courseId}`} className="button button--primary">
+                  <Link to={`/account/courses/${courseId}`} state={{ from: 'course-detail' }} className="button button--primary">
                     Перейти к обучению
                   </Link>
                 ) : (
