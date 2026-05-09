@@ -333,6 +333,30 @@ class TestSubmitSerializer(serializers.Serializer):
     answers = SubmitAnswerItemSerializer(many=True, allow_empty=True)
 
 
+class InterruptAnswerItemSerializer(serializers.Serializer):
+    question_id = serializers.UUIDField(source="question", required=False)
+    question = serializers.UUIDField(write_only=True, required=False)
+    selected_option_id = serializers.UUIDField(source="selected_option", required=False)
+    selected_option = serializers.UUIDField(write_only=True, required=False)
+    selected_option_ids = serializers.ListField(child=serializers.UUIDField(), required=False, allow_empty=True)
+
+    def validate(self, attrs):
+        if "question" not in attrs:
+            raise serializers.ValidationError({"question_id": "This field is required."})
+        return attrs
+
+    def to_internal_value(self, data):
+        if "question_id" not in data and "question" in data:
+            data = {**data, "question_id": data["question"]}
+        if "selected_option_id" not in data and "selected_option" in data:
+            data = {**data, "selected_option_id": data["selected_option"]}
+        return super().to_internal_value(data)
+
+
+class TestInterruptSerializer(serializers.Serializer):
+    answers = InterruptAnswerItemSerializer(many=True, allow_empty=True, required=False, default=list)
+
+
 class TestAttemptStartSerializer(serializers.Serializer):
     attempt_id = serializers.UUIDField(source="id")
     status = serializers.CharField()
@@ -366,6 +390,7 @@ class AttemptDetailOptionSerializer(serializers.Serializer):
 
 
 class AttemptDetailQuestionSerializer(serializers.Serializer):
+    unanswered = serializers.SerializerMethodField()
     question_id = serializers.UUIDField(source="id", read_only=True)
     text = serializers.CharField(read_only=True)
     order = serializers.IntegerField(read_only=True)
@@ -383,8 +408,13 @@ class AttemptDetailQuestionSerializer(serializers.Serializer):
         answers_map = self.context.get("answers_map", {})
         selected_ids = {answer.selected_option_id for answer in answers_map.get(obj.id, [])}
         if not selected_ids:
-            return "error"
+            return "unanswered"
         return "success" if selected_ids == correct_option_ids_map.get(obj.id, set()) else "error"
+
+
+    def get_unanswered(self, obj):
+        answers_map = self.context.get("answers_map", {})
+        return len(answers_map.get(obj.id, [])) == 0
 
 
 class TestAttemptDetailSerializer(serializers.ModelSerializer):
@@ -424,16 +454,18 @@ class TestAttemptDetailSerializer(serializers.ModelSerializer):
         return serializer.data
 
 
-def _normalize_selected_option_ids(item: dict, *, question: TestQuestion) -> list:
+def _normalize_selected_option_ids(item: dict, *, question: TestQuestion, allow_unanswered: bool = False) -> list:
     if question.question_type == TestQuestion.QuestionType.SINGLE_CHOICE:
-        if "selected_option" not in item or "selected_option_ids" in item:
+        if "selected_option_ids" in item:
             raise serializers.ValidationError({"selected_option_id": "Single choice question expects selected_option_id."})
+        if "selected_option" not in item:
+            return [] if allow_unanswered else (_ for _ in ()).throw(serializers.ValidationError({"selected_option_id": "Single choice question expects selected_option_id."}))
         return [item["selected_option"]]
 
-    if "selected_option_ids" not in item or "selected_option" in item:
-        raise serializers.ValidationError(
-            {"selected_option_ids": "Multiple choice question expects selected_option_ids."}
-        )
+    if "selected_option" in item:
+        raise serializers.ValidationError({"selected_option_ids": "Multiple choice question expects selected_option_ids."})
+    if "selected_option_ids" not in item:
+        return [] if allow_unanswered else (_ for _ in ()).throw(serializers.ValidationError({"selected_option_ids": "Multiple choice question expects selected_option_ids."}))
 
     selected_option_ids = item["selected_option_ids"]
     if len(selected_option_ids) != len(set(selected_option_ids)):
@@ -441,7 +473,7 @@ def _normalize_selected_option_ids(item: dict, *, question: TestQuestion) -> lis
     return selected_option_ids
 
 
-def _validate_and_score_answers(*, test: CourseTest, answers_data: list[dict]):
+def _validate_and_score_answers(*, test: CourseTest, answers_data: list[dict], allow_unanswered: bool = True):
     question_ids = [item["question"] for item in answers_data]
     if len(question_ids) != len(set(question_ids)):
         raise serializers.ValidationError({"answers": "Duplicate answers for the same question."})
@@ -464,7 +496,7 @@ def _validate_and_score_answers(*, test: CourseTest, answers_data: list[dict]):
         if item is None:
             normalized_answers.append((question, []))
             continue
-        selected_option_ids = _normalize_selected_option_ids(item, question=question)
+        selected_option_ids = _normalize_selected_option_ids(item, question=question, allow_unanswered=allow_unanswered)
         all_option_ids.extend(selected_option_ids)
         normalized_answers.append((question, selected_option_ids))
 
@@ -497,7 +529,7 @@ def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[di
         raise serializers.ValidationError({"detail": "Max attempts exceeded."})
 
     attempt_number = existing_attempts + 1
-    score, user_answers_payload = _validate_and_score_answers(test=test, answers_data=answers_data)
+    score, user_answers_payload = _validate_and_score_answers(test=test, answers_data=answers_data, allow_unanswered=False)
     is_passed = score >= test.passing_score
 
     with transaction.atomic():
@@ -510,7 +542,7 @@ def create_attempt_with_answers(*, user, test: CourseTest, answers_data: list[di
 
 
 def finalize_attempt(*, attempt: TestAttempt, answers_data: list[dict], status_value: str):
-    score, user_answers_payload = _validate_and_score_answers(test=attempt.test, answers_data=answers_data)
+    score, user_answers_payload = _validate_and_score_answers(test=attempt.test, answers_data=answers_data, allow_unanswered=(status_value == TestAttempt.AttemptStatus.INTERRUPTED))
     is_passed = score >= attempt.test.passing_score
     from django.utils import timezone
     with transaction.atomic():

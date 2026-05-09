@@ -25,6 +25,7 @@ from testing.serializers import (
     TestAttemptDetailSerializer,
     TestSubmitResultSerializer,
     TestSubmitSerializer,
+    TestInterruptSerializer,
     create_attempt_with_answers,
     finalize_attempt,
 )
@@ -355,7 +356,7 @@ class AdminAnswerOptionRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyA
 
 class TestAttemptInterruptView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = TestSubmitSerializer
+    serializer_class = TestInterruptSerializer
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
