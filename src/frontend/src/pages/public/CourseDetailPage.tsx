@@ -105,7 +105,7 @@ export const CourseDetailPage = () => {
   const enrolledProgressStatus = enrolledCourse?.progress_status ?? 'enrolled';
   const mainStatusLabel = isEnrolled ? 'Вы записаны' : 'Доступен';
   const progressLabel = !isEnrolled
-    ? 'Доступен'
+    ? 'Не записан на курс'
     : enrolledCourse?.progress_percent === 50
       ? 'Теория завершена'
       : enrolledCourse?.progress_percent === 75
