@@ -5,8 +5,9 @@ import { testingApi } from '@/entities/testing/api';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
+import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
+import { Toast } from '@/shared/ui/Toast';
 
 const getAttemptStatusLabel = (status?: string) => status === 'in_progress' ? 'Активна' : status === 'completed' ? 'Завершена' : status === 'interrupted' ? 'Прервана' : 'Неизвестный статус';
 
@@ -30,6 +31,7 @@ export const TestPage = () => {
   const [isTestVisible, setIsTestVisible] = useState(false);
   const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
   const [localActiveAttemptId, setLocalActiveAttemptId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const queryClient = useQueryClient();
 
   const testQuery = useQuery({ queryKey: ['testing', 'my-course', courseId], queryFn: () => testingApi.myCourseTest(courseId), enabled: Boolean(courseId) });
@@ -37,9 +39,9 @@ export const TestPage = () => {
   const attemptsQuery = useQuery({ queryKey: ['testing', 'attempts', testQuery.data?.test_id], queryFn: () => testingApi.attempts(testQuery.data?.test_id ?? ''), enabled: Boolean(testQuery.data?.test_id) });
   const attemptDetailQuery = useQuery({ queryKey: ['testing', 'attempt-detail', selectedAttemptId], queryFn: () => testingApi.attemptDetail(selectedAttemptId ?? ''), enabled: Boolean(selectedAttemptId) });
 
-  const startMutation = useMutation({ mutationFn: () => testingApi.startAttempt(testQuery.data?.test_id ?? ''), onSuccess: async (d) => { setLocalActiveAttemptId(d.attempt_id); setAttemptId(d.attempt_id); setIsTestVisible(true); await queryClient.invalidateQueries({ queryKey: ['testing', 'attempts', testQuery.data?.test_id] }); await queryClient.invalidateQueries({ queryKey: ['testing', 'active', testQuery.data?.test_id] }); } });
-  const submitMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.submit(testQuery.data?.test_id ?? '', payload, attemptId ?? undefined), onSuccess: async () => { setLocalActiveAttemptId(null); setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); } });
-  const interruptMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.interruptAttempt(attemptId ?? '', payload), onSuccess: async () => { setLocalActiveAttemptId(null); setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); navigate(returnTo); } });
+  const startMutation = useMutation({ mutationFn: () => testingApi.startAttempt(testQuery.data?.test_id ?? ''), onSuccess: async (d) => { setLocalActiveAttemptId(d.attempt_id); setAttemptId(d.attempt_id); setIsTestVisible(true); await queryClient.invalidateQueries({ queryKey: ['testing', 'attempts', testQuery.data?.test_id] }); await queryClient.invalidateQueries({ queryKey: ['testing', 'active', testQuery.data?.test_id] }); }, onError: (error) => { const message = extractApiError(error).toLowerCase(); if (message.includes('max attempts exceeded')) { setToast({ type: 'error', message: 'Лимит попыток исчерпан. Повторное прохождение недоступно.' }); } } });
+  const submitMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.submit(testQuery.data?.test_id ?? '', payload, attemptId ?? undefined), onSuccess: async () => { setToast({ type: 'success', message: 'Попытка успешно завершена.' }); setLocalActiveAttemptId(null); setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); }, onError: (error) => { const message = extractApiError(error).toLowerCase(); if (message.includes('max attempts exceeded')) { setToast({ type: 'error', message: 'Лимит попыток исчерпан. Повторное прохождение недоступно.' }); return; } setToast({ type: 'error', message: 'Не удалось отправить попытку. Попробуйте ещё раз.' }); } });
+  const interruptMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.interruptAttempt(attemptId ?? '', payload), onSuccess: async () => { setToast({ type: 'success', message: 'Попытка прервана.' }); setLocalActiveAttemptId(null); setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); navigate(returnTo); }, onError: () => { setToast({ type: 'error', message: 'Не удалось завершить попытку. Попробуйте ещё раз.' }); } });
 
   const attempts = attemptsQuery.data ? ensurePaginated(attemptsQuery.data).results : [];
   const submitPayload = useMemo(() => testQuery.data?.questions.map((q) => q.question_type === 'single_choice' ? { question_id: q.question_id, selected_option_id: (answers[q.question_id] ?? [])[0] } : { question_id: q.question_id, selected_option_ids: answers[q.question_id] ?? [] }) ?? [], [answers, testQuery.data?.questions]);
@@ -69,12 +71,25 @@ export const TestPage = () => {
   const attemptsUsed = finalizedAttempts.length;
   const attemptsMax = testQuery.data?.max_attempts ?? 0;
   const attemptsLeft = Math.max(attemptsMax - attemptsUsed, 0);
-  const canStartAttempt = !activeAttemptId && attemptsLeft > 0;
+  const passedAttempt = attempts.find((attempt) => attempt.status === 'completed' && attempt.is_passed);
+  const testPassed = Boolean(passedAttempt);
+  const attemptsLimitReached = attemptsLeft === 0;
+  const canStartAttempt = !activeAttemptId && !testPassed && !attemptsLimitReached;
   const showTopBackButton = !isTestVisible && !activeAttemptId;
   const hasActiveAttempt = Boolean(activeAttemptId) || attempts.some((attempt) => attempt.status === 'in_progress');
   const isTakingTest = Boolean(activeAttemptId && isTestVisible);
+  const testState = activeAttemptId ? 'active' : testPassed ? 'passed' : attemptsLimitReached ? 'attempts-limit' : 'available';
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
 
   return <PageSection>
+    {toast ? <Toast type={toast.type} message={toast.message} /> : null}
     {testQuery.isLoading ? <LoadingState message="Загружаем тест..." /> : null}
     {testQuery.isError ? <ErrorState message={extractApiError(testQuery.error)} /> : null}
     {testQuery.data && !testQuery.data.has_test ? <EmptyState message="Для этого курса тест пока не настроен." /> : null}
@@ -83,9 +98,10 @@ export const TestPage = () => {
         {showTopBackButton ? <div className="test-back-row"><Link to={backTarget} className="button button--ghost public-course-details-back-link">{backLabel}</Link></div> : null}
         <div className="details-layout"><form className="card card--wide form-stack" onSubmit={(e: FormEvent) => { e.preventDefault(); submitMutation.mutate(submitPayload); }}>
       <h2>{testQuery.data.title}</h2>{!isTakingTest ? <p>{testQuery.data.description}</p> : null}
-      {!isTestVisible && !activeAttemptId && canStartAttempt ? <div className="form-stack"><p>После начала тестирования будет создана активная попытка. Пока попытка активна, доступ к теории и подробностям прошлых попыток будет временно ограничен. Если вы покинете тест через элементы интерфейса, попытка будет завершена с текущими ответами, а вопросы без ответа будут оценены в 0 баллов.</p><Button type="button" onClick={() => startMutation.mutate()} disabled={startMutation.isPending}>Начать тестирование</Button></div> : null}
-      {!isTestVisible && !activeAttemptId && !canStartAttempt ? <ErrorState message={`Лимит попыток исчерпан. Вы использовали ${attemptsUsed} из ${attemptsMax} попыток. Повторное прохождение недоступно. Обратитесь к администратору или ответственному за обучение для получения дополнительной попытки.`} /> : null}
-      {!isTestVisible && activeAttemptId ? <div className="form-stack"><p>У вас есть незавершённая попытка. Продолжите тестирование или завершите её перед возвратом к теории.</p><Button type="button" onClick={() => { setAttemptId(activeAttemptId); setIsTestVisible(true); }}>Продолжить тестирование</Button></div> : null}
+      {!isTestVisible && testState === 'available' ? <div className="form-stack"><p>После начала тестирования будет создана активная попытка. Пока попытка активна, доступ к теории и подробностям прошлых попыток будет временно ограничен. Если вы покинете тест через элементы интерфейса, попытка будет завершена с текущими ответами, а вопросы без ответа будут оценены в 0 баллов.</p><Button type="button" onClick={() => startMutation.mutate()} disabled={startMutation.isPending || !canStartAttempt}>Начать тестирование</Button></div> : null}
+      {!isTestVisible && testState === 'attempts-limit' ? <ErrorState message={`Лимит попыток исчерпан. Вы использовали ${attemptsUsed} из ${attemptsMax} попыток. Повторное прохождение недоступно. Обратитесь к администратору или ответственному за обучение для получения дополнительной попытки.`} /> : null}
+      {!isTestVisible && testState === 'passed' ? <div className="form-stack"><p>Тест успешно пройден. Результат сохранён в истории попыток, курс считается завершённым.</p><p>Ваш результат: {passedAttempt?.score ?? 0} из {testQuery.data.questions.length}.</p></div> : null}
+      {!isTestVisible && testState === 'active' ? <div className="form-stack"><p>У вас есть незавершённая попытка. Продолжите тестирование или завершите её перед возвратом к теории.</p><Button type="button" onClick={() => { setAttemptId(activeAttemptId); setIsTestVisible(true); }}>Продолжить тестирование</Button></div> : null}
       {isTestVisible ? <>
         {testQuery.data.questions.map((question) => <fieldset key={question.question_id} className="question-block"><legend>{question.order}. {question.text}</legend>{question.options.map((option) => {
           const selected = answers[question.question_id] ?? [];
@@ -94,10 +110,7 @@ export const TestPage = () => {
         <Button type="submit" disabled={submitMutation.isPending}>Отправить попытку</Button>
         <Button type="button" variant="ghost" disabled={interruptMutation.isPending} onClick={async () => { if (!window.confirm('Вы действительно хотите вернуться к теории? Активная попытка будет завершена с текущими ответами. Вопросы без ответа будут оценены в 0 баллов.')) return; await interruptMutation.mutateAsync(interruptPayload); }}>Вернуться к теории</Button>
       </> : null}
-      {submitMutation.isSuccess ? <SuccessState message="Попытка успешно завершена." /> : null}
-      {submitMutation.isError ? <ErrorState message="Не удалось отправить попытку. Проверьте соединение и попробуйте снова." /> : null}
-      {interruptMutation.isError ? <ErrorState message="Не удалось завершить попытку. Попробуйте ещё раз." /> : null}
-      {startMutation.isError ? <ErrorState message={extractApiError(startMutation.error)} /> : null}
+      {startMutation.isError && !extractApiError(startMutation.error).toLowerCase().includes('max attempts exceeded') ? <ErrorState message={extractApiError(startMutation.error)} /> : null}
     </form><aside className="card"><h3>История попыток</h3>
       {attemptsQuery.isLoading ? <LoadingState message="Загружаем попытки..." /> : null}
       {!attemptsQuery.isLoading && !attempts.length ? <EmptyState message="Вы ещё не отправляли попытки по этому тесту." /> : null}
