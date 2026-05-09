@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { testingApi } from '@/entities/testing/api';
 import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
@@ -13,6 +13,7 @@ const getAttemptStatusLabel = (status?: string) => status === 'in_progress' ? '�
 export const TestPage = () => {
   const { courseId = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [isTestVisible, setIsTestVisible] = useState(false);
@@ -25,13 +26,19 @@ export const TestPage = () => {
 
   const startMutation = useMutation({ mutationFn: () => testingApi.startAttempt(testQuery.data?.test_id ?? ''), onSuccess: (d) => { setAttemptId(d.attempt_id); setIsTestVisible(true); } });
   const submitMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.submit(testQuery.data?.test_id ?? '', payload, attemptId ?? undefined), onSuccess: async () => { setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); } });
-  const interruptMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.interruptAttempt(attemptId ?? '', payload), onSuccess: async () => { setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); navigate(`/account/courses/${courseId}`); } });
+  const interruptMutation = useMutation({ mutationFn: (payload: unknown[]) => testingApi.interruptAttempt(attemptId ?? '', payload), onSuccess: async () => { setAttemptId(null); setIsTestVisible(false); setAnswers({}); await attemptsQuery.refetch(); await activeAttemptQuery.refetch(); navigate(returnTo); } });
 
   const attempts = attemptsQuery.data ? ensurePaginated(attemptsQuery.data).results : [];
   const submitPayload = useMemo(() => testQuery.data?.questions.map((q) => q.question_type === 'single_choice' ? { question_id: q.question_id, selected_option_id: (answers[q.question_id] ?? [])[0] } : { question_id: q.question_id, selected_option_ids: answers[q.question_id] ?? [] }) ?? [], [answers, testQuery.data?.questions]);
   const interruptPayload = useMemo(() => (testQuery.data?.questions ?? []).flatMap((q) => { const selected = answers[q.question_id] ?? []; if (selected.length === 0) return []; return q.question_type === 'single_choice' ? [{ question_id: q.question_id, selected_option_id: selected[0] }] : [{ question_id: q.question_id, selected_option_ids: selected }]; }), [answers, testQuery.data?.questions]);
 
   const activeAttemptId = activeAttemptQuery.data?.active_attempt?.attempt_id;
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? `/account/courses/${courseId}`;
+  const finalizedAttempts = attempts.filter((a) => a.status === "completed" || a.status === "interrupted");
+  const attemptsUsed = finalizedAttempts.length;
+  const attemptsMax = testQuery.data?.max_attempts ?? 0;
+  const attemptsLeft = Math.max(attemptsMax - attemptsUsed, 0);
+  const canStartAttempt = !activeAttemptId && attemptsLeft > 0;
 
   return <PageSection>
     {testQuery.isLoading ? <LoadingState message="Загружаем тест..." /> : null}
@@ -39,7 +46,8 @@ export const TestPage = () => {
     {testQuery.data && !testQuery.data.has_test ? <EmptyState message="Для этого курса тест пока не настроен." /> : null}
     {testQuery.data?.has_test ? <div className="details-layout"><form className="card card--wide form-stack" onSubmit={(e: FormEvent) => { e.preventDefault(); submitMutation.mutate(submitPayload); }}>
       <h2>{testQuery.data.title}</h2><p>{testQuery.data.description}</p>
-      {!isTestVisible && !activeAttemptId ? <div className="form-stack"><p>После начала тестирования будет создана активная попытка. Пока попытка активна, доступ к теории будет временно ограничен. Если вы покинете тест через элементы интерфейса, попытка будет завершена с текущими ответами, а вопросы без ответа будут оценены в 0 баллов.</p><Button type="button" onClick={() => startMutation.mutate()} disabled={startMutation.isPending}>Начать тестирование</Button></div> : null}
+      {!isTestVisible && !activeAttemptId && canStartAttempt ? <div className="form-stack"><p>После начала тестирования будет создана активная попытка. Пока попытка активна, доступ к теории будет временно ограничен. Если вы покинете тест через элементы интерфейса, попытка будет завершена с текущими ответами, а вопросы без ответа будут оценены в 0 баллов.</p><Button type="button" onClick={() => startMutation.mutate()} disabled={startMutation.isPending}>Начать тестирование</Button></div> : null}
+      {!isTestVisible && !activeAttemptId && !canStartAttempt ? <ErrorState message={`Лимит попыток исчерпан. Вы использовали ${attemptsUsed} из ${attemptsMax} попыток. Повторное прохождение недоступно. Обратитесь к администратору или ответственному за обучение для получения дополнительной попытки.`} /> : null}
       {!isTestVisible && activeAttemptId ? <div className="form-stack"><p>У вас есть незавершённая попытка. Продолжите тестирование или завершите её перед возвратом к теории.</p><Button type="button" onClick={() => { setAttemptId(activeAttemptId); setIsTestVisible(true); }}>Продолжить тестирование</Button></div> : null}
       {isTestVisible ? <>
         {testQuery.data.questions.map((question) => <fieldset key={question.question_id} className="question-block"><legend>{question.order}. {question.text}</legend>{question.options.map((option) => {
@@ -50,12 +58,13 @@ export const TestPage = () => {
         <Button type="button" variant="ghost" disabled={interruptMutation.isPending} onClick={async () => { if (!window.confirm('Вы действительно хотите покинуть тест? Активная попытка будет завершена с текущими ответами. Вопросы без ответа будут оценены в 0 баллов.')) return; await interruptMutation.mutateAsync(interruptPayload); }}>Вернуться к теории</Button>
       </> : null}
       {submitMutation.isSuccess ? <SuccessState message="Попытка успешно завершена." /> : null}
-      {submitMutation.isError ? <ErrorState message={extractApiError(submitMutation.error)} /> : null}
-      {interruptMutation.isError ? <ErrorState message={extractApiError(interruptMutation.error)} /> : null}
+      {submitMutation.isError ? <ErrorState message="Не удалось отправить попытку. Проверьте соединение и попробуйте снова." /> : null}
+      {interruptMutation.isError ? <ErrorState message="Не удалось завершить попытку. Попробуйте ещё раз." /> : null}
+      {startMutation.isError ? <ErrorState message={extractApiError(startMutation.error)} /> : null}
     </form><aside className="card"><h3>История попыток</h3>
       {attemptsQuery.isLoading ? <LoadingState message="Загружаем попытки..." /> : null}
       {!attemptsQuery.isLoading && !attempts.length ? <EmptyState message="Вы ещё не отправляли попытки по этому тесту." /> : null}
-      {attempts.map((attempt) => <div key={attempt.attempt_id} className="list-item"><strong>Попытка #{attempt.attempt_number}</strong><p>Статус: {getAttemptStatusLabel(attempt.status)}</p><p>Результат: {attempt.status === 'in_progress' ? 'ещё не рассчитан' : `${attempt.score} из ${testQuery.data.questions.length}`}</p>{attempt.status !== 'in_progress' ? <Button type="button" variant="secondary" onClick={() => setSelectedAttemptId(attempt.attempt_id)}>Подробнее</Button> : null}</div>)}
+      <div className="stack-list">{attempts.map((attempt) => <div key={attempt.attempt_id} className="list-item"><strong>Попытка #{attempt.attempt_number}</strong><p>Статус: {getAttemptStatusLabel(attempt.status)}</p><p>Результат: {attempt.status === 'in_progress' ? 'ещё не рассчитан' : `${attempt.score} из ${testQuery.data.questions.length}`}</p>{attempt.status !== 'in_progress' ? <Button type="button" variant="secondary" onClick={() => setSelectedAttemptId(attempt.attempt_id)}>Подробнее</Button> : null}</div>)}</div>
     </aside></div> : null}
 
     {selectedAttemptId ? <div className="overlay" role="dialog" aria-modal="true"><div className="overlay__backdrop" onClick={() => setSelectedAttemptId(null)} /><div className="overlay__panel card"><div className="card__row"><h3>Детали попытки</h3><Button type="button" variant="ghost" onClick={() => setSelectedAttemptId(null)}>Закрыть</Button></div>

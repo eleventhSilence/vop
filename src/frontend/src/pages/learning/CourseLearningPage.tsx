@@ -227,7 +227,7 @@ export const CourseLearningPage = () => {
   }, [courseId, navigate, pageError]);
   useEffect(() => {
     if (activeAttemptGuardQuery.data?.active_attempt && courseId) {
-      navigate(`/account/courses/${courseId}/test`, { replace: true });
+      navigate(`/account/courses/${courseId}/test`, { replace: true, state: { returnTo: `/account/courses/${courseId}`, from: "course-theory-blocked-by-active-attempt" } });
     }
   }, [activeAttemptGuardQuery.data, courseId, navigate]);
 
