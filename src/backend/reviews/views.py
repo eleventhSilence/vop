@@ -46,10 +46,22 @@ class CourseApprovedReviewListView(generics.ListAPIView):
     serializer_class = ReviewPublicSerializer
 
     def get_queryset(self):
-        return Review.objects.filter(
+        queryset = Review.objects.filter(
             course_id=self.kwargs["course_id"],
             status=ReviewStatus.APPROVED,
-        ).select_related("user").order_by("-created_at", "id")
+        ).select_related("user", "course")
+
+        rating = (self.request.query_params.get("rating") or "").strip().lower()
+        if rating and rating != "all":
+            try:
+                rating_value = int(rating)
+            except (TypeError, ValueError):
+                rating_value = None
+
+            if rating_value in {1, 2, 3, 4, 5}:
+                queryset = queryset.filter(rating=rating_value)
+
+        return queryset.order_by("-created_at", "id")
 
 
 class MyReviewListView(generics.ListAPIView):

@@ -2,13 +2,20 @@ export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
 export type Review = {
   review_id: string;
+  course_id?: string;
+  author_name?: string;
   comment: string;
   rating: number;
   status?: ReviewStatus;
   created_at: string;
   updated_at?: string;
-  course_id?: string;
   course_title?: string;
+};
+
+export type CourseReviewsParams = {
+  page?: number;
+  page_size?: number;
+  rating?: 'all' | '1' | '2' | '3' | '4' | '5';
 };
 
 export type AdminReview = {

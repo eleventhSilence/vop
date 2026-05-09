@@ -30,6 +30,7 @@ export type CourseDetail = Course & {
   created_at: string;
   updated_at: string;
   participants_count: number;
+  review_count?: number;
 };
 
 export type EnrolledCourse = {

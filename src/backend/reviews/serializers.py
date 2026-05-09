@@ -150,11 +150,17 @@ class AdminReviewStatusUpdateSerializer(serializers.ModelSerializer):
 
 class ReviewPublicSerializer(serializers.ModelSerializer):
     review_id = serializers.UUIDField(source="id", read_only=True)
+    course_id = serializers.UUIDField(source="course.id", read_only=True)
+    author_name = serializers.SerializerMethodField()
     comment = serializers.CharField(source="text", read_only=True)
 
     class Meta:
         model = Review
-        fields = ("review_id", "comment", "rating", "created_at")
+        fields = ("review_id", "course_id", "author_name", "comment", "rating", "created_at")
+
+    def get_author_name(self, obj):
+        full_name = f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return full_name or obj.user.email
 
 
 class ReviewMySerializer(serializers.ModelSerializer):

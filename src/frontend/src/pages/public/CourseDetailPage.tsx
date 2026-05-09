@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
 import type { CourseEnrollment, EnrolledCourse } from '@/entities/course/types';
 import { reviewsApi } from '@/entities/review/api';
+import type { Review } from '@/entities/review/types';
 import { useAuth } from '@/features/auth/model/useAuth';
 import { extractApiError } from '@/shared/api/client';
 import { formatDateTime, formatStatus } from '@/shared/lib/format';
@@ -33,6 +35,10 @@ export const CourseDetailPage = () => {
   const { courseId = '' } = useParams();
   const queryClient = useQueryClient();
   const { isAuthenticated, isAdmin } = useAuth();
+  const [selectedRating, setSelectedRating] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all');
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [reviewsItems, setReviewsItems] = useState<Review[]>([]);
+  const [reviewsNext, setReviewsNext] = useState<string | null>(null);
 
   const courseQuery = useQuery({
     queryKey: ['courses', 'detail', courseId],
@@ -40,11 +46,31 @@ export const CourseDetailPage = () => {
     enabled: Boolean(courseId),
   });
 
-  const reviewsQuery = useQuery({
-    queryKey: ['courses', 'reviews', courseId],
-    queryFn: () => reviewsApi.listByCourse(courseId),
+  const reviewsQuery = useQuery<PaginatedResponse<Review>, Error>({
+    queryKey: ['courses', 'reviews', courseId, selectedRating, reviewsPage],
+    queryFn: () =>
+      reviewsApi.listByCourse(courseId, {
+        page: reviewsPage,
+        page_size: 10,
+        rating: selectedRating,
+      }),
     enabled: Boolean(courseId),
   });
+
+  useEffect(() => {
+    const data = reviewsQuery.data;
+    if (!data) {
+      return;
+    }
+
+    setReviewsNext(data.next);
+    if (reviewsPage === 1) {
+      setReviewsItems(data.results);
+      return;
+    }
+
+    setReviewsItems((current) => [...current, ...data.results]);
+  }, [reviewsPage, reviewsQuery.data]);
 
   const myCoursesQuery = useQuery({
     queryKey: ['courses', 'my'],
@@ -96,7 +122,7 @@ export const CourseDetailPage = () => {
     },
   });
 
-  const reviews = reviewsQuery.data ? ensurePaginated(reviewsQuery.data).results : [];
+  const hasNextReviewsPage = Boolean(reviewsNext);
   const myCourses = myCoursesQuery.data ? ensurePaginated(myCoursesQuery.data).results : [];
   const enrolledCourse = myCourses.find((course) => course.course_id === courseId);
   const isCourseAvailable = courseQuery.data?.status === 'available';
@@ -223,7 +249,7 @@ export const CourseDetailPage = () => {
                 </div>
                 <div>
                   <dt>Отзывы</dt>
-                  <dd>{reviews.length}</dd>
+                  <dd>{courseQuery.data.review_count ?? reviewsQuery.data?.count ?? reviewsItems.length}</dd>
                 </div>
               </dl>
             </section>
@@ -236,21 +262,56 @@ export const CourseDetailPage = () => {
                 <p className="eyebrow">Отзывы</p>
                 <h3>Одобренные отзывы участников</h3>
               </div>
+              <label className="public-reviews-filter">
+                <span>Оценка:</span>
+                <select
+                  value={selectedRating}
+                  onChange={(event) => {
+                    setSelectedRating(event.target.value as 'all' | '1' | '2' | '3' | '4' | '5');
+                    setReviewsItems([]);
+                    setReviewsNext(null);
+                    setReviewsPage(1);
+                  }}
+                >
+                  <option value="all">Все оценки</option>
+                  <option value="5">5</option>
+                  <option value="4">4</option>
+                  <option value="3">3</option>
+                  <option value="2">2</option>
+                  <option value="1">1</option>
+                </select>
+              </label>
             </div>
             {reviewsQuery.isLoading ? <LoadingState message="Загружаем отзывы..." /> : null}
             {reviewsQuery.isError ? <ErrorState message={extractApiError(reviewsQuery.error)} /> : null}
-            {!reviewsQuery.isLoading && !reviewsQuery.isError && !reviews.length ? <EmptyState message="Пока нет одобренных отзывов по этому курсу." /> : null}
+            {!reviewsQuery.isLoading && !reviewsQuery.isError && !reviewsItems.length ? (
+              <EmptyState
+                message={
+                  selectedRating === 'all'
+                    ? 'Пока нет одобренных отзывов по этому курсу.'
+                    : 'Отзывов с выбранной оценкой пока нет.'
+                }
+              />
+            ) : null}
             <div className="stack-list">
-              {reviews.map((review) => (
+              {reviewsItems.map((review) => (
                 <div key={review.review_id} className="list-item public-review-item">
                   <div className="card__row">
                     <strong>Оценка: {review.rating}/5</strong>
                     <span className="muted">{formatDateTime(review.created_at)}</span>
                   </div>
+                  <p className="muted">Автор: {review.author_name ?? 'Участник курса'}</p>
                   <p>{review.comment}</p>
                 </div>
               ))}
             </div>
+            {hasNextReviewsPage ? (
+              <div className="public-reviews-more">
+                <Button onClick={() => setReviewsPage((current) => current + 1)} disabled={reviewsQuery.isFetching}>
+                  {reviewsQuery.isFetching ? 'Загрузка...' : 'Показать ещё'}
+                </Button>
+              </div>
+            ) : null}
           </section>
         </>
       ) : null}

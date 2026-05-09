@@ -1,10 +1,17 @@
 import { http } from '@/shared/api/http';
-import type { AdminReview, AdminReviewListParams, Review, ReviewStatus, ReviewWritePayload } from '@/entities/review/types';
+import type {
+  AdminReview,
+  AdminReviewListParams,
+  CourseReviewsParams,
+  Review,
+  ReviewStatus,
+  ReviewWritePayload,
+} from '@/entities/review/types';
 import type { PaginatedResponse } from '@/shared/lib/pagination';
 
 export const reviewsApi = {
-  listByCourse(courseId: string) {
-    return http.get<PaginatedResponse<Review>>(`/reviews/course/${courseId}/`).then((response) => response.data);
+  listByCourse(courseId: string, params?: CourseReviewsParams) {
+    return http.get<PaginatedResponse<Review>>(`/reviews/course/${courseId}/`, { params }).then((response) => response.data);
   },
   myReviews() {
     return http.get<PaginatedResponse<Review>>('/reviews/my/').then((response) => response.data);
