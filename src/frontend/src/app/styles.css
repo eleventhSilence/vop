@@ -1746,16 +1746,68 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .my-course-card__badge--completed { background: #e7f7ee; color: #266a40; border-color: #c0e6d1; }
 .my-course-card__progress {
   width: 100%;
-  height: 0.55rem;
+}
+
+.animated-progress {
+  position: relative;
+  width: 100%;
+  height: 9px;
   border-radius: 999px;
-  background: #e8ecf3;
+  background: #e8edfb;
   overflow: hidden;
 }
-.my-course-card__progress span {
-  display: block;
+
+.animated-progress__base {
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #5870e6 0%, #7b93fb 100%);
+  width: calc(var(--progress) * 1%);
+  background: #6073f6;
+  border-radius: 0;
+  z-index: 1;
+}
+
+.animated-progress__pulse {
+  position: absolute;
+  top: 0;
+  left: calc(var(--progress) * 1%);
+  height: 100%;
+  width: calc(var(--range) * 1%);
+  transform-origin: left center;
+  transform: scaleX(0);
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(96, 115, 246, 0.9) 0%,
+    rgba(126, 118, 238, 0.72) 35%,
+    rgba(174, 139, 177, 0.55) 68%,
+    rgba(218, 174, 76, 0.25) 100%
+  );
+  border-radius: 0;
+  z-index: 2;
+  animation: progress-pulse 4s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+
+@keyframes progress-pulse {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  16% {
+    opacity: 1;
+  }
+
+  72% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
 }
 .my-course-card__actions {
   display: flex;
