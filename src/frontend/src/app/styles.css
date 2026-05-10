@@ -1099,6 +1099,11 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   border-radius: 0.9rem;
   padding: 1rem;
 }
+.question-type-hint {
+  margin: 0.4rem 0 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
 .option-row {
   display: flex;
   gap: 0.5rem;
