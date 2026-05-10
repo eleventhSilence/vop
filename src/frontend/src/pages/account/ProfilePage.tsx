@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
+import { Toast } from '@/shared/ui/Toast';
 import { AccountDashboardSection } from '@/pages/account/components/AccountDashboardSection';
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -16,13 +17,16 @@ export const ProfilePage = () => {
   const queryClient = useQueryClient();
   const { updateUser } = useAuth();
 
+  const [isProfileOverlayOpen, setProfileOverlayOpen] = useState(false);
+  const [isPasswordOverlayOpen, setPasswordOverlayOpen] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const [profileForm, setProfileForm] = useState({
     first_name: '',
     last_name: '',
     email: '',
   });
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
 
   const [passwordForm, setPasswordForm] = useState({
     current_password: '',
@@ -30,12 +34,20 @@ export const ProfilePage = () => {
     new_password_confirm: '',
   });
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   const meQuery = useQuery({
     queryKey: ['account', 'me'],
     queryFn: authApi.me,
   });
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
 
   useEffect(() => {
     if (!meQuery.data) {
@@ -71,7 +83,7 @@ export const ProfilePage = () => {
     }
 
     if (passwordForm.new_password !== passwordForm.new_password_confirm) {
-      return 'Новый пароль и подтверждение не совпадают.';
+      return 'Пароли не совпадают.';
     }
 
     return null;
@@ -81,13 +93,14 @@ export const ProfilePage = () => {
     mutationFn: authApi.updateMe,
     onSuccess: (updatedUser) => {
       setProfileError(null);
-      setProfileSuccess('Профиль успешно обновлён.');
+      setProfileOverlayOpen(false);
+      setToast({ type: 'success', message: 'Профиль обновлён.' });
       queryClient.setQueryData(['account', 'me'], updatedUser);
       updateUser(updatedUser);
     },
-    onError: (error) => {
-      setProfileSuccess(null);
-      setProfileError(extractApiError(error));
+    onError: () => {
+      setProfileError('Не удалось обновить профиль. Проверьте данные и попробуйте ещё раз.');
+      setToast({ type: 'error', message: 'Не удалось обновить профиль. Проверьте данные и попробуйте ещё раз.' });
     },
   });
 
@@ -95,22 +108,18 @@ export const ProfilePage = () => {
     mutationFn: authApi.changePassword,
     onSuccess: () => {
       setPasswordError(null);
-      setPasswordSuccess('Пароль успешно изменён.');
-      setPasswordForm({
-        current_password: '',
-        new_password: '',
-        new_password_confirm: '',
-      });
+      setPasswordOverlayOpen(false);
+      setPasswordForm({ current_password: '', new_password: '', new_password_confirm: '' });
+      setToast({ type: 'success', message: 'Пароль изменён.' });
     },
-    onError: (error) => {
-      setPasswordSuccess(null);
-      setPasswordError(extractApiError(error));
+    onError: () => {
+      setPasswordError('Не удалось изменить пароль. Проверьте введённые данные.');
+      setToast({ type: 'error', message: 'Не удалось изменить пароль. Проверьте введённые данные.' });
     },
   });
 
   const handleProfileSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setProfileSuccess(null);
 
     if (profileValidationError) {
       setProfileError(profileValidationError);
@@ -126,7 +135,6 @@ export const ProfilePage = () => {
 
   const handlePasswordSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setPasswordSuccess(null);
 
     if (passwordValidationError) {
       setPasswordError(passwordValidationError);
@@ -138,6 +146,42 @@ export const ProfilePage = () => {
       current_password: passwordForm.current_password,
       new_password: passwordForm.new_password,
     });
+  };
+
+  const openProfileOverlay = () => {
+    if (meQuery.data) {
+      setProfileForm({
+        first_name: meQuery.data.first_name,
+        last_name: meQuery.data.last_name,
+        email: meQuery.data.email,
+      });
+    }
+    setProfileError(null);
+    setProfileOverlayOpen(true);
+  };
+
+  const closeProfileOverlay = () => {
+    setProfileOverlayOpen(false);
+    setProfileError(null);
+    if (meQuery.data) {
+      setProfileForm({
+        first_name: meQuery.data.first_name,
+        last_name: meQuery.data.last_name,
+        email: meQuery.data.email,
+      });
+    }
+  };
+
+  const openPasswordOverlay = () => {
+    setPasswordForm({ current_password: '', new_password: '', new_password_confirm: '' });
+    setPasswordError(null);
+    setPasswordOverlayOpen(true);
+  };
+
+  const closePasswordOverlay = () => {
+    setPasswordOverlayOpen(false);
+    setPasswordError(null);
+    setPasswordForm({ current_password: '', new_password: '', new_password_confirm: '' });
   };
 
   return (
@@ -165,73 +209,96 @@ export const ProfilePage = () => {
               <div><dt>Дата регистрации</dt><dd>{formatDateTime(meQuery.data.registered_at)}</dd></div>
               <div><dt>Последний вход</dt><dd>{formatDateTime(meQuery.data.last_login_at)}</dd></div>
             </dl>
+            <div className="button-row">
+              <Button type="button" onClick={openProfileOverlay}>Редактировать профиль</Button>
+              <Button type="button" variant="ghost" onClick={openPasswordOverlay}>Изменить пароль</Button>
+            </div>
           </div>
 
-          <form className="card form-stack" onSubmit={handleProfileSubmit}>
-            <h3>Редактирование профиля</h3>
-            <Input
-              id="profile-first-name"
-              label="Имя"
-              value={profileForm.first_name}
-              onChange={(event) => setProfileForm((current) => ({ ...current, first_name: event.target.value }))}
-              required
-            />
-            <Input
-              id="profile-last-name"
-              label="Фамилия"
-              value={profileForm.last_name}
-              onChange={(event) => setProfileForm((current) => ({ ...current, last_name: event.target.value }))}
-              required
-            />
-            <Input id="profile-email" label="Email" type="email" value={profileForm.email} readOnly />
+          {isProfileOverlayOpen ? (
+            <div className="overlay" role="presentation" onClick={closeProfileOverlay}>
+              <div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                <form className="form-stack" onSubmit={handleProfileSubmit}>
+                  <h3>Редактирование профиля</h3>
+                  <Input
+                    id="profile-first-name"
+                    label="Имя"
+                    value={profileForm.first_name}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, first_name: event.target.value }))}
+                    required
+                  />
+                  <Input
+                    id="profile-last-name"
+                    label="Фамилия"
+                    value={profileForm.last_name}
+                    onChange={(event) => setProfileForm((current) => ({ ...current, last_name: event.target.value }))}
+                    required
+                  />
+                  <Input id="profile-email" label="Email" type="email" value={profileForm.email} readOnly />
 
-            {profileError ? <div className="form-error">{profileError}</div> : null}
-            {profileSuccess ? <div className="form-success">{profileSuccess}</div> : null}
+                  {profileError ? <div className="form-error">{profileError}</div> : null}
+                  <div className="button-row">
+                    <Button type="submit" disabled={profileMutation.isPending}>
+                      {profileMutation.isPending ? 'Сохраняем...' : 'Сохранить'}
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={closeProfileOverlay} disabled={profileMutation.isPending}>
+                      Отмена
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          ) : null}
 
-            <Button type="submit" disabled={profileMutation.isPending}>
-              {profileMutation.isPending ? 'Сохраняем...' : 'Сохранить профиль'}
-            </Button>
-          </form>
+          {isPasswordOverlayOpen ? (
+            <div className="overlay" role="presentation" onClick={closePasswordOverlay}>
+              <div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                <form className="form-stack" onSubmit={handlePasswordSubmit}>
+                  <h3>Смена пароля</h3>
+                  <Input
+                    id="profile-current-password"
+                    label="Текущий пароль"
+                    type="password"
+                    value={passwordForm.current_password}
+                    onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))}
+                    required
+                  />
+                  <Input
+                    id="profile-new-password"
+                    label="Новый пароль"
+                    type="password"
+                    minLength={MIN_PASSWORD_LENGTH}
+                    value={passwordForm.new_password}
+                    onChange={(event) => setPasswordForm((current) => ({ ...current, new_password: event.target.value }))}
+                    required
+                  />
+                  <Input
+                    id="profile-new-password-confirm"
+                    label="Подтверждение нового пароля"
+                    type="password"
+                    minLength={MIN_PASSWORD_LENGTH}
+                    value={passwordForm.new_password_confirm}
+                    onChange={(event) => setPasswordForm((current) => ({ ...current, new_password_confirm: event.target.value }))}
+                    required
+                  />
 
-          <form className="card form-stack" onSubmit={handlePasswordSubmit}>
-            <h3>Смена пароля</h3>
-            <Input
-              id="profile-current-password"
-              label="Текущий пароль"
-              type="password"
-              value={passwordForm.current_password}
-              onChange={(event) => setPasswordForm((current) => ({ ...current, current_password: event.target.value }))}
-              required
-            />
-            <Input
-              id="profile-new-password"
-              label="Новый пароль"
-              type="password"
-              minLength={MIN_PASSWORD_LENGTH}
-              value={passwordForm.new_password}
-              onChange={(event) => setPasswordForm((current) => ({ ...current, new_password: event.target.value }))}
-              required
-            />
-            <Input
-              id="profile-new-password-confirm"
-              label="Подтверждение нового пароля"
-              type="password"
-              minLength={MIN_PASSWORD_LENGTH}
-              value={passwordForm.new_password_confirm}
-              onChange={(event) => setPasswordForm((current) => ({ ...current, new_password_confirm: event.target.value }))}
-              required
-            />
-
-            {passwordError ? <div className="form-error">{passwordError}</div> : null}
-            {passwordSuccess ? <div className="form-success">{passwordSuccess}</div> : null}
-
-            <Button type="submit" disabled={changePasswordMutation.isPending}>
-              {changePasswordMutation.isPending ? 'Сохраняем...' : 'Изменить пароль'}
-            </Button>
-          </form>
+                  {passwordError ? <div className="form-error">{passwordError}</div> : null}
+                  <div className="button-row">
+                    <Button type="submit" disabled={changePasswordMutation.isPending}>
+                      {changePasswordMutation.isPending ? 'Сохраняем...' : 'Сохранить'}
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={closePasswordOverlay} disabled={changePasswordMutation.isPending}>
+                      Отмена
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          ) : null}
           <AccountDashboardSection />
         </>
       ) : null}
+      {toast ? <Toast type={toast.type} message={toast.message} /> : null}
     </PageSection>
   );
 };
