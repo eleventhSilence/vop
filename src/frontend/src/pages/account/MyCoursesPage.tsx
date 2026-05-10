@@ -142,39 +142,40 @@ export const MyCoursesPage = () => {
           </select>
         </label>
       </div>
-      {coursesQuery.isLoading ? <LoadingState message="Загружаем ваши курсы..." /> : null}
-      {coursesQuery.isError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
-      {!coursesQuery.isLoading && !coursesQuery.isError && !courses.length ? <EmptyState message={search || progress !== 'all' ? 'Курсы не найдены.' : 'У вас пока нет записанных курсов.'} /> : null}
-      <div className="stack-list">
-        {courses.map((course) => {
-          const stage = getCourseStage(course);
-          return (
-            <article className="card my-course-card" key={course.course_id}>
-              <div className="my-course-card__top">
-                <div>
-                  <h3>{course.title}</h3>
-                  <p>{course.short_description}</p>
+      <div className="my-courses-content">
+        {coursesQuery.isLoading ? <LoadingState message="Загружаем ваши курсы..." /> : null}
+        {coursesQuery.isError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
+        {!coursesQuery.isLoading && !coursesQuery.isError && !courses.length ? <EmptyState message={search || progress !== 'all' ? 'Курсы не найдены.' : 'У вас пока нет записанных курсов.'} /> : null}
+        <div className="stack-list my-courses-list">
+          {courses.map((course) => {
+            const stage = getCourseStage(course);
+            return (
+              <article className="card my-course-card" key={course.course_id}>
+                <div className="my-course-card__top">
+                  <div>
+                    <h3>{course.title}</h3>
+                    <p>{course.short_description}</p>
+                  </div>
+                  <div className="my-course-card__meta">
+                    <span className={`my-course-card__badge ${stage.badgeClassName}`}>{course.progress_percent}% · {stage.badge}</span>
+                  </div>
                 </div>
-                <div className="my-course-card__meta">
-                  <strong>{course.progress_percent}%</strong>
-                  <span className={`my-course-card__badge ${stage.badgeClassName}`}>{stage.badge}</span>
+                <div className="my-course-card__progress" role="progressbar" aria-valuenow={course.progress_percent} aria-valuemin={0} aria-valuemax={100} aria-label={`Прогресс по курсу ${course.title}`}>
+                  <span style={{ width: `${course.progress_percent}%` }} />
                 </div>
-              </div>
-              <div className="my-course-card__progress" role="progressbar" aria-valuenow={course.progress_percent} aria-valuemin={0} aria-valuemax={100} aria-label={`Прогресс по курсу ${course.title}`}>
-                <span style={{ width: `${course.progress_percent}%` }} />
-              </div>
-              <div className="my-course-card__actions">
-                <Link to={stage.primaryTo} state={stage.primaryState} className="button button--primary">{stage.primaryLabel}</Link>
-                {stage.secondaryLabel && stage.secondaryTo ? (
-                  <Link to={stage.secondaryTo} state={stage.secondaryState} className="button button--ghost">{stage.secondaryLabel}</Link>
-                ) : (
-                  <button type="button" className="button button--ghost" disabled>Тестирование недоступно</button>
-                )}
-              </div>
-              {stage.testingUnavailableNote ? <p className="my-course-card__hint">{stage.testingUnavailableNote}</p> : null}
-            </article>
-          );
-        })}
+                <div className="my-course-card__actions">
+                  <Link to={stage.primaryTo} state={stage.primaryState} className="button button--primary">{stage.primaryLabel}</Link>
+                  {stage.secondaryLabel && stage.secondaryTo ? (
+                    <Link to={stage.secondaryTo} state={stage.secondaryState} className="button button--ghost">{stage.secondaryLabel}</Link>
+                  ) : (
+                    <button type="button" className="button button--ghost" disabled>Тестирование недоступно</button>
+                  )}
+                </div>
+                {stage.testingUnavailableNote ? <p className="my-course-card__hint">{stage.testingUnavailableNote}</p> : null}
+              </article>
+            );
+          })}
+        </div>
       </div>
     </PageSection>
   );
