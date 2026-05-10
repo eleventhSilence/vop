@@ -7,6 +7,7 @@ import { extractApiError } from '@/shared/api/client';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
+import { AnimatedProgressBar } from '@/shared/ui/AnimatedProgressBar';
 
 type CourseStage = {
   badge: string;
@@ -160,8 +161,8 @@ export const MyCoursesPage = () => {
                     <span className={`my-course-card__badge ${stage.badgeClassName}`}>{course.progress_percent}% · {stage.badge}</span>
                   </div>
                 </div>
-                <div className="my-course-card__progress" role="progressbar" aria-valuenow={course.progress_percent} aria-valuemin={0} aria-valuemax={100} aria-label={`Прогресс по курсу ${course.title}`}>
-                  <span style={{ width: `${course.progress_percent}%` }} />
+                <div className="my-course-card__progress">
+                  <AnimatedProgressBar progress={course.progress_percent} label={`Прогресс по курсу ${course.title}`} />
                 </div>
                 <div className="my-course-card__actions">
                   <Link to={stage.primaryTo} state={stage.primaryState} className="button button--primary">{stage.primaryLabel}</Link>
