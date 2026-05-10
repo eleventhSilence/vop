@@ -11,6 +11,7 @@ import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
+import { Toast } from '@/shared/ui/Toast';
 
 export const CourseLearningPage = () => {
   const { courseId = '' } = useParams();
@@ -55,6 +56,7 @@ export const CourseLearningPage = () => {
 
   const [reviewDraft, setReviewDraft] = useState({ comment: '', rating: 5 });
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
   const [visualProgressPercent, setVisualProgressPercent] = useState<number | null>(null);
   const courseContentRef = useRef<HTMLDivElement | null>(null);
@@ -191,7 +193,11 @@ export const CourseLearningPage = () => {
   const completeTheoryMutation = useMutation({
     mutationFn: () => progressApi.completeTheory(courseId),
     onSuccess: async () => {
+      setToast({ type: 'success', message: 'Теория отмечена как завершённая.' });
       await progressQuery.refetch();
+    },
+    onError: () => {
+      setToast({ type: 'error', message: 'Не удалось завершить теорию. Попробуйте ещё раз.' });
     },
   });
 
@@ -203,7 +209,16 @@ export const CourseLearningPage = () => {
     },
     onSuccess: async (updatedReview) => {
       setReviewDraft({ comment: updatedReview.comment, rating: updatedReview.rating });
+      setToast({
+        type: 'success',
+        message: myCourseReview
+          ? 'Отзыв обновлён. После модерации он появится на публичной странице курса.'
+          : 'Отзыв сохранён. После модерации он появится на публичной странице курса.',
+      });
       await myReviewsQuery.refetch();
+    },
+    onError: () => {
+      setToast({ type: 'error', message: 'Не удалось сохранить отзыв. Попробуйте ещё раз.' });
     },
   });
 
@@ -230,6 +245,11 @@ export const CourseLearningPage = () => {
       navigate(`/account/courses/${courseId}/test`, { replace: true, state: { returnTo: `/account/courses/${courseId}`, from: "course-theory-blocked-by-active-attempt" } });
     }
   }, [activeAttemptGuardQuery.data, courseId, navigate]);
+  useEffect(() => {
+    if (!toast) return;
+    const timeoutId = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
 
   const displayProgressPercent = useMemo(() => {
     if (!progressQuery.data) return 0;
@@ -247,6 +267,7 @@ export const CourseLearningPage = () => {
 
   return (
     <PageSection className="learning-page-stack">
+      {toast ? <Toast type={toast.type} message={toast.message} /> : null}
       <Link to={backTarget} className="button button--ghost public-course-details-back-link">
         {backLabel}
       </Link>
@@ -264,9 +285,6 @@ export const CourseLearningPage = () => {
             {!progressQuery.data.is_theory_completed ? (
               <Button onClick={() => completeTheoryMutation.mutate()} disabled={completeTheoryMutation.isPending}>Завершить теорию</Button>
             ) : null}
-            {completeTheoryMutation.isError ? <ErrorState message={extractApiError(completeTheoryMutation.error)} /> : null}
-            {completeTheoryMutation.isSuccess ? <SuccessState message="Теория отмечена как завершённая. Прогресс курса обновлён." /> : null}
-
             {progressQuery.data.is_theory_completed ? (
               <div className="form-stack">
                 <p className="muted">Тестирование доступно.</p>
@@ -353,8 +371,6 @@ export const CourseLearningPage = () => {
                   {myCourseReview ? 'Обновить отзыв' : 'Оставить отзыв'}
                 </Button>
                 {reviewError ? <ErrorState message={reviewError} /> : null}
-                {reviewMutation.isError ? <ErrorState message={extractApiError(reviewMutation.error)} /> : null}
-                {reviewMutation.isSuccess ? <SuccessState message="Отзыв сохранён. После модерации он появится на публичной странице курса." /> : null}
                 {!myCourseReview ? <EmptyState message="Вы ещё не оставляли отзыв по этому курсу." /> : null}
               </form>
             ) : null}
