@@ -199,7 +199,7 @@ export const ProfilePage = () => {
 
       {meQuery.data ? (
         <>
-          <div className="card card--wide">
+          <div className="card card--wide profile-summary">
             <dl className="description-list">
               <div><dt>Имя</dt><dd>{meQuery.data.first_name}</dd></div>
               <div><dt>Фамилия</dt><dd>{meQuery.data.last_name}</dd></div>
@@ -209,7 +209,7 @@ export const ProfilePage = () => {
               <div><dt>Дата регистрации</dt><dd>{formatDateTime(meQuery.data.registered_at)}</dd></div>
               <div><dt>Последний вход</dt><dd>{formatDateTime(meQuery.data.last_login_at)}</dd></div>
             </dl>
-            <div className="button-row">
+            <div className="button-row profile-actions">
               <Button type="button" onClick={openProfileOverlay}>Редактировать профиль</Button>
               <Button type="button" variant="ghost" onClick={openPasswordOverlay}>Изменить пароль</Button>
             </div>
@@ -295,7 +295,9 @@ export const ProfilePage = () => {
               </div>
             </div>
           ) : null}
-          <AccountDashboardSection />
+          <div className="profile-statistics-section">
+            <AccountDashboardSection />
+          </div>
         </>
       ) : null}
       {toast ? <Toast type={toast.type} message={toast.message} /> : null}
