@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.auth import authenticate
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -49,6 +50,9 @@ class LoginSerializer(serializers.Serializer):
         if user.status == AccountStatus.BLOCKED:
             raise AuthenticationFailed("Account is blocked.")
 
+        user.last_login_at = timezone.now()
+        user.save(update_fields=("last_login_at",))
+
         refresh = RefreshToken.for_user(user)
         return {
             "user": {
@@ -59,6 +63,7 @@ class LoginSerializer(serializers.Serializer):
                 "role": user.role,
                 "status": user.status,
                 "is_email_verified": user.is_email_verified,
+                "last_login_at": user.last_login_at,
             },
             "tokens": {
                 "access": str(refresh.access_token),
