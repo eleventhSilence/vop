@@ -1724,15 +1724,15 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   margin-top: 1.25rem;
 }
 .my-course-card__meta {
-  display: grid;
-  justify-items: end;
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
 }
 .my-course-card__badge {
   display: inline-flex;
-  width: auto;
-  min-width: 13.5rem;
-  max-width: 100%;
-  padding: 0.3rem 0.75rem;
+  width: fit-content;
+  max-width: max-content;
+  padding: 6px 12px;
   border-radius: 999px;
   font-size: 0.77rem;
   font-weight: 600;
@@ -1774,11 +1774,10 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   }
   .my-course-card__meta {
     width: 100%;
-    justify-items: start;
+    justify-content: flex-start;
   }
   .my-course-card__badge {
-    min-width: 0;
-    white-space: normal;
+    max-width: 100%;
   }
   .my-course-card__actions .button {
     width: 100%;
