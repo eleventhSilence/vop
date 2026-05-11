@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -20,10 +21,12 @@ from accounts.serializers import (
     AdminAccountWriteSerializer,
     AdminDashboardSerializer,
     ChangePasswordSerializer,
+    PublicUserProfileSerializer,
 )
 from accounts.services import build_account_dashboard, build_admin_dashboard
 from dto.serializers import LoginSerializer, LogoutSerializer, RegisterSerializer
 from reviews.permissions import IsAdminUserRole
+from reviews.models import ReviewStatus
 
 
 class RegisterView(generics.CreateAPIView):
@@ -180,3 +183,22 @@ class AdminUserDetailView(generics.RetrieveUpdateAPIView):
         response_instance = self.get_queryset().get(pk=instance.pk)
         response_serializer = AdminAccountDetailSerializer(response_instance)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class PublicUserProfileView(generics.RetrieveAPIView):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = PublicUserProfileSerializer
+    lookup_url_kwarg = "user_id"
+
+    def get_queryset(self):
+        return Account.objects.prefetch_related("course_enrollments__course").annotate(
+            approved_reviews_count=Count("reviews", filter=Q(reviews__status=ReviewStatus.APPROVED), distinct=True)
+        )
+
+    def get_object(self):
+        user = get_object_or_404(self.get_queryset(), pk=self.kwargs[self.lookup_url_kwarg])
+        latest_reviews = list(
+            user.reviews.filter(status=ReviewStatus.APPROVED).select_related("course").order_by("-created_at")[:5]
+        )
+        user.latest_reviews = latest_reviews
+        return user
