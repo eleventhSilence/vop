@@ -1,6 +1,6 @@
 export type PublicUserReview = {
   id: string;
-  course_id: string;
+  course_id?: string;
   course_title: string;
   rating: number;
   text: string;

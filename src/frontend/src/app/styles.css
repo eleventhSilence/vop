@@ -1886,6 +1886,17 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   margin: 0;
 }
 
+
+.public-participant-review-course-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.public-participant-review-course-link:hover {
+  text-decoration: underline;
+}
+
 .public-participant-review-rating {
   display: flex;
   align-items: center;
