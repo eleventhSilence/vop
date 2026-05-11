@@ -32,12 +32,7 @@ export const ParticipantProfilePage = () => {
           </Link>
 
           <section className="card">
-            <p className="eyebrow">УЧАСТНИК ПЛАТФОРМЫ</p>
-            <h2>{profileQuery.data.first_name} {profileQuery.data.last_name}</h2>
-          </section>
-
-          <section className="card">
-            <h3>Профиль</h3>
+            <h3>Участник платформы</h3>
             <dl className="description-list">
               <div><dt>Имя</dt><dd>{profileQuery.data.first_name}</dd></div>
               <div><dt>Фамилия</dt><dd>{profileQuery.data.last_name}</dd></div>
@@ -47,15 +42,13 @@ export const ParticipantProfilePage = () => {
           </section>
 
           <section className="participant-profile-stats-grid">
-            <article className="card">
-              <p className="eyebrow">Статистика</p>
-              <h3>Завершено курсов</h3>
-              <p className="lead">{profileQuery.data.completed_courses_count}</p>
+            <article className="card participant-profile-stats-card">
+              <p className="participant-profile-stats-card__label">Завершено курсов</p>
+              <p className="participant-profile-stats-card__value">{profileQuery.data.completed_courses_count}</p>
             </article>
-            <article className="card">
-              <p className="eyebrow">Статистика</p>
-              <h3>Опубликовано отзывов</h3>
-              <p className="lead">{profileQuery.data.approved_reviews_count}</p>
+            <article className="card participant-profile-stats-card">
+              <p className="participant-profile-stats-card__label">Опубликовано отзывов</p>
+              <p className="participant-profile-stats-card__value">{profileQuery.data.approved_reviews_count}</p>
             </article>
           </section>
 

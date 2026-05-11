@@ -1844,6 +1844,32 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     text-align: center;
   }
 }
+
+.participant-profile-stats-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.participant-profile-stats-card__label {
+  margin: 0;
+  color: #2f3f53;
+  font-weight: 600;
+}
+
+.participant-profile-stats-card__value {
+  margin: 0;
+  margin-left: auto;
+  text-align: right;
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 700;
+  color: #0f2a4f;
+}
+
 .participant-profile-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
