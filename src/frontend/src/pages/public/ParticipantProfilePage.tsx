@@ -4,16 +4,7 @@ import { usersApi } from '@/entities/user/api';
 import { formatDateTime, formatRole } from '@/shared/lib/format';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
-
-
-const renderRatingStars = (rating: number | null | undefined) => {
-  const safeRating = Number.isFinite(Number(rating)) ? Math.trunc(Number(rating)) : 0;
-  if (safeRating < 1 || safeRating > 5) {
-    return null;
-  }
-
-  return Array.from({ length: 5 }, (_, index) => index < safeRating);
-};
+import { RatingStars } from '@/shared/ui/RatingStars';
 
 export const ParticipantProfilePage = () => {
   const { userId = '' } = useParams();
@@ -69,8 +60,6 @@ export const ParticipantProfilePage = () => {
             ) : (
               <div className="stack-list">
                 {profileQuery.data.latest_reviews.slice(0, 5).map((review) => {
-                  const stars = renderRatingStars(review.rating);
-
                   return (
                     <article key={review.id} className="list-item public-review-item">
                       <div className="card__row">
@@ -92,20 +81,7 @@ export const ParticipantProfilePage = () => {
                       </div>
                       <p className="public-participant-review-rating muted">
                         <span>Оценка:</span>{' '}
-                        {stars ? (
-                          <span className="public-participant-review-stars" aria-label={`Оценка ${review.rating} из 5`}>
-                            {stars.map((isActive, index) => (
-                              <span
-                                key={`${review.id}-star-${index + 1}`}
-                                className={isActive ? 'public-participant-review-star--active' : 'public-participant-review-star--inactive'}
-                              >
-                                ★
-                              </span>
-                            ))}
-                          </span>
-                        ) : (
-                          <span>—</span>
-                        )}
+                        <RatingStars rating={review.rating} ariaLabel="Оценка" />
                       </p>
                       <p>{review.text}</p>
                     </article>

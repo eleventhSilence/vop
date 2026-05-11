@@ -12,6 +12,7 @@ import { ensurePaginated, type PaginatedResponse } from '@/shared/lib/pagination
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
+import { RatingStars } from '@/shared/ui/RatingStars';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
 
 const ENROLL_PENDING_TEXT = 'Оформляем запись...';
@@ -297,7 +298,7 @@ export const CourseDetailPage = () => {
               {reviewsItems.map((review) => (
                 <div key={review.review_id} className="list-item public-review-item">
                   <div className="card__row">
-                    <strong>Оценка: {review.rating}/5</strong>
+                    <strong className="public-participant-review-rating">Оценка: <RatingStars rating={review.rating} ariaLabel="Оценка" /></strong>
                     <span className="muted">{formatDateTime(review.created_at)}</span>
                   </div>
                   <p className="muted">
