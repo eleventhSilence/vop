@@ -3,7 +3,8 @@ export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 export type Review = {
   review_id: string;
   course_id?: string;
-  author_name?: string;
+  author_id?: string | null;
+  author_name?: string | null;
   comment: string;
   rating: number;
   status?: ReviewStatus;
