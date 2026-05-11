@@ -5,6 +5,16 @@ import { formatDateTime, formatRole } from '@/shared/lib/format';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 
+
+const renderRatingStars = (rating: number | null | undefined) => {
+  const safeRating = Number.isFinite(Number(rating)) ? Math.trunc(Number(rating)) : 0;
+  if (safeRating < 1 || safeRating > 5) {
+    return null;
+  }
+
+  return Array.from({ length: 5 }, (_, index) => index < safeRating);
+};
+
 export const ParticipantProfilePage = () => {
   const { userId = '' } = useParams();
 
@@ -58,16 +68,39 @@ export const ParticipantProfilePage = () => {
               <EmptyState message="У пользователя пока нет опубликованных отзывов." />
             ) : (
               <div className="stack-list">
-                {profileQuery.data.latest_reviews.slice(0, 5).map((review) => (
-                  <article key={review.id} className="list-item public-review-item">
-                    <div className="card__row">
-                      <strong>{review.course_title}</strong>
-                      <span className="muted">{formatDateTime(review.created_at)}</span>
-                    </div>
-                    <p className="muted">Оценка: {review.rating}/5</p>
-                    <p>{review.text}</p>
-                  </article>
-                ))}
+                {profileQuery.data.latest_reviews.slice(0, 5).map((review) => {
+                  const stars = renderRatingStars(review.rating);
+
+                  return (
+                    <article key={review.id} className="list-item public-review-item">
+                      <div className="card__row">
+                        <p className="public-participant-review-course">
+                          <span className="muted">Название курса:</span>{' '}
+                          <strong>{review.course_title || '—'}</strong>
+                        </p>
+                        <span className="muted">{formatDateTime(review.created_at)}</span>
+                      </div>
+                      <p className="public-participant-review-rating muted">
+                        <span>Оценка:</span>{' '}
+                        {stars ? (
+                          <span className="public-participant-review-stars" aria-label={`Оценка ${review.rating} из 5`}>
+                            {stars.map((isActive, index) => (
+                              <span
+                                key={`${review.id}-star-${index + 1}`}
+                                className={isActive ? 'public-participant-review-star--active' : 'public-participant-review-star--inactive'}
+                              >
+                                ★
+                              </span>
+                            ))}
+                          </span>
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </p>
+                      <p>{review.text}</p>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>

@@ -1881,3 +1881,29 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     grid-template-columns: 1fr;
   }
 }
+
+.public-participant-review-course {
+  margin: 0;
+}
+
+.public-participant-review-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.public-participant-review-stars {
+  display: inline-flex;
+  gap: 0.15rem;
+  letter-spacing: 0.02em;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.public-participant-review-star--active {
+  color: #f5a400;
+}
+
+.public-participant-review-star--inactive {
+  color: #d7dbe2;
+}
