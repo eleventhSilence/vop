@@ -76,7 +76,17 @@ export const ParticipantProfilePage = () => {
                       <div className="card__row">
                         <p className="public-participant-review-course">
                           <span className="muted">Название курса:</span>{' '}
-                          <strong>{review.course_title || '—'}</strong>
+                          {review.course_title ? (
+                            review.course_id ? (
+                              <Link to={`/courses/${review.course_id}`} className="public-participant-review-course-link">
+                                <strong>{review.course_title}</strong>
+                              </Link>
+                            ) : (
+                              <strong>{review.course_title}</strong>
+                            )
+                          ) : (
+                            <strong>—</strong>
+                          )}
                         </p>
                         <span className="muted">{formatDateTime(review.created_at)}</span>
                       </div>
