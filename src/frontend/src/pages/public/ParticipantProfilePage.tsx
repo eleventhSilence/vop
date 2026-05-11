@@ -32,7 +32,7 @@ export const ParticipantProfilePage = () => {
           </Link>
 
           <section className="card">
-            <p className="eyebrow">Участник платформы</p>
+            <h3>Участник платформы</h3>
             <dl className="description-list">
               <div><dt>Имя</dt><dd>{profileQuery.data.first_name}</dd></div>
               <div><dt>Фамилия</dt><dd>{profileQuery.data.last_name}</dd></div>
