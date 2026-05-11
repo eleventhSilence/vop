@@ -7,6 +7,7 @@ from accounts.models import Account
 from courses.models import CourseEnrollment
 from reviews.models import Review
 from reviews.serializers import AdminReviewListSerializer
+from progress.utils import build_progress_payload
 
 
 class AccountMeSerializer(serializers.ModelSerializer):
@@ -280,3 +281,45 @@ class AdminAccountWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
 
         return attrs
+
+
+class PublicUserLatestReviewSerializer(serializers.ModelSerializer):
+    course_id = serializers.UUIDField(source="course.id", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ("id", "course_id", "course_title", "rating", "text", "created_at")
+        read_only_fields = fields
+
+
+class PublicUserProfileSerializer(serializers.ModelSerializer):
+    date_joined = serializers.DateTimeField(source="registered_at", read_only=True)
+    completed_courses_count = serializers.SerializerMethodField()
+    approved_reviews_count = serializers.IntegerField(read_only=True)
+    latest_reviews = PublicUserLatestReviewSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Account
+        fields = (
+            "id",
+            "first_name",
+            "last_name",
+            "role",
+            "date_joined",
+            "completed_courses_count",
+            "approved_reviews_count",
+            "latest_reviews",
+        )
+        read_only_fields = fields
+
+    def get_completed_courses_count(self, obj: Account) -> int:
+        enrollments = obj.course_enrollments.select_related("course")
+        completed_count = 0
+
+        for enrollment in enrollments:
+            progress_payload = build_progress_payload(enrollment=enrollment)
+            if progress_payload["progress_status"] == "completed":
+                completed_count += 1
+
+        return completed_count

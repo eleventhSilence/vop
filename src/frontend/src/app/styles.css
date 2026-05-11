@@ -1836,3 +1836,14 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     text-align: center;
   }
 }
+.participant-profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .participant-profile-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

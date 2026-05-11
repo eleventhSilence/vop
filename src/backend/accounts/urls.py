@@ -6,6 +6,7 @@ from .views import (
     LoginView,
     LogoutView,
     PublicTokenRefreshView,
+    PublicUserProfileView,
     RegisterView,
 )
 
@@ -17,4 +18,5 @@ urlpatterns = [
     path("account/me/", AccountMeView.as_view(), name="account-me"),
     path("account/change-password/", ChangePasswordView.as_view(), name="account-change-password"),
     path("account/dashboard/", AccountDashboardView.as_view(), name="account-dashboard"),
+    path("public/users/<uuid:user_id>/", PublicUserProfileView.as_view(), name="public-user-profile"),
 ]

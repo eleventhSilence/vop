@@ -21,6 +21,7 @@ import { TestPage } from '@/pages/learning/TestPage';
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage';
 import { CourseDetailPage } from '@/pages/public/CourseDetailPage';
 import { CoursesListPage } from '@/pages/public/CoursesListPage';
+import { ParticipantProfilePage } from '@/pages/public/ParticipantProfilePage';
 import { MyReviewsPage } from '@/pages/reviews/MyReviewsPage';
 import { AccountLayout } from '@/widgets/navigation/AccountLayout';
 import { AdminLayout } from '@/widgets/navigation/AdminLayout';
@@ -35,6 +36,7 @@ export const AppRouter = () => {
           <Route index element={<HomePage />} />
           <Route path="courses" element={<CoursesListPage />} />
           <Route path="courses/:courseId" element={<CourseDetailPage />} />
+          <Route path="participants/:userId" element={<ParticipantProfilePage />} />
 
           <Route element={<PublicOnlyRoute />}>
             <Route path="login" element={<LoginPage />} />
