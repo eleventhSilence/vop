@@ -1040,6 +1040,14 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .public-course-reviews-section {
   margin-top: 1.1rem;
 }
+
+.public-review-author-link {
+  color: #3557ff;
+  text-decoration: none;
+}
+.public-review-author-link:hover {
+  text-decoration: underline;
+}
 .public-reviews-filter {
   display: inline-flex;
   align-items: center;

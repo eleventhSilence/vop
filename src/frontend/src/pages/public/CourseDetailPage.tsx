@@ -300,7 +300,16 @@ export const CourseDetailPage = () => {
                     <strong>Оценка: {review.rating}/5</strong>
                     <span className="muted">{formatDateTime(review.created_at)}</span>
                   </div>
-                  <p className="muted">Автор: {review.author_name ?? 'Участник курса'}</p>
+                  <p className="muted">
+                    Автор:{' '}
+                    {review.author_id ? (
+                      <Link to={`/participants/${review.author_id}`} className="public-review-author-link">
+                        {review.author_name?.trim() || 'Пользователь'}
+                      </Link>
+                    ) : (
+                      <span>{review.author_name?.trim() || 'Пользователь'}</span>
+                    )}
+                  </p>
                   <p>{review.comment}</p>
                 </div>
               ))}
