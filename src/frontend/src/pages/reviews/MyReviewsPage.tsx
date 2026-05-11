@@ -1,19 +1,22 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { coursesApi } from '@/entities/course/api';
 import { reviewsApi } from '@/entities/review/api';
-import type { ReviewStatus } from '@/entities/review/types';
+import type { Review, ReviewStatus } from '@/entities/review/types';
 import { extractApiError } from '@/shared/api/client';
+import { formatDateTime } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
-import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
-import { Input } from '@/shared/ui/Input';
+import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
+import { Toast } from '@/shared/ui/Toast';
 
 export const MyReviewsPage = () => {
   const [draft, setDraft] = useState({ course_id: '', comment: '', rating: 5 });
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const reviewsQuery = useQuery({ queryKey: ['reviews', 'my'], queryFn: reviewsApi.myReviews });
   const coursesQuery = useQuery({ queryKey: ['courses', 'my'], queryFn: coursesApi.myCourses });
 
@@ -27,13 +30,38 @@ export const MyReviewsPage = () => {
   );
 
   const reviewedCourseIds = useMemo(() => new Set(reviews.map((review) => review.course_id)), [reviews]);
-  const availableCourses = courses.filter((course) => !reviewedCourseIds.has(course.course_id));
+  const availableCourses = useMemo(
+    () => courses.filter((course) => !reviewedCourseIds.has(course.course_id)),
+    [courses, reviewedCourseIds],
+  );
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!availableCourses.length) {
+      setDraft((current) => ({ ...current, course_id: '' }));
+      return;
+    }
+    if (!draft.course_id || !availableCourses.some((course) => course.course_id === draft.course_id)) {
+      setDraft((current) => ({ ...current, course_id: availableCourses[0].course_id }));
+    }
+  }, [availableCourses, draft.course_id]);
 
   const createMutation = useMutation({
     mutationFn: () => reviewsApi.create(draft),
     onSuccess: async () => {
       setDraft({ course_id: '', comment: '', rating: 5 });
+      setToast({ type: 'success', message: 'Отзыв сохранён. После модерации он появится на публичной странице курса.' });
       await Promise.all([reviewsQuery.refetch(), coursesQuery.refetch()]);
+    },
+    onError: () => {
+      setToast({ type: 'error', message: 'Не удалось сохранить отзыв. Попробуйте ещё раз.' });
     },
   });
 
@@ -43,7 +71,7 @@ export const MyReviewsPage = () => {
 
   const handleCreate = (event: FormEvent) => {
     event.preventDefault();
-    if (!canCreateReview) {
+    if (!canCreateReview || !draft.course_id) {
       return;
     }
     createMutation.mutate();
@@ -51,69 +79,26 @@ export const MyReviewsPage = () => {
 
   return (
     <PageSection>
-      <div className="details-layout">
-        <form className="card form-stack" onSubmit={handleCreate}>
-          <div>
-            <p className="eyebrow">Отзывы</p>
-            <h2>Оставить отзыв</h2>
-          </div>
+      <div className="form-stack">
+        <header className="section-header">
+          <p className="eyebrow">ОТЗЫВЫ</p>
+          <h1>Мои отзывы</h1>
+        </header>
 
-          {isCoursesLoading ? <LoadingState message="Загружаем доступные курсы..." /> : null}
-          {isCoursesError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
-          {!isCoursesLoading && !isCoursesError && !availableCourses.length ? <EmptyState message="Нет доступных курсов для нового отзыва." /> : null}
-
-          <label className="field">
-            <span className="field__label">Курс</span>
-            <select
-              className="field__control"
-              value={draft.course_id}
-              onChange={(event) => setDraft((current) => ({ ...current, course_id: event.target.value }))}
-              required
-              disabled={!canCreateReview || createMutation.isPending}
-            >
-              <option value="">Выберите курс</option>
-              {availableCourses.map((course) => (
-                <option key={course.course_id} value={course.course_id}>{course.title}</option>
-              ))}
-            </select>
-          </label>
-          <Input
-            id="review-comment"
-            label="Комментарий"
-            value={draft.comment}
-            onChange={(event) => setDraft((current) => ({ ...current, comment: event.target.value }))}
-            required
-            disabled={!canCreateReview || createMutation.isPending}
-          />
-          <Input
-            id="review-rating"
-            label="Оценка"
-            type="number"
-            min={1}
-            max={5}
-            value={draft.rating}
-            onChange={(event) => setDraft((current) => ({ ...current, rating: Number(event.target.value) }))}
-            required
-            disabled={!canCreateReview || createMutation.isPending}
-          />
-          <Button type="submit" disabled={!canCreateReview || createMutation.isPending}>Сохранить отзыв</Button>
-          {createMutation.isError ? <ErrorState message={extractApiError(createMutation.error)} /> : null}
-          {createMutation.isSuccess ? <SuccessState message="Отзыв сохранён. После модерации он появится на странице курса." /> : null}
-        </form>
-
-        <div className="card card--wide">
-          <h3>Мои отзывы</h3>
+        <section className="card form-stack">
+          <h2>Оставленные отзывы</h2>
           {reviewsQuery.isLoading ? <LoadingState /> : null}
           {reviewsQuery.isError ? <ErrorState message={extractApiError(reviewsQuery.error)} /> : null}
-          {!reviewsQuery.isLoading && !reviewsQuery.isError && !reviews.length ? <EmptyState message="Вы ещё не оставляли отзывы." /> : null}
+          {!reviewsQuery.isLoading && !reviewsQuery.isError && !reviews.length ? (
+            <EmptyState message="Вы пока не оставили ни одного отзыва." />
+          ) : null}
+
           <div className="stack-list">
             {reviews.map((review) => (
-              <ReviewEditor
+              <ReviewCard
                 key={review.review_id}
-                reviewId={review.review_id}
-                comment={review.comment}
-                rating={review.rating}
-                status={review.status ?? 'pending'}
+                review={review}
+                onToast={setToast}
                 onUpdated={() => reviewsQuery.refetch()}
                 onDeleted={async () => {
                   await Promise.all([reviewsQuery.refetch(), coursesQuery.refetch()]);
@@ -121,43 +106,103 @@ export const MyReviewsPage = () => {
               />
             ))}
           </div>
-        </div>
+        </section>
+
+        <section className="card form-stack">
+          <h2>Оставить новый отзыв</h2>
+          {isCoursesLoading ? <LoadingState message="Загружаем доступные курсы..." /> : null}
+          {isCoursesError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
+          {!isCoursesLoading && !isCoursesError && !availableCourses.length ? (
+            <EmptyState message="Вы уже оставили отзывы по всем курсам, на которые записаны." />
+          ) : null}
+
+          {canCreateReview ? (
+            <form className="form-stack" onSubmit={handleCreate}>
+              <label className="field">
+                <span className="field__label">Курс</span>
+                <select
+                  className="field__control"
+                  value={draft.course_id}
+                  onChange={(event) => setDraft((current) => ({ ...current, course_id: event.target.value }))}
+                  required
+                  disabled={createMutation.isPending}
+                >
+                  {availableCourses.map((course) => (
+                    <option key={course.course_id} value={course.course_id}>{course.title}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="field">
+                <span className="field__label">Комментарий</span>
+                <textarea
+                  id="review-comment"
+                  className="field__control"
+                  value={draft.comment}
+                  onChange={(event) => setDraft((current) => ({ ...current, comment: event.target.value }))}
+                  required
+                  disabled={createMutation.isPending}
+                />
+              </label>
+
+              <div className="field">
+                <span className="field__label">Оценка</span>
+                <InteractiveRatingStars
+                  value={draft.rating}
+                  onChange={(value) => setDraft((current) => ({ ...current, rating: value }))}
+                  disabled={createMutation.isPending}
+                />
+              </div>
+
+              <Button type="submit" disabled={!draft.course_id || createMutation.isPending}>Сохранить отзыв</Button>
+            </form>
+          ) : null}
+        </section>
       </div>
+
+      {toast ? <Toast type={toast.type} message={toast.message} /> : null}
     </PageSection>
   );
 };
 
-const ReviewEditor = ({
-  reviewId,
-  comment,
-  rating,
-  status,
+const ReviewCard = ({
+  review,
+  onToast,
   onUpdated,
   onDeleted,
 }: {
-  reviewId: string;
-  comment: string;
-  rating: number;
-  status: ReviewStatus;
+  review: Review;
+  onToast: (toast: { type: 'success' | 'error'; message: string }) => void;
   onUpdated: () => void;
   onDeleted: () => Promise<void>;
 }) => {
-  const [draftComment, setDraftComment] = useState(comment);
-  const [draftRating, setDraftRating] = useState(rating);
-  const [isDeleted, setIsDeleted] = useState(false);
+  const [draftComment, setDraftComment] = useState(review.comment);
+  const [draftRating, setDraftRating] = useState(review.rating);
+
+  useEffect(() => {
+    setDraftComment(review.comment);
+    setDraftRating(review.rating);
+  }, [review.comment, review.rating]);
 
   const updateMutation = useMutation({
-    mutationFn: () => reviewsApi.update(reviewId, { comment: draftComment, rating: draftRating }),
+    mutationFn: () => reviewsApi.update(review.review_id, { comment: draftComment, rating: draftRating }),
     onSuccess: async () => {
+      onToast({ type: 'success', message: 'Отзыв обновлён.' });
       await onUpdated();
+    },
+    onError: () => {
+      onToast({ type: 'error', message: 'Не удалось обновить отзыв. Попробуйте ещё раз.' });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => reviewsApi.remove(reviewId),
+    mutationFn: () => reviewsApi.remove(review.review_id),
     onSuccess: async () => {
-      setIsDeleted(true);
+      onToast({ type: 'success', message: 'Отзыв удалён.' });
       await onDeleted();
+    },
+    onError: () => {
+      onToast({ type: 'error', message: 'Не удалось удалить отзыв. Попробуйте ещё раз.' });
     },
   });
 
@@ -170,48 +215,73 @@ const ReviewEditor = ({
     deleteMutation.mutate();
   };
 
-  if (isDeleted) {
-    return <SuccessState message="Отзыв удалён." />;
-  }
-
   return (
-    <form className="list-item form-stack" onSubmit={(event) => {
-      event.preventDefault();
-      updateMutation.mutate();
-    }}>
+    <form
+      className="list-item form-stack"
+      onSubmit={(event) => {
+        event.preventDefault();
+        updateMutation.mutate();
+      }}
+    >
       <div className="card__row">
-        <strong>Отзыв #{reviewId.slice(0, 8)}</strong>
-        <StatusBadge status={status} />
+        <strong>{review.course_title ? `Курс: ${review.course_title}` : 'Курс недоступен'}</strong>
+        <StatusBadge status={(review.status ?? 'pending') as ReviewStatus} />
       </div>
-      <Input
-        id={`comment-${reviewId}`}
-        label="Комментарий"
-        value={draftComment}
-        onChange={(event) => setDraftComment(event.target.value)}
-        required
-        disabled={isBusy}
-      />
-      <Input
-        id={`rating-${reviewId}`}
-        label="Оценка"
-        type="number"
-        min={1}
-        max={5}
-        value={draftRating}
-        onChange={(event) => setDraftRating(Number(event.target.value))}
-        required
-        disabled={isBusy}
-      />
-      {updateMutation.isError ? <ErrorState message={extractApiError(updateMutation.error)} /> : null}
-      {deleteMutation.isError ? <ErrorState message={extractApiError(deleteMutation.error)} /> : null}
-      {updateMutation.isSuccess ? <SuccessState message="Изменения сохранены." /> : null}
-      <div className="card__row">
+
+      <div className="muted">Создан: {formatDateTime(review.created_at)} · Обновлён: {formatDateTime(review.updated_at ?? review.created_at)}</div>
+
+      <label className="field">
+        <span className="field__label">Комментарий</span>
+        <textarea
+          id={`comment-${review.review_id}`}
+          className="field__control"
+          value={draftComment}
+          onChange={(event) => setDraftComment(event.target.value)}
+          required
+          disabled={isBusy}
+        />
+      </label>
+
+      <div className="field">
+        <span className="field__label">Оценка</span>
+        <InteractiveRatingStars value={draftRating} onChange={setDraftRating} disabled={isBusy} />
+      </div>
+
+      <div className="card__row review-card__actions">
         <Button type="submit" variant="secondary" disabled={isBusy}>Сохранить изменения</Button>
         <Button type="button" variant="ghost" onClick={handleDelete} disabled={isBusy}>
           {deleteMutation.isPending ? 'Удаляем...' : 'Удалить отзыв'}
         </Button>
-        <Link to={`/account/reviews/${reviewId}/edit`} className="text-link">Открыть отдельную страницу →</Link>
+        {review.course_id ? (
+          <Link to={`/courses/${review.course_id}`} className="text-link">Открыть страницу курса</Link>
+        ) : null}
       </div>
     </form>
   );
 };
+
+const InteractiveRatingStars = ({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+}) => (
+  <div className="star-rating" role="group" aria-label="Выбор рейтинга">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={star}
+        type="button"
+        className={`star-rating__star ${star <= value ? 'star-rating__star--active' : ''}`}
+        aria-label={`Оценка ${star}`}
+        title={`Оценка ${star}`}
+        onClick={() => onChange(star)}
+        disabled={disabled}
+      >
+        ★
+      </button>
+    ))}
+  </div>
+);
