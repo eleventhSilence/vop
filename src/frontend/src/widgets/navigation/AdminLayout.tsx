@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { TopNavigation } from '@/widgets/navigation/TopNavigation';
 import { platformAssets } from '@/shared/config/platformAssets';
@@ -20,27 +20,93 @@ export const AdminLayout = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isTabsExpanded, setIsTabsExpanded] = useState(false);
 
+  const isTabsExpandedRef = useRef(isTabsExpanded);
+  const lastScrollYRef = useRef(0);
+  const lastToggleScrollYRef = useRef(0);
+  const frameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    isTabsExpandedRef.current = isTabsExpanded;
+  }, [isTabsExpanded]);
+
   useEffect(() => {
     const ADMIN_TABS_COLLAPSE_OFFSET = 80;
+    const MIN_SCROLL_DELTA = 8;
+    const TOGGLE_DISTANCE = 56;
+    const BOTTOM_GUARD = 16;
+    const MIN_REMAINING_SCROLL_TO_COLLAPSE = 180;
 
-    const handleScroll = () => {
-      const shouldCollapse = window.scrollY > ADMIN_TABS_COLLAPSE_OFFSET;
+    const processScroll = () => {
+      frameRef.current = null;
 
+      const currentScrollY = window.scrollY;
+      const shouldCollapse = currentScrollY > ADMIN_TABS_COLLAPSE_OFFSET;
       setIsScrolled(shouldCollapse);
 
-      if (shouldCollapse) {
-        setIsTabsExpanded(false);
+      if (!shouldCollapse) {
+        if (isTabsExpandedRef.current) {
+          isTabsExpandedRef.current = false;
+          setIsTabsExpanded(false);
+          lastToggleScrollYRef.current = currentScrollY;
+        }
+        lastScrollYRef.current = currentScrollY;
         return;
       }
 
-      setIsTabsExpanded(false);
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const remainingScroll = maxScroll - currentScrollY;
+      const delta = currentScrollY - lastScrollYRef.current;
+
+      if (Math.abs(delta) < MIN_SCROLL_DELTA) {
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      const distanceFromLastToggle = Math.abs(currentScrollY - lastToggleScrollYRef.current);
+
+      if (
+        delta > 0 &&
+        isTabsExpandedRef.current &&
+        distanceFromLastToggle >= TOGGLE_DISTANCE
+      ) {
+        if (remainingScroll < MIN_REMAINING_SCROLL_TO_COLLAPSE || remainingScroll <= BOTTOM_GUARD) {
+          lastScrollYRef.current = currentScrollY;
+          return;
+        }
+
+        isTabsExpandedRef.current = false;
+        setIsTabsExpanded(false);
+        lastToggleScrollYRef.current = currentScrollY;
+      }
+
+      if (delta < 0 && !isTabsExpandedRef.current && distanceFromLastToggle >= TOGGLE_DISTANCE) {
+        isTabsExpandedRef.current = true;
+        setIsTabsExpanded(true);
+        lastToggleScrollYRef.current = currentScrollY;
+      }
+
+      lastScrollYRef.current = currentScrollY;
     };
 
-    handleScroll();
+    const handleScroll = () => {
+      if (frameRef.current !== null) {
+        return;
+      }
+
+      frameRef.current = window.requestAnimationFrame(processScroll);
+    };
+
+    lastScrollYRef.current = window.scrollY;
+    lastToggleScrollYRef.current = window.scrollY;
+    processScroll();
+
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+      }
     };
   }, []);
 
@@ -94,7 +160,14 @@ export const AdminLayout = () => {
                 type="button"
                 className="admin-tabs-toggle"
                 aria-label={toggleLabel}
-                onClick={() => setIsTabsExpanded((prev) => !prev)}
+                onClick={() => {
+                  setIsTabsExpanded((prev) => {
+                    const next = !prev;
+                    isTabsExpandedRef.current = next;
+                    lastToggleScrollYRef.current = window.scrollY;
+                    return next;
+                  });
+                }}
               >
                 <span aria-hidden="true">{toggleSymbol}</span>
               </button>
