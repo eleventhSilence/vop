@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { TopNavigation } from '@/widgets/navigation/TopNavigation';
 import { platformAssets } from '@/shared/config/platformAssets';
@@ -19,27 +19,93 @@ export const AdminLayout = () => {
   const { pathname } = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isTabsExpanded, setIsTabsExpanded] = useState(false);
+  const isTabsExpandedRef = useRef(isTabsExpanded);
+  const lastScrollYRef = useRef(0);
+  const lastToggleScrollYRef = useRef(0);
+  const scrollRafIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    isTabsExpandedRef.current = isTabsExpanded;
+  }, [isTabsExpanded]);
 
   useEffect(() => {
     const ADMIN_TABS_COLLAPSE_OFFSET = 80;
+    const MIN_SCROLL_DELTA = 4;
+    const TOGGLE_DISTANCE = 50;
+    const BOTTOM_GUARD = 8;
 
-    const handleScroll = () => {
-      const shouldCollapse = window.scrollY > ADMIN_TABS_COLLAPSE_OFFSET;
+    const updateStateFromScroll = () => {
+      const currentScrollY = window.scrollY;
+      const shouldCollapse = currentScrollY > ADMIN_TABS_COLLAPSE_OFFSET;
 
-      setIsScrolled(shouldCollapse);
-
-      if (shouldCollapse) {
+      if (!shouldCollapse) {
+        setIsScrolled(false);
         setIsTabsExpanded(false);
+        isTabsExpandedRef.current = false;
+        lastScrollYRef.current = currentScrollY;
+        lastToggleScrollYRef.current = currentScrollY;
         return;
       }
 
-      setIsTabsExpanded(false);
+      setIsScrolled(true);
+
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const isNearBottom = currentScrollY >= maxScroll - BOTTOM_GUARD;
+      const delta = currentScrollY - lastScrollYRef.current;
+
+      if (Math.abs(delta) < MIN_SCROLL_DELTA) {
+        return;
+      }
+
+      if (isNearBottom) {
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      const distanceFromLastToggle = Math.abs(currentScrollY - lastToggleScrollYRef.current);
+
+      if (distanceFromLastToggle < TOGGLE_DISTANCE) {
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      if (delta > 0 && isTabsExpandedRef.current) {
+        setIsTabsExpanded(false);
+        isTabsExpandedRef.current = false;
+        lastToggleScrollYRef.current = currentScrollY;
+      }
+
+      if (delta < 0 && !isTabsExpandedRef.current) {
+        setIsTabsExpanded(true);
+        isTabsExpandedRef.current = true;
+        lastToggleScrollYRef.current = currentScrollY;
+      }
+
+      lastScrollYRef.current = currentScrollY;
     };
 
-    handleScroll();
+    const handleScroll = () => {
+      if (scrollRafIdRef.current !== null) {
+        return;
+      }
+
+      scrollRafIdRef.current = window.requestAnimationFrame(() => {
+        scrollRafIdRef.current = null;
+        updateStateFromScroll();
+      });
+    };
+
+    const initialScrollY = window.scrollY;
+    lastScrollYRef.current = initialScrollY;
+    lastToggleScrollYRef.current = initialScrollY;
+    updateStateFromScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
+      if (scrollRafIdRef.current !== null) {
+        window.cancelAnimationFrame(scrollRafIdRef.current);
+        scrollRafIdRef.current = null;
+      }
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
