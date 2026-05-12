@@ -1822,6 +1822,10 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   width: 100%;
 }
 
+.my-courses-pagination {
+  margin-top: 34px;
+}
+
 .animated-progress {
   position: relative;
   width: 100%;

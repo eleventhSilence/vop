@@ -211,7 +211,7 @@ export const MyCoursesPage = () => {
       </div>
 
       {shouldShowPagination && !coursesQuery.isError && !coursesQuery.isLoading ? (
-        <div className="card public-pagination-card">
+        <div className="card public-pagination-card my-courses-pagination">
           <p className="muted">
             Страница {currentPage} из {totalPages}. Сейчас показано {courses.length} записей.
           </p>
