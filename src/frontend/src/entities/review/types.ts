@@ -10,7 +10,14 @@ export type Review = {
   status?: ReviewStatus;
   created_at: string;
   updated_at?: string;
-  course_title?: string;
+  course_title?: string | null;
+  course_is_available?: boolean | null;
+  course?: {
+    id?: string | null;
+    title?: string | null;
+    name?: string | null;
+    status?: string | null;
+  } | null;
 };
 
 export type CourseReviewsParams = {

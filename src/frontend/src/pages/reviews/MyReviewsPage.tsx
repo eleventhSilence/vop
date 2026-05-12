@@ -61,11 +61,8 @@ export const MyReviewsPage = () => {
               <p className="muted">Вы ещё не оставили отзыв по следующим курсам:</p>
               <div className="stack-list">
                 {coursesWithoutReview.map((course) => (
-                  <div key={course.course_id} className="list-item">
-                    <div className="form-stack">
-                      <strong>{course.title}</strong>
-                      {course.description ? <p className="muted">{course.description}</p> : null}
-                    </div>
+                  <div key={course.course_id} className="list-item review-course-row">
+                    <strong>{course.title}</strong>
                     <Link to={`/account/courses/${course.course_id}/learn#review`} className="button button--secondary">
                       Оставить отзыв
                     </Link>
@@ -162,15 +159,25 @@ const ReviewCard = ({ review, onToast, onUpdated, onDeleted }: {
     setIsEditing(false);
   };
 
-  const courseTitle = review.course_title || 'Курс недоступен';
+  const resolvedCourseTitle = review.course_title?.trim() || review.course?.title?.trim() || review.course?.name?.trim();
+  const isCourseAvailable = review.course_is_available ?? (review.course?.status ? review.course.status === 'available' : true);
+  const shouldShowUnavailable = !resolvedCourseTitle && (isCourseAvailable === false || !review.course_id);
 
   return (
     <article className="list-item form-stack">
       <div className="card__row">
         <strong>
-          {review.course_id && review.course_title ? (
-            <Link to={`/courses/${review.course_id}`} className="text-link">{review.course_title}</Link>
-          ) : courseTitle}
+          {resolvedCourseTitle ? (
+            review.course_id && isCourseAvailable !== false ? (
+              <Link to={`/courses/${review.course_id}`} className="text-link">{resolvedCourseTitle}</Link>
+            ) : (
+              resolvedCourseTitle
+            )
+          ) : shouldShowUnavailable ? (
+            'Курс недоступен'
+          ) : (
+            'Курс'
+          )}
         </strong>
         <StatusBadge status={(review.status ?? 'pending') as ReviewStatus} />
       </div>

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from courses.models import Course, CourseEnrollment
+from courses.models import Course, CourseEnrollment, CourseStatus
 from reviews.models import Review, ReviewStatus
 
 
@@ -167,8 +167,25 @@ class ReviewPublicSerializer(serializers.ModelSerializer):
 class ReviewMySerializer(serializers.ModelSerializer):
     review_id = serializers.UUIDField(source="id", read_only=True)
     course_id = serializers.UUIDField(source="course.id", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    course_is_available = serializers.SerializerMethodField()
     comment = serializers.CharField(source="text", read_only=True)
 
     class Meta:
         model = Review
-        fields = ("review_id", "course_id", "comment", "rating", "status", "created_at", "updated_at")
+        fields = (
+            "review_id",
+            "course_id",
+            "course_title",
+            "course_is_available",
+            "comment",
+            "rating",
+            "status",
+            "created_at",
+            "updated_at",
+        )
+
+    def get_course_is_available(self, obj):
+        if not obj.course_id:
+            return False
+        return obj.course.status == CourseStatus.AVAILABLE

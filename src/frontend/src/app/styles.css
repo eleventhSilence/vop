@@ -1113,6 +1113,22 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   gap: 1rem;
 }
 .text-link { font-weight: 600; }
+.text-link:hover {
+  text-decoration: underline;
+}
+
+.review-course-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.review-course-row > strong {
+  min-width: 0;
+}
+.review-course-row .button {
+  flex-shrink: 0;
+}
 .question-block {
   border: 1px solid var(--surface-border);
   border-radius: 0.9rem;
@@ -1590,6 +1606,10 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   }
   .content { padding: 1rem; }
   .card__row { flex-direction: column; }
+  .review-course-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
   .admin-courses-toolbar {
     justify-content: stretch;
   }
