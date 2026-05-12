@@ -171,6 +171,33 @@ class CoursesApiTests(APITestCase):
             any(item["course_id"] == str(other_enrollment.course_id) for item in response.data["results"])
         )
 
+
+    def test_get_my_courses_uses_five_items_per_page(self):
+        for index in range(6):
+            course = Course.objects.create(
+                title=f"My course {index}",
+                short_description="My course description",
+                content="# My course",
+                status=CourseStatus.AVAILABLE,
+            )
+            CourseEnrollment.objects.create(user=self.user, course=course)
+
+        self.client.force_authenticate(user=self.user)
+        first_page_response = self.client.get(reverse("course-my-list"), {"page": 1})
+        second_page_response = self.client.get(reverse("course-my-list"), {"page": 2})
+
+        self.assertEqual(first_page_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(first_page_response.data["count"], 6)
+        self.assertEqual(len(first_page_response.data["results"]), 5)
+        self.assertIsNotNone(first_page_response.data["next"])
+        self.assertIsNone(first_page_response.data["previous"])
+
+        self.assertEqual(second_page_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_page_response.data["count"], 6)
+        self.assertEqual(len(second_page_response.data["results"]), 1)
+        self.assertIsNone(second_page_response.data["next"])
+        self.assertIsNotNone(second_page_response.data["previous"])
+
     def test_get_my_courses_returns_blocked_user_unauthorized(self):
         blocked_user = Account.objects.create_user(
             email="blocked-courses@example.com",
