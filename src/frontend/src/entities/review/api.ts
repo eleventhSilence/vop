@@ -34,7 +34,7 @@ export const reviewsApi = {
   adminPending(params?: Pick<AdminReviewListParams, 'page' | 'search'>) {
     return http.get<PaginatedResponse<AdminReview>>('/admin/reviews/pending/', { params }).then((response) => response.data);
   },
-  adminModerate(reviewId: string, status: Extract<ReviewStatus, 'approved' | 'rejected'>) {
+  adminModerate(reviewId: string, status: ReviewStatus) {
     return http.patch<AdminReview>(`/admin/reviews/${reviewId}/`, { status }).then((response) => response.data);
   },
 };

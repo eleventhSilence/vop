@@ -30,6 +30,8 @@ export type AdminReview = {
   review_id: string;
   user_id: string;
   user_email: string;
+  user_first_name?: string;
+  user_last_name?: string;
   course_id: string;
   course_title: string;
   rating: number;

@@ -103,6 +103,8 @@ class AdminReviewListSerializer(serializers.ModelSerializer):
     review_id = serializers.UUIDField(source="id", read_only=True)
     user_id = serializers.UUIDField(source="user.id", read_only=True)
     user_email = serializers.EmailField(source="user.email", read_only=True)
+    user_first_name = serializers.CharField(source="user.first_name", read_only=True)
+    user_last_name = serializers.CharField(source="user.last_name", read_only=True)
     course_id = serializers.UUIDField(source="course.id", read_only=True)
     course_title = serializers.CharField(source="course.title", read_only=True)
     comment = serializers.CharField(source="text", read_only=True)
@@ -113,6 +115,8 @@ class AdminReviewListSerializer(serializers.ModelSerializer):
             "review_id",
             "user_id",
             "user_email",
+            "user_first_name",
+            "user_last_name",
             "course_id",
             "course_title",
             "rating",

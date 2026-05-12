@@ -2412,3 +2412,16 @@ a.course-title:hover {
   .review-header { align-items: flex-start; flex-direction: column; }
   .review-btn { width: 100%; text-align: center; }
 }
+
+.table-review-comment-cell {
+  max-width: 420px;
+}
+
+.table-review-comment-text {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
