@@ -13,8 +13,11 @@ export const reviewsApi = {
   listByCourse(courseId: string, params?: CourseReviewsParams) {
     return http.get<PaginatedResponse<Review>>(`/reviews/course/${courseId}/`, { params }).then((response) => response.data);
   },
-  myReviews() {
-    return http.get<PaginatedResponse<Review>>('/reviews/my/').then((response) => response.data);
+  myReviews(params?: { page?: number; page_size?: number }) {
+    return http.get<PaginatedResponse<Review>>('/reviews/my/', { params }).then((response) => response.data);
+  },
+  availableCourses(params?: { page?: number; page_size?: number }) {
+    return http.get<PaginatedResponse<{ course_id: string; title: string; short_description: string; enrolled_at: string }>>('/reviews/available-courses/', { params }).then((response) => response.data);
   },
   create(payload: ReviewWritePayload) {
     return http.post<Review>('/reviews/', payload).then((response) => response.data);

@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { coursesApi } from '@/entities/course/api';
 import { reviewsApi } from '@/entities/review/api';
 import type { Review, ReviewStatus } from '@/entities/review/types';
 import { extractApiError } from '@/shared/api/client';
@@ -15,24 +14,26 @@ import { Toast } from '@/shared/ui/Toast';
 
 export const MyReviewsPage = () => {
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [coursesPage, setCoursesPage] = useState(1);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const pageSize = 5;
 
-  const reviewsQuery = useQuery({ queryKey: ['reviews', 'my'], queryFn: reviewsApi.myReviews });
-  const coursesQuery = useQuery({ queryKey: ['courses', 'my'], queryFn: coursesApi.myCourses });
+  const reviewsQuery = useQuery({
+    queryKey: ['my-reviews', reviewsPage],
+    queryFn: () => reviewsApi.myReviews({ page: reviewsPage, page_size: pageSize }),
+  });
+  const coursesQuery = useQuery({
+    queryKey: ['my-reviewable-courses', coursesPage],
+    queryFn: () => reviewsApi.availableCourses({ page: coursesPage, page_size: pageSize }),
+  });
 
   const reviews = useMemo(
     () => (reviewsQuery.data ? ensurePaginated(reviewsQuery.data).results : []),
     [reviewsQuery.data],
   );
-  const courses = useMemo(
-    () => (coursesQuery.data ? ensurePaginated(coursesQuery.data).results : []),
-    [coursesQuery.data],
-  );
-
-  const reviewedCourseIds = useMemo(() => new Set(reviews.map((review) => review.course_id)), [reviews]);
-  const coursesWithoutReview = useMemo(
-    () => courses.filter((course) => !reviewedCourseIds.has(course.course_id)),
-    [courses, reviewedCourseIds],
-  );
+  const coursesWithoutReview = useMemo(() => (coursesQuery.data ? ensurePaginated(coursesQuery.data).results : []), [coursesQuery.data]);
+  const reviewsPaginated = reviewsQuery.data ? ensurePaginated(reviewsQuery.data) : null;
+  const coursesPaginated = coursesQuery.data ? ensurePaginated(coursesQuery.data) : null;
 
   useEffect(() => {
     if (!toast) {
@@ -68,6 +69,15 @@ export const MyReviewsPage = () => {
                   </div>
                 ))}
               </div>
+              {coursesPaginated && coursesPaginated.count > pageSize ? (
+                <CompactPagination
+                  page={coursesPage}
+                  hasPrevious={Boolean(coursesPaginated.previous)}
+                  hasNext={Boolean(coursesPaginated.next)}
+                  onPrevious={() => setCoursesPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setCoursesPage((prev) => prev + 1)}
+                />
+              ) : null}
             </>
           ) : null}
 
@@ -92,11 +102,27 @@ export const MyReviewsPage = () => {
                 onToast={setToast}
                 onUpdated={() => reviewsQuery.refetch()}
                 onDeleted={async () => {
-                  await Promise.all([reviewsQuery.refetch(), coursesQuery.refetch()]);
+                  const refreshed = ensurePaginated(await reviewsQuery.refetch().then((result) => result.data ?? reviewsQuery.data ?? { count: 0, next: null, previous: null, results: [] }));
+                  if (!refreshed.results.length && reviewsPage > 1) {
+                    setReviewsPage((prev) => Math.max(1, prev - 1));
+                  }
+                  const refreshedCourses = ensurePaginated(await coursesQuery.refetch().then((result) => result.data ?? coursesQuery.data ?? { count: 0, next: null, previous: null, results: [] }));
+                  if (!refreshedCourses.results.length && coursesPage > 1) {
+                    setCoursesPage((prev) => Math.max(1, prev - 1));
+                  }
                 }}
               />
             ))}
           </div>
+          {reviewsPaginated && reviewsPaginated.count > pageSize ? (
+            <CompactPagination
+              page={reviewsPage}
+              hasPrevious={Boolean(reviewsPaginated.previous)}
+              hasNext={Boolean(reviewsPaginated.next)}
+              onPrevious={() => setReviewsPage((prev) => Math.max(1, prev - 1))}
+              onNext={() => setReviewsPage((prev) => prev + 1)}
+            />
+          ) : null}
         </section>
       </div>
 
@@ -104,6 +130,26 @@ export const MyReviewsPage = () => {
     </PageSection>
   );
 };
+
+const CompactPagination = ({
+  page,
+  hasPrevious,
+  hasNext,
+  onPrevious,
+  onNext,
+}: {
+  page: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) => (
+  <div className="compact-pagination">
+    <button type="button" onClick={onPrevious} disabled={!hasPrevious}>Назад</button>
+    <span>Страница {page}</span>
+    <button type="button" onClick={onNext} disabled={!hasNext}>Вперёд</button>
+  </div>
+);
 
 const ReviewCard = ({ review, onToast, onUpdated, onDeleted }: {
   review: Review;
