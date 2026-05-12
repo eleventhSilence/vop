@@ -1523,6 +1523,12 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .admin-tests-table__title strong {
   color: #1b3561;
 }
+.admin-questions-table__text {
+  min-width: 320px;
+  max-width: 700px;
+  white-space: normal;
+  word-break: break-word;
+}
 .admin-interactive-card {
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
