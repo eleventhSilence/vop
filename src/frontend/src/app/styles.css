@@ -1429,10 +1429,20 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   margin-bottom: 1rem;
 }
 .admin-list-filters {
-  display: grid;
-  grid-template-columns: minmax(320px, 1.6fr) repeat(2, minmax(190px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   align-items: end;
+  width: fit-content;
+  max-width: 100%;
+}
+.admin-list-filters > :first-child {
+  flex: 1 1 340px;
+  min-width: 260px;
+}
+.admin-list-filters > :not(:first-child) {
+  flex: 0 1 210px;
+  min-width: 180px;
 }
 .admin-list-filters--panel {
   padding: 1rem 1.1rem;
@@ -1809,7 +1819,13 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
     justify-content: stretch;
   }
   .admin-list-filters {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    width: 100%;
+  }
+  .admin-list-filters > :first-child,
+  .admin-list-filters > :not(:first-child) {
+    flex: 1 1 auto;
+    min-width: 0;
     width: 100%;
   }
   .admin-courses-create-trigger {
