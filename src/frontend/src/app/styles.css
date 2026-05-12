@@ -1938,3 +1938,176 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .public-participant-review-star--inactive {
   color: #d7dbe2;
 }
+
+.reviews-card {
+  margin-bottom: 24px;
+  padding: 32px 28px;
+  background: rgba(255, 252, 246, 0.92);
+  border: 1px solid #e7dfd1;
+  border-radius: 18px;
+  box-shadow: 0 14px 35px rgba(31, 42, 68, 0.06);
+}
+
+.course-item,
+.review-item {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 18px;
+  margin-bottom: 16px;
+  background: #fffdf8;
+  border: 1px solid #e6dece;
+  border-radius: 4px 16px 16px 0;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+.course-item:hover,
+.review-item:hover {
+  transform: translateY(-3px);
+  border-color: rgba(31, 76, 255, 0.32);
+  background: #fffefa;
+  box-shadow: 0 14px 28px rgba(31, 42, 68, 0.09);
+}
+
+.course-item::before,
+.review-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  height: 0;
+  background: #1f4cff;
+  border-radius: 0 4px 0 0;
+  transition: height 0.25s ease;
+}
+
+.course-item:hover::before,
+.review-item:hover::before {
+  height: 100%;
+}
+
+.course-item::after,
+.review-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(31, 76, 255, 0.06), transparent 45%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.course-item:hover::after,
+.review-item:hover::after {
+  opacity: 1;
+}
+
+.course-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.course-title {
+  position: relative;
+  z-index: 1;
+  color: #061b3a;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a.course-title:hover {
+  color: #1f4cff;
+  text-decoration: none;
+}
+
+.review-btn {
+  position: relative;
+  z-index: 1;
+  padding: 12px 18px;
+  border: 1px solid #e4dccd;
+  border-radius: 12px;
+  background: #fffdf8;
+  color: #1f4cff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.review-btn:hover {
+  background: #f4f6ff;
+  border-color: rgba(31, 76, 255, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(31, 76, 255, 0.12);
+  text-decoration: none;
+}
+
+.review-header,
+.review-date,
+.review-rating-label,
+.review-text,
+.review-actions,
+.review-item .field,
+.review-item .field__control,
+.review-item .star-rating {
+  position: relative;
+  z-index: 1;
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-date { color: #56637a; }
+
+.status-badge {
+  position: relative;
+  z-index: 1;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f1f4ff;
+  color: #1f4cff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.status-badge.approved { background: #eef8f0; color: #2f7a3e; }
+
+.review-rating-label {
+  margin-bottom: 6px;
+  color: #061b3a;
+  font-weight: 700;
+}
+
+.rating { color: #f59e0b; letter-spacing: 2px; margin-bottom: 18px; }
+.rating span.public-participant-review-star--inactive { color: #cbd2df; }
+
+.review-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.secondary-btn,
+.danger-btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fffdf8;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.secondary-btn { border: 1px solid #d8deef; color: #1f4cff; }
+.secondary-btn:hover { background: #f4f6ff; border-color: rgba(31, 76, 255, 0.35); transform: translateY(-1px); box-shadow: 0 8px 18px rgba(31, 76, 255, 0.1); }
+
+.danger-btn { border: 1px solid #ead5d5; color: #b42318; }
+.danger-btn:hover { background: #fff5f5; border-color: rgba(180, 35, 24, 0.35); transform: translateY(-1px); box-shadow: 0 8px 18px rgba(180, 35, 24, 0.08); }
+
+@media (max-width: 640px) {
+  .reviews-card { padding: 24px 18px; }
+  .course-item { align-items: flex-start; flex-direction: column; }
+  .review-header { align-items: flex-start; flex-direction: column; }
+  .review-btn { width: 100%; text-align: center; }
+}

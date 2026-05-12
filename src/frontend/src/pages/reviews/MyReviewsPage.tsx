@@ -11,7 +11,6 @@ import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 import { RatingStars } from '@/shared/ui/RatingStars';
-import { StatusBadge } from '@/shared/ui/StatusBadge';
 import { Toast } from '@/shared/ui/Toast';
 
 export const MyReviewsPage = () => {
@@ -51,7 +50,7 @@ export const MyReviewsPage = () => {
           <h1>Мои отзывы</h1>
         </header>
 
-        <section className="card form-stack">
+        <section className="card form-stack reviews-card">
           <h2>Курсы без отзыва</h2>
           {coursesQuery.isLoading ? <LoadingState message="Загружаем доступные курсы..." /> : null}
           {coursesQuery.isError ? <ErrorState message={extractApiError(coursesQuery.error)} /> : null}
@@ -61,9 +60,9 @@ export const MyReviewsPage = () => {
               <p className="muted">Вы ещё не оставили отзыв по следующим курсам:</p>
               <div className="stack-list">
                 {coursesWithoutReview.map((course) => (
-                  <div key={course.course_id} className="list-item review-course-row">
-                    <strong>{course.title}</strong>
-                    <Link to={`/account/courses/${course.course_id}/learn#review`} className="button button--secondary">
+                  <div key={course.course_id} className="course-item">
+                    <span className="course-title">{course.title}</span>
+                    <Link to={`/account/courses/${course.course_id}/learn#review`} className="review-btn">
                       Оставить отзыв
                     </Link>
                   </div>
@@ -77,7 +76,7 @@ export const MyReviewsPage = () => {
           ) : null}
         </section>
 
-        <section className="card form-stack">
+        <section className="card form-stack reviews-card">
           <h2>Оставленные отзывы</h2>
           {reviewsQuery.isLoading ? <LoadingState /> : null}
           {reviewsQuery.isError ? <ErrorState message={extractApiError(reviewsQuery.error)} /> : null}
@@ -146,6 +145,10 @@ const ReviewCard = ({ review, onToast, onUpdated, onDeleted }: {
 
   const isBusy = updateMutation.isPending || deleteMutation.isPending;
 
+  const status = (review.status ?? 'pending') as ReviewStatus;
+  const statusLabel = status === 'approved' ? 'Опубликован' : status === 'rejected' ? 'Отклонён' : 'На модерации';
+  const isApprovedStatus = status === 'approved';
+
   const handleDelete = () => {
     if (!window.confirm('Удалить отзыв? Это действие нельзя отменить.')) {
       return;
@@ -164,12 +167,12 @@ const ReviewCard = ({ review, onToast, onUpdated, onDeleted }: {
   const shouldShowUnavailable = !resolvedCourseTitle && (isCourseAvailable === false || !review.course_id);
 
   return (
-    <article className="list-item form-stack">
-      <div className="card__row">
+    <article className="review-item form-stack">
+      <div className="review-header">
         <strong>
           {resolvedCourseTitle ? (
             review.course_id && isCourseAvailable !== false ? (
-              <Link to={`/courses/${review.course_id}`} className="text-link">{resolvedCourseTitle}</Link>
+              <Link to={`/courses/${review.course_id}`} className="course-title">{resolvedCourseTitle}</Link>
             ) : (
               resolvedCourseTitle
             )
@@ -179,10 +182,10 @@ const ReviewCard = ({ review, onToast, onUpdated, onDeleted }: {
             'Курс'
           )}
         </strong>
-        <StatusBadge status={(review.status ?? 'pending') as ReviewStatus} />
+        <span className={`status-badge ${isApprovedStatus ? 'approved' : ''}`}>{statusLabel}</span>
       </div>
 
-      <div className="muted">Создан: {formatDateTime(review.created_at)} · Обновлён: {formatDateTime(review.updated_at ?? review.created_at)}</div>
+      <p className="review-date">Создан: {formatDateTime(review.created_at)} · Обновлён: {formatDateTime(review.updated_at ?? review.created_at)}</p>
 
       {isEditing ? (
         <form
@@ -205,25 +208,25 @@ const ReviewCard = ({ review, onToast, onUpdated, onDeleted }: {
           </label>
 
           <div className="field">
-            <span className="field__label">Оценка</span>
+            <span className="field__label review-rating-label">Оценка</span>
             <InteractiveRatingStars value={draftRating} onChange={setDraftRating} disabled={isBusy} />
           </div>
 
-          <div className="card__row review-card__actions">
-            <Button type="submit" variant="secondary" disabled={isBusy}>Сохранить</Button>
-            <Button type="button" variant="ghost" onClick={handleEditCancel} disabled={isBusy}>Отмена</Button>
+          <div className="review-actions">
+            <Button type="submit" variant="secondary" className="secondary-btn" disabled={isBusy}>Сохранить</Button>
+            <Button type="button" variant="ghost" className="danger-btn" onClick={handleEditCancel} disabled={isBusy}>Отмена</Button>
           </div>
         </form>
       ) : (
         <>
           <div className="field">
-            <span className="field__label">Оценка</span>
-            <RatingStars rating={review.rating} ariaLabel="Оценка отзыва" />
+            <span className="field__label review-rating-label">Оценка</span>
+            <RatingStars rating={review.rating} ariaLabel="Оценка отзыва" className="rating" />
           </div>
-          <p>{review.comment}</p>
-          <div className="card__row review-card__actions">
-            <Button type="button" variant="secondary" onClick={() => setIsEditing(true)} disabled={isBusy}>Редактировать</Button>
-            <Button type="button" variant="ghost" onClick={handleDelete} disabled={isBusy}>
+          <p className="review-text">{review.comment}</p>
+          <div className="review-actions">
+            <Button type="button" variant="secondary" className="secondary-btn" onClick={() => setIsEditing(true)} disabled={isBusy}>Редактировать</Button>
+            <Button type="button" variant="ghost" className="danger-btn" onClick={handleDelete} disabled={isBusy}>
               {deleteMutation.isPending ? 'Удаляем...' : 'Удалить'}
             </Button>
           </div>
