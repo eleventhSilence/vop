@@ -325,7 +325,7 @@ export const CourseLearningPage = () => {
             </div>
           </aside>
 
-          <section className="card form-stack">
+          <section id="review" className="card form-stack">
             <div>
               <h3>{myCourseReview ? 'Ваш отзыв по курсу' : 'Оставить отзыв по курсу'}</h3>
               <p className="muted">Напишите отзыв сразу после прохождения теории или завершения курса.</p>
