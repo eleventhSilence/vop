@@ -1293,7 +1293,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .table-card table { width: 100%; border-collapse: collapse; }
 .admin-users-layout {
-  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
 .admin-users-table-panel,
@@ -1306,14 +1306,6 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .users-table {
   min-width: 980px;
-}
-.admin-users-details {
-  position: sticky;
-  top: 6.5rem;
-  align-self: start;
-}
-.admin-users-details__header {
-  margin-bottom: 1rem;
 }
 .admin-user-panel,
 .admin-user-panel__section,
@@ -1372,7 +1364,6 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   vertical-align: top;
 }
 .users-table__row {
-  cursor: pointer;
   transition: background-color 0.18s ease, box-shadow 0.18s ease;
 }
 .users-table__row:hover td,
@@ -1382,14 +1373,8 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .users-table__row:focus-visible {
   outline: 0;
 }
-.users-table__row--selected td {
-  background: #edf2ff;
-}
 .users-table__row td:first-child {
   border-left: 3px solid transparent;
-}
-.users-table__row--selected td:first-child {
-  border-left-color: #2b59ff;
 }
 .inline-edit,
 .users-actions,
@@ -1734,14 +1719,6 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@media (max-width: 1180px) {
-  .admin-users-layout { grid-template-columns: minmax(0, 1fr) 360px; }
-  .admin-users-details {
-    position: static;
-    top: auto;
   }
 }
 
