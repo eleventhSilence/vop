@@ -255,7 +255,11 @@ export const AdminQuestionOptionsPage = () => {
             {questionQuery.data ? (
               <>
                 <div className="admin-question-context__meta">
-                  <StatusBadge status={questionQuery.data.question_type} label={`Тип: ${questionQuery.data.question_type}`} tone="accent" />
+                  <StatusBadge
+                    status={questionQuery.data.question_type}
+                    label={`Тип: ${questionQuery.data.question_type === 'single_choice' ? 'Один вариант' : 'Несколько вариантов'}`}
+                    tone="accent"
+                  />
                   <StatusBadge status="order" label={`Порядок вопроса: ${questionQuery.data.order}`} tone="neutral" />
                 </div>
               </>
