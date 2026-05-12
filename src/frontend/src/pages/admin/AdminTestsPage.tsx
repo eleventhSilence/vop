@@ -1,9 +1,10 @@
 import { FormEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminCourseStatus, AdminTestCreatePayload, AdminTestUpdatePayload } from '@/entities/admin/types';
 import { extractApiError } from '@/shared/api/client';
+import { formatDateTime } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, LoadingState } from '@/shared/ui/DataState';
@@ -47,21 +48,50 @@ export const AdminTestsPage = () => {
 
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | AdminCourseStatus>('all');
+  const [knownPageSize, setKnownPageSize] = useState<number | null>(null);
+
+  const getPageFromUrl = (url: string | null) => {
+    if (!url) return null;
+    try {
+      const parsedUrl = new URL(url, 'http://localhost');
+      const nextPage = parsedUrl.searchParams.get('page');
+      return nextPage ? Number(nextPage) : null;
+    } catch {
+      return null;
+    }
+  };
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setSearch(searchInput.trim()), 400);
     return () => window.clearTimeout(timeoutId);
   }, [searchInput]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
   const testsQuery = useQuery({
-    queryKey: ['admin', 'tests', search, statusFilter],
-    queryFn: () => adminApi.tests({ search, status: statusFilter }),
+    queryKey: ['admin', 'tests', page, search, statusFilter],
+    queryFn: () => adminApi.tests({ page, search, status: statusFilter }),
   });
   const coursesQuery = useQuery({ queryKey: ['admin', 'courses', 'for-test-create'], queryFn: () => adminApi.courses({ page_size: 100 }) });
 
-  const tests = testsQuery.data ? ensurePaginated(testsQuery.data).results : [];
+  const paginatedTests = testsQuery.data ? ensurePaginated(testsQuery.data) : { count: 0, next: null, previous: null, results: [] };
+  const tests = paginatedTests.results;
+  const hasNextPage = Boolean(paginatedTests.next);
+  const hasPreviousPage = Boolean(paginatedTests.previous);
+  const nextPage = getPageFromUrl(paginatedTests.next) ?? (hasNextPage ? page + 1 : null);
+  const previousPage = getPageFromUrl(paginatedTests.previous) ?? (hasPreviousPage ? Math.max(1, page - 1) : null);
+  const pageSize = knownPageSize ?? (tests.length || 1);
+  const totalPages = Math.max(1, Math.ceil(paginatedTests.count / pageSize));
   const createCourses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
+  useEffect(() => {
+    if (tests.length && (!knownPageSize || tests.length > knownPageSize)) {
+      setKnownPageSize(tests.length);
+    }
+  }, [knownPageSize, tests.length]);
 
   const createTestMutation = useMutation({
     mutationFn: (payload: AdminTestCreatePayload) => adminApi.createTest(payload),
@@ -267,7 +297,7 @@ export const AdminTestsPage = () => {
     openEdit(testId);
   };
 
-  const openTestQuestions = (event: MouseEvent<HTMLButtonElement>, testId: string) => {
+  const openTestQuestions = (event: MouseEvent<HTMLElement>, testId: string) => {
     event.stopPropagation();
     navigate(`/admin/tests/${testId}/questions`);
   };
@@ -432,6 +462,12 @@ export const AdminTestsPage = () => {
             </div>
             {editFormErrorMessage ? <p className="field__error">{editFormErrorMessage}</p> : null}
             <form className="stack-list" onSubmit={handleEdit}>
+              <section className="admin-user-panel__section">
+                <div className="admin-user-panel__section-head">
+                  <div>
+                    <p className="eyebrow">Редактируемые данные</p>
+                  </div>
+                </div>
               <label className="field" htmlFor="admin-test-edit-course-id">
                 <span className="field__label">Курс</span>
                 <input id="admin-test-edit-course-id" className="field__control" value={editTest.course_title} readOnly />
@@ -485,6 +521,24 @@ export const AdminTestsPage = () => {
                   onChange={(event) => setEditFormValues((current) => ({ ...current, is_active: event.target.checked }))}
                 />
               </label>
+              </section>
+              <section className="admin-user-panel__section">
+                <div className="admin-user-panel__section-head">
+                  <div>
+                    <p className="eyebrow">Служебная информация</p>
+                  </div>
+                </div>
+                <div className="admin-user-panel__meta grid-2">
+                  <div className="admin-user-panel__value-block">
+                    <p className="muted">Дата создания</p>
+                    <strong>{editTest.created_at ? formatDateTime(editTest.created_at) : '—'}</strong>
+                  </div>
+                  <div className="admin-user-panel__value-block">
+                    <p className="muted">Дата обновления</p>
+                    <strong>{editTest.updated_at ? formatDateTime(editTest.updated_at) : '—'}</strong>
+                  </div>
+                </div>
+              </section>
               <div className="actions-row admin-action-bar">
                 <Button variant="ghost" type="button" onClick={closeEdit}>
                   Отмена
@@ -510,40 +564,54 @@ export const AdminTestsPage = () => {
       {coursesQuery.isLoading && isCreateOpen ? <LoadingState message="Загрузка курсов..." /> : null}
 
       {!testsQuery.isLoading && !testsQuery.isError ? (
-        <div className="stack-list admin-tests-list">
+        <div className="table-card admin-tests-table-panel">
+          <div className="table-card__header">
+            <div>
+              <strong>Всего тестов: {paginatedTests.count}</strong>
+              <p className="muted">Страница {page} из {totalPages}. Сейчас показано {tests.length} записей.</p>
+            </div>
+            <div className="pagination-controls" aria-label="Пагинация тестов">
+              <Button variant="ghost" onClick={() => previousPage !== null && setPage(previousPage)} disabled={!hasPreviousPage || testsQuery.isLoading}>Назад</Button>
+              <span className="pagination-controls__status">Страница {page}</span>
+              <Button variant="ghost" onClick={() => nextPage !== null && setPage(nextPage)} disabled={!hasNextPage || testsQuery.isLoading}>Вперёд</Button>
+            </div>
+          </div>
           {tests.length === 0 ? <EmptyState message={search || statusFilter !== 'all' ? 'Тесты не найдены.' : 'Тесты пока не созданы.'} /> : null}
-          {tests.map((test) => (
-            <article
-              id={`admin-test-${test.test_id}`}
-              className={`card admin-test-card admin-interactive-card ${test.is_active ? 'admin-test-card--active' : 'admin-test-card--inactive'}`}
-              key={test.test_id}
-              role="button"
-              tabIndex={0}
-              aria-label={`Открыть карточку теста «${test.title}»`}
-              onClick={() => openTestCard(test.test_id)}
-              onKeyDown={(event) => handleTestCardKeyDown(event, test.test_id)}
-            >
-              <div className="card__row admin-test-card__header">
-                <h3 className="admin-test-card__title">{test.title}</h3>
-                <StatusBadge status={test.is_active ? 'active' : 'inactive'} label={test.is_active ? 'Активен' : 'Неактивен'} tone={test.is_active ? 'success' : 'danger'} />
-              </div>
-              <p className="muted">Курс: {test.course_title}</p>
-              <div className="admin-test-card__meta">
-                <span className="badge badge--default">Passing score: {test.passing_score}</span>
-                <span className="badge badge--neutral">Max attempts: {test.max_attempts}</span>
-              </div>
-              <div className="admin-test-card__footer">
-                <button
-                  type="button"
-                  className="admin-test-card__questions-chip"
-                  aria-label={`Перейти к вопросам теста «${test.title}»`}
-                  onClick={(event) => openTestQuestions(event, test.test_id)}
-                >
-                  Вопросы →
-                </button>
-              </div>
-            </article>
-          ))}
+          {tests.length ? (
+            <div className="admin-tests-table-wrap">
+              <table className="users-table">
+                <thead><tr><th>Название теста</th><th>Название курса</th><th>Статус</th><th>Дата обновления</th><th>Вопросы</th></tr></thead>
+                <tbody>
+                  {tests.map((test) => (
+                    <tr
+                      id={`admin-test-${test.test_id}`}
+                      key={test.test_id}
+                      className="users-table__row"
+                      onClick={() => openTestCard(test.test_id)}
+                      onKeyDown={(event) => handleTestCardKeyDown(event, test.test_id)}
+                      tabIndex={0}
+                      role="button"
+                      title={`Открыть карточку теста «${test.title}»`}
+                    >
+                      <td className="admin-tests-table__title"><strong>{test.title}</strong></td>
+                      <td>{test.course_title}</td>
+                      <td><StatusBadge status={test.is_active ? 'active' : 'inactive'} label={test.is_active ? 'Активен' : 'Неактивен'} tone={test.is_active ? 'success' : 'danger'} /></td>
+                      <td>{test.updated_at ? formatDateTime(test.updated_at) : '—'}</td>
+                      <td>
+                        <Link
+                          className="admin-test-card__questions-chip"
+                          to={`/admin/tests/${test.test_id}/questions`}
+                          onClick={(event) => openTestQuestions(event, test.test_id)}
+                        >
+                          Открыть →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
