@@ -164,16 +164,28 @@ export const AdminUsersPage = () => {
           </div>
           <div className="admin-users-table-wrap">
             <table className="users-table">
-              <thead><tr><th>Имя</th><th>Email</th><th>Роль</th><th>Статус</th><th>Дата регистрации</th><th>Действия</th></tr></thead>
+              <thead><tr><th>Имя</th><th>Email</th><th>Роль</th><th>Статус</th><th>Дата регистрации</th></tr></thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.user_id} className="users-table__row">
+                  <tr
+                    key={user.user_id}
+                    className="users-table__row"
+                    onClick={() => startEditing(user)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        startEditing(user);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    title="Открыть карточку пользователя"
+                  >
                     <td><strong>{[user.first_name, user.last_name].filter(Boolean).join(' ') || 'Без имени'}</strong></td>
                     <td>{user.email}</td>
                     <td><StatusBadge status={user.role} label={formatRole(user.role)} tone={getRoleTone(user.role)} /></td>
                     <td><StatusBadge status={user.status} label={formatStatus(user.status)} tone={getStatusTone(user.status)} /></td>
                     <td>{formatDateTime(user.registered_at)}</td>
-                    <td><Button variant="ghost" onClick={() => startEditing(user)}>Редактировать</Button></td>
                   </tr>
                 ))}
               </tbody>
@@ -189,15 +201,42 @@ export const AdminUsersPage = () => {
               <div>
                 <h3>Редактирование пользователя</h3>
                 <p className="muted">{[editingUser.first_name, editingUser.last_name].filter(Boolean).join(' ') || 'Без имени'}</p>
-                <p className="muted">{editingUser.email}</p>
               </div>
             </div>
+            <section className="admin-user-panel__section">
+              <div className="admin-user-panel__section-head">
+                <div>
+                  <p className="eyebrow">Редактируемые данные</p>
+                </div>
+              </div>
             <div className="grid-2">
               <label className="field"><span>Имя</span><input className="field__control" value={editDraft.first_name} onChange={(e) => setEditDraft((c) => (c ? { ...c, first_name: e.target.value } : c))} /></label>
               <label className="field"><span>Фамилия</span><input className="field__control" value={editDraft.last_name} onChange={(e) => setEditDraft((c) => (c ? { ...c, last_name: e.target.value } : c))} /></label>
               <label className="field"><span>Роль</span><select className="field__control" value={editDraft.role} onChange={(e) => setEditDraft((c) => (c ? { ...c, role: e.target.value as AdminUser['role'] } : c))} disabled={getSelfLocked(editingUser.user_id)}>{ROLE_OPTIONS.map((role) => <option key={role} value={role}>{formatRole(role)}</option>)}</select></label>
               <label className="field"><span>Статус</span><select className="field__control" value={editDraft.status} onChange={(e) => setEditDraft((c) => (c ? { ...c, status: e.target.value as AdminUser['status'] } : c))} disabled={getSelfLocked(editingUser.user_id)}>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}</select></label>
             </div>
+            </section>
+            <section className="admin-user-panel__section">
+              <div className="admin-user-panel__section-head">
+                <div>
+                  <p className="eyebrow">Служебная информация</p>
+                </div>
+              </div>
+              <div className="admin-user-panel__meta grid-2">
+                <div className="admin-user-panel__value-block">
+                  <p className="muted">Email</p>
+                  <strong>{editingUser.email}</strong>
+                </div>
+                <div className="admin-user-panel__value-block">
+                  <p className="muted">Дата регистрации</p>
+                  <strong>{formatDateTime(editingUser.registered_at)}</strong>
+                </div>
+                <div className="admin-user-panel__value-block">
+                  <p className="muted">Последний вход</p>
+                  <strong>{editingUser.last_login_at ? formatDateTime(editingUser.last_login_at) : 'Нет данных'}</strong>
+                </div>
+              </div>
+            </section>
             <div className="users-actions__buttons">
               <Button variant="secondary" onClick={handleSaveUser} disabled={pendingUserId === editingUser.user_id}>Сохранить</Button>
               <Button variant="ghost" onClick={closeEditOverlay} disabled={pendingUserId === editingUser.user_id}>Отмена</Button>
