@@ -1639,37 +1639,18 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 .admin-question-card__footer {
   align-items: center;
 }
-.admin-courses-list {
-  gap: 0.85rem;
+.admin-courses-table-wrap {
+  overflow-x: auto;
 }
-.admin-course-card {
-  display: grid;
-  gap: 0.75rem;
-  padding: 1rem 1.1rem;
+.admin-courses-table__title {
+  max-width: 360px;
 }
-.admin-course-card--available {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fdf9 100%);
-  border-color: #d4e9db;
-}
-.admin-course-card--unavailable {
-  background: linear-gradient(180deg, #ffffff 0%, #fff9f9 100%);
-  border-color: #efd7d7;
-}
-.admin-course-card__header {
-  align-items: center;
-}
-.admin-course-card__title {
-  margin: 0;
-  color: #1b3561;
-}
-.admin-course-card__description {
-  margin: 0;
-  color: #4f5f73;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+.admin-courses-table__title strong {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 .overlay {
   position: fixed;
