@@ -21,6 +21,8 @@ type CourseStage = {
   testingUnavailableNote?: string;
 };
 
+const PAGE_SIZE = 5;
+
 const getCourseStage = (course: EnrolledCourse): CourseStage => {
   const learningLink = `/account/courses/${course.course_id}`;
   const testLink = `/account/courses/${course.course_id}/test`;
@@ -78,6 +80,8 @@ const getCourseStage = (course: EnrolledCourse): CourseStage => {
 export const MyCoursesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchInput, setSearchInput] = useState(searchParams.get('search') ?? '');
+  const currentPageParam = Number(searchParams.get('page') ?? '1');
+  const currentPage = Number.isFinite(currentPageParam) && currentPageParam > 0 ? currentPageParam : 1;
   const search = (searchParams.get('search') ?? '').trim();
   const progress = ((searchParams.get('progress') ?? 'all').trim().toLowerCase() || 'all') as MyCoursesProgressFilter;
 
@@ -95,6 +99,7 @@ export const MyCoursesPage = () => {
       } else {
         nextParams.delete('search');
       }
+      nextParams.delete('page');
       setSearchParams(nextParams);
     }, 400);
 
@@ -102,11 +107,26 @@ export const MyCoursesPage = () => {
   }, [searchInput, searchParams, setSearchParams]);
 
   const coursesQuery = useQuery({
-    queryKey: ['courses', 'my', search, progress],
-    queryFn: () => coursesApi.myCourses({ search, progress }),
+    queryKey: ['courses', 'my', currentPage, search, progress],
+    queryFn: () => coursesApi.myCourses({ page: currentPage, page_size: PAGE_SIZE, search, progress }),
   });
 
-  const courses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
+  const paginatedCourses = coursesQuery.data ? ensurePaginated(coursesQuery.data) : null;
+  const courses = paginatedCourses?.results ?? [];
+  const totalPages = paginatedCourses ? Math.max(1, Math.ceil(paginatedCourses.count / PAGE_SIZE)) : 1;
+  const shouldShowPagination = Boolean(paginatedCourses && paginatedCourses.count > 0);
+
+  useEffect(() => {
+    if (!paginatedCourses) {
+      return;
+    }
+
+    if (currentPage > totalPages) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('page');
+      setSearchParams(nextParams);
+    }
+  }, [currentPage, paginatedCourses, searchParams, setSearchParams, totalPages]);
 
   const setProgress = (nextProgress: MyCoursesProgressFilter) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -114,6 +134,17 @@ export const MyCoursesPage = () => {
       nextParams.delete('progress');
     } else {
       nextParams.set('progress', nextProgress);
+    }
+    nextParams.delete('page');
+    setSearchParams(nextParams);
+  };
+
+  const setPage = (page: number) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (page <= 1) {
+      nextParams.delete('page');
+    } else {
+      nextParams.set('page', String(page));
     }
     setSearchParams(nextParams);
   };
@@ -178,6 +209,24 @@ export const MyCoursesPage = () => {
           })}
         </div>
       </div>
+
+      {shouldShowPagination && !coursesQuery.isError && !coursesQuery.isLoading ? (
+        <div className="card public-pagination-card my-courses-pagination">
+          <p className="muted">
+            Страница {currentPage} из {totalPages}. Сейчас показано {courses.length} записей.
+          </p>
+
+          <div className="public-pagination-card__actions">
+            <button type="button" className="button button--ghost" onClick={() => setPage(currentPage - 1)} disabled={currentPage <= 1}>
+              Назад
+            </button>
+            <span className="public-pagination-card__page-indicator">Страница {currentPage}</span>
+            <button type="button" className="button button--ghost" onClick={() => setPage(currentPage + 1)} disabled={currentPage >= totalPages}>
+              Вперёд
+            </button>
+          </div>
+        </div>
+      ) : null}
     </PageSection>
   );
 };

@@ -4,6 +4,7 @@ from pathlib import Path
 from django.db.models import Count, Exists, OuterRef, Q
 
 from rest_framework import generics, permissions, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
@@ -50,9 +51,14 @@ class CourseListView(generics.ListAPIView):
         return queryset.order_by("-created_at", "id")
 
 
+class MyCoursesPagination(PageNumberPagination):
+    page_size = 5
+
+
 class MyCourseListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = MyCourseSerializer
+    pagination_class = MyCoursesPagination
 
     def get_queryset(self):
         queryset = CourseEnrollment.objects.filter(user=self.request.user).select_related("course")
