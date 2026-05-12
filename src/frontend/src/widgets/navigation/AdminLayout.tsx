@@ -25,17 +25,21 @@ export const AdminLayout = () => {
         <main className="content">
           <section className="page-section admin-layout-heading">
             <h1>Административная панель для управления пользователями и контентом</h1>
-            <nav className="admin-tabs" aria-label="Навигация административной панели">
-              {adminNavItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={`admin-tabs__link ${item.match(pathname) ? 'admin-tabs__link--active' : ''}`}
-                >
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
+            <div className="admin-tabs-sticky">
+              <nav className="admin-tabs-shell" aria-label="Навигация административной панели">
+                <div className="admin-tabs">
+                  {adminNavItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={`admin-tabs__link ${item.match(pathname) ? 'admin-tabs__link--active' : ''}`}
+                    >
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </nav>
+            </div>
           </section>
           <Outlet />
         </main>
