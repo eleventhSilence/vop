@@ -32,6 +32,19 @@ export const AdminTestQuestionsPage = () => {
   const [editValues, setEditValues] = useState<QuestionFormValues>(defaultQuestionFormValues);
   const [editErrors, setEditErrors] = useState<ValidationErrors>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [page, setPage] = useState(1);
+  const [knownPageSize, setKnownPageSize] = useState<number | null>(null);
+
+  const getPageFromUrl = (url: string | null) => {
+    if (!url) return null;
+    try {
+      const parsedUrl = new URL(url, 'http://localhost');
+      const nextPage = parsedUrl.searchParams.get('page');
+      return nextPage ? Number(nextPage) : null;
+    } catch {
+      return null;
+    }
+  };
 
   const testQuery = useQuery({
     queryKey: ['admin', 'test-detail', testId],
@@ -39,20 +52,22 @@ export const AdminTestQuestionsPage = () => {
     enabled: Boolean(testId),
   });
   const questionsQuery = useQuery({
-    queryKey: ['admin', 'questions', testId],
-    queryFn: () => adminApi.questions(),
+    queryKey: ['admin', 'questions', testId, page],
+    queryFn: () => adminApi.questions({ test_id: testId!, page }),
     enabled: Boolean(testId),
   });
 
-  const questions = useMemo(() => {
-    if (!questionsQuery.data || !testId) {
-      return [];
-    }
-
-    return ensurePaginated(questionsQuery.data).results
-      .filter((question) => question.test_id === testId)
-      .sort((first, second) => first.order - second.order);
-  }, [questionsQuery.data, testId]);
+  const paginatedQuestions = questionsQuery.data ? ensurePaginated(questionsQuery.data) : { count: 0, next: null, previous: null, results: [] };
+  const questions = useMemo(
+    () => [...paginatedQuestions.results].sort((first, second) => first.order - second.order),
+    [paginatedQuestions.results],
+  );
+  const hasNextPage = Boolean(paginatedQuestions.next);
+  const hasPreviousPage = Boolean(paginatedQuestions.previous);
+  const nextPage = getPageFromUrl(paginatedQuestions.next) ?? (hasNextPage ? page + 1 : null);
+  const previousPage = getPageFromUrl(paginatedQuestions.previous) ?? (hasPreviousPage ? Math.max(1, page - 1) : null);
+  const pageSize = knownPageSize ?? (questions.length || 1);
+  const totalPages = Math.max(1, Math.ceil(paginatedQuestions.count / pageSize));
 
   const closeCreate = () => {
     setCreateOpen(false);
@@ -183,6 +198,16 @@ export const AdminTestQuestionsPage = () => {
     navigate(`/admin/questions/${questionId}/options`);
   };
 
+  useEffect(() => {
+    setPage(1);
+  }, [testId]);
+
+  useEffect(() => {
+    if (questions.length && (!knownPageSize || questions.length > knownPageSize)) {
+      setKnownPageSize(questions.length);
+    }
+  }, [knownPageSize, questions.length]);
+
   const handleQuestionCardKeyDown = (event: KeyboardEvent<HTMLElement>, questionId: string, values: QuestionFormValues) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return;
@@ -309,47 +334,71 @@ export const AdminTestQuestionsPage = () => {
       ) : null}
 
       {!questionsQuery.isLoading && !questionsQuery.isError && testId ? (
-        <div className="stack-list admin-questions-list">
-          {questions.length === 0 ? <EmptyState message="У этого теста пока нет вопросов." /> : null}
-          {questions.map((question) => (
-            <article
-              className="card admin-test-card admin-interactive-card admin-question-card"
-              key={question.question_id}
-              role="button"
-              tabIndex={0}
-              aria-label={`Открыть редактирование вопроса «${question.text}»`}
-              onClick={() =>
-                startEdit(question.question_id, {
-                  text: question.text,
-                  question_type: question.question_type,
-                  order: String(question.order),
-                })
-              }
-              onKeyDown={(event) =>
-                handleQuestionCardKeyDown(event, question.question_id, {
-                  text: question.text,
-                  question_type: question.question_type,
-                  order: String(question.order),
-                })
-              }
-            >
-              <h3 className="admin-test-card__title">{question.text}</h3>
-              <div className="admin-test-card__meta">
-                <span className="badge badge--default">Тип: {question.question_type}</span>
-                <span className="badge badge--neutral">Порядок: {question.order}</span>
+        <div className="details-layout admin-users-layout">
+          <div className="table-card admin-users-table-panel">
+            <div className="table-card__header">
+              <div>
+                <strong>Всего вопросов: {paginatedQuestions.count}</strong>
+                <p className="muted">Страница {page} из {totalPages}. Сейчас показано {questions.length} записей.</p>
               </div>
-              <div className="admin-test-card__footer admin-question-card__footer">
-                <button
-                  type="button"
-                  className="admin-test-card__questions-chip"
-                  aria-label={`Перейти к вариантам ответа вопроса «${question.text}»`}
-                  onClick={(event) => openQuestionOptions(event, question.question_id)}
-                >
-                  Варианты ответов →
-                </button>
+              <div className="pagination-controls" aria-label="Пагинация вопросов">
+                <Button variant="ghost" onClick={() => previousPage !== null && setPage(previousPage)} disabled={!hasPreviousPage || questionsQuery.isLoading}>Назад</Button>
+                <span className="pagination-controls__status">Страница {page}</span>
+                <Button variant="ghost" onClick={() => nextPage !== null && setPage(nextPage)} disabled={!hasNextPage || questionsQuery.isLoading}>Вперёд</Button>
               </div>
-            </article>
-          ))}
+            </div>
+            {questions.length === 0 ? <EmptyState message="У этого теста пока нет вопросов." /> : null}
+            {questions.length > 0 ? (
+              <div className="admin-tests-table-wrap">
+                <table className="users-table">
+                  <thead>
+                    <tr>
+                      <th>Порядок</th>
+                      <th>Текст вопроса</th>
+                      <th>Тип ответа</th>
+                      <th>Варианты ответов</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {questions.map((question) => (
+                      <tr
+                        key={question.question_id}
+                        className="users-table__row"
+                        onClick={() => startEdit(question.question_id, { text: question.text, question_type: question.question_type, order: String(question.order) })}
+                        onKeyDown={(event) =>
+                          handleQuestionCardKeyDown(event, question.question_id, {
+                            text: question.text,
+                            question_type: question.question_type,
+                            order: String(question.order),
+                          })
+                        }
+                        tabIndex={0}
+                        role="button"
+                        title="Открыть редактирование вопроса"
+                      >
+                        <td><strong>{question.order}</strong></td>
+                        <td className="admin-questions-table__text">{question.text}</td>
+                        <td>
+                          <span className="badge badge--default">
+                            {question.question_type === 'single_choice' ? 'Один вариант' : 'Несколько вариантов'}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="admin-test-card__questions-chip"
+                            onClick={(event) => openQuestionOptions(event, question.question_id)}
+                          >
+                            Открыть →
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

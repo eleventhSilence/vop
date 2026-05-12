@@ -243,7 +243,13 @@ class AdminTestQuestionListCreateView(generics.ListCreateAPIView):
     http_method_names = ["get", "post", "head", "options"]
 
     def get_queryset(self):
-        return TestQuestion.objects.select_related("test").order_by("test__created_at", "test_id", "order", "created_at", "id")
+        queryset = TestQuestion.objects.select_related("test")
+
+        test_id = self.request.query_params.get("test_id")
+        if test_id:
+            queryset = queryset.filter(test_id=test_id)
+
+        return queryset.order_by("test__created_at", "test_id", "order", "created_at", "id")
 
     def get_serializer_class(self):
         if self.request.method == "POST":
