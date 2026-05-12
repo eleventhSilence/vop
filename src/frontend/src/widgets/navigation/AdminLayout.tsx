@@ -53,8 +53,8 @@ export const AdminLayout = () => {
         return;
       }
 
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      const remainingScroll = maxScroll - currentScrollY;
+      const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const remainingScroll = Math.max(0, maxScroll - currentScrollY);
       const delta = currentScrollY - lastScrollYRef.current;
 
       if (Math.abs(delta) < MIN_SCROLL_DELTA) {
@@ -64,16 +64,19 @@ export const AdminLayout = () => {
 
       const distanceFromLastToggle = Math.abs(currentScrollY - lastToggleScrollYRef.current);
 
-      if (
+      const canAutoCollapseDown =
         delta > 0 &&
         isTabsExpandedRef.current &&
-        distanceFromLastToggle >= TOGGLE_DISTANCE
-      ) {
-        if (remainingScroll < MIN_REMAINING_SCROLL_TO_COLLAPSE || remainingScroll <= BOTTOM_GUARD) {
-          lastScrollYRef.current = currentScrollY;
-          return;
-        }
+        distanceFromLastToggle >= TOGGLE_DISTANCE &&
+        remainingScroll >= MIN_REMAINING_SCROLL_TO_COLLAPSE &&
+        remainingScroll > BOTTOM_GUARD;
 
+      if (delta > 0 && isTabsExpandedRef.current && remainingScroll < MIN_REMAINING_SCROLL_TO_COLLAPSE) {
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      if (canAutoCollapseDown) {
         isTabsExpandedRef.current = false;
         setIsTabsExpanded(false);
         lastToggleScrollYRef.current = currentScrollY;
