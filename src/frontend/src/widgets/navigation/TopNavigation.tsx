@@ -24,6 +24,7 @@ export const TopNavigation = () => {
   const location = useLocation();
   const { isAuthenticated, isAdmin, logout, user } = useAuth();
   const menuRef = useRef<HTMLDetailsElement | null>(null);
+  const topbarRef = useRef<HTMLElement | null>(null);
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;
   const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim();
   const initials = [user?.first_name?.[0], user?.last_name?.[0]].filter(Boolean).join('').toUpperCase();
@@ -41,6 +42,21 @@ export const TopNavigation = () => {
     setIsLogoBroken(false);
   }, [brandingConfig.logoUrl]);
 
+
+  useEffect(() => {
+    const syncHeaderHeight = () => {
+      const topbarHeight = topbarRef.current?.offsetHeight ?? 112;
+      document.documentElement.style.setProperty('--header-height', `${topbarHeight}px`);
+    };
+
+    syncHeaderHeight();
+    window.addEventListener('resize', syncHeaderHeight);
+
+    return () => {
+      window.removeEventListener('resize', syncHeaderHeight);
+    };
+  }, [isAuthenticated, isAdmin, location.pathname]);
+
   const closeMenu = () => {
     if (menuRef.current?.open) {
       menuRef.current.open = false;
@@ -48,7 +64,7 @@ export const TopNavigation = () => {
   };
 
   return (
-    <header className="topbar">
+    <header className="topbar" ref={topbarRef}>
       <div className="topbar__actions topbar__actions--left">
         {isAuthenticated && user ? (
           <details className="user-menu" ref={menuRef}>
