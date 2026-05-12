@@ -2,8 +2,9 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { reviewsApi } from '@/entities/review/api';
+import type { Review } from '@/entities/review/types';
 import { extractApiError } from '@/shared/api/client';
-import { ensurePaginated } from '@/shared/lib/pagination';
+import { ensurePaginated, type PaginatedResponse } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
@@ -12,13 +13,16 @@ import { PageSection } from '@/shared/ui/PageSection';
 export const ReviewEditPage = () => {
   const { reviewId } = useParams<{ reviewId: string }>();
 
-  const reviewQuery = useQuery({ queryKey: ['reviews', 'my'], queryFn: reviewsApi.myReviews });
+  const reviewQuery = useQuery<PaginatedResponse<Review>>({
+    queryKey: ['reviews', 'my'],
+    queryFn: () => reviewsApi.myReviews(),
+  });
 
   const review = useMemo(() => {
     if (!reviewId || !reviewQuery.data) {
       return undefined;
     }
-    return ensurePaginated(reviewQuery.data).results.find((item) => item.review_id === reviewId);
+    return ensurePaginated<Review>(reviewQuery.data).results.find((item) => item.review_id === reviewId);
   }, [reviewId, reviewQuery.data]);
 
   const [draft, setDraft] = useState({ comment: '', rating: 5 });

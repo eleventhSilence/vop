@@ -5,9 +5,10 @@ import { coursesApi } from '@/entities/course/api';
 import { CourseContentRenderer, extractCourseHeadings } from '@/entities/course/CourseContentRenderer';
 import { progressApi } from '@/entities/progress/api';
 import { reviewsApi } from '@/entities/review/api';
+import type { Review } from '@/entities/review/types';
 import { testingApi } from '@/entities/testing/api';
 import { extractApiError, isEnrollmentAccessError } from '@/shared/api/client';
-import { ensurePaginated } from '@/shared/lib/pagination';
+import { ensurePaginated, type PaginatedResponse } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
@@ -43,15 +44,15 @@ export const CourseLearningPage = () => {
     queryFn: () => testingApi.activeAttempt(courseTestQuery.data?.test_id ?? ''),
     enabled: Boolean(courseTestQuery.data?.test_id),
   });
-  const myReviewsQuery = useQuery({
+  const myReviewsQuery = useQuery<PaginatedResponse<Review>>({
     queryKey: ['reviews', 'my'],
-    queryFn: reviewsApi.myReviews,
+    queryFn: () => reviewsApi.myReviews(),
     enabled: Boolean(courseId),
   });
 
   const myCourseReview = useMemo(() => {
     if (!myReviewsQuery.data) return undefined;
-    return ensurePaginated(myReviewsQuery.data).results.find((review) => review.course_id === courseId);
+    return ensurePaginated<Review>(myReviewsQuery.data).results.find((review) => review.course_id === courseId);
   }, [courseId, myReviewsQuery.data]);
 
   const [reviewDraft, setReviewDraft] = useState({ comment: '', rating: 5 });
