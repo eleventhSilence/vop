@@ -311,8 +311,8 @@ export const AdminCoursesPage = () => {
     <PageSection>
       <h2>Администрирование курсов</h2>
       <div className="admin-courses-toolbar">
-        <div className="admin-list-filters">
-          <Input id="admin-courses-search" label="" placeholder="Поиск по курсам" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <div className="card admin-list-filters admin-list-filters--panel">
+          <Input id="admin-courses-search" label="Поиск" placeholder="Поиск по курсам" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
           <label className="field" htmlFor="admin-courses-status-filter">
             <span className="field__label">Статус</span>
             <select id="admin-courses-status-filter" className="field__control" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | AdminCourseStatus)}>

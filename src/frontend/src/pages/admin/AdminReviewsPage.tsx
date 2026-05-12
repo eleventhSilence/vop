@@ -49,7 +49,7 @@ export const AdminReviewsPage = () => {
         </div>
       </div>
       <div className="admin-users-toolbar">
-        <div className="admin-list-filters">
+        <div className="card admin-list-filters admin-list-filters--panel">
           <Input
             id="admin-review-search"
             label="Поиск"
@@ -57,17 +57,20 @@ export const AdminReviewsPage = () => {
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
           />
-          <select
-            id="admin-reviews-status-filter"
-            className="field__control"
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as 'all' | Extract<ReviewStatus, 'pending' | 'approved' | 'rejected'>)}
-          >
-            <option value="all">Все статусы</option>
-            <option value="pending">На модерации</option>
-            <option value="approved">Одобрен</option>
-            <option value="rejected">Отклонён</option>
-          </select>
+          <label className="field" htmlFor="admin-reviews-status-filter">
+            <span className="field__label">Статус</span>
+            <select
+              id="admin-reviews-status-filter"
+              className="field__control"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as 'all' | Extract<ReviewStatus, 'pending' | 'approved' | 'rejected'>)}
+            >
+              <option value="all">Все статусы</option>
+              <option value="pending">На модерации</option>
+              <option value="approved">Одобрен</option>
+              <option value="rejected">Отклонён</option>
+            </select>
+          </label>
         </div>
       </div>
       {reviewsQuery.isLoading ? <LoadingState /> : null}

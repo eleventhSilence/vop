@@ -1430,8 +1430,32 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .admin-list-filters {
   display: grid;
-  grid-template-columns: minmax(220px, 320px) minmax(180px, 220px) minmax(180px, 220px);
+  grid-template-columns: minmax(320px, 1.6fr) repeat(2, minmax(190px, 1fr));
   gap: 0.75rem;
+  align-items: end;
+}
+.admin-list-filters--panel {
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(202, 193, 170, 0.62);
+  background: linear-gradient(180deg, #fbfaf7 0%, #f7f4ee 100%);
+  box-shadow: 0 8px 20px rgba(35, 34, 29, 0.045);
+}
+.admin-list-filters--panel .field {
+  margin-bottom: 0;
+}
+.admin-list-filters--panel .field__label,
+.admin-list-filters--panel .field > span {
+  color: #3f5378;
+  font-weight: 600;
+}
+.admin-list-filters--panel .field__control {
+  min-height: 42px;
+  border-color: rgba(186, 179, 158, 0.65);
+  background: #fffdf9;
+}
+.admin-list-filters--panel .field__control:focus {
+  border-color: #8ea7f5;
+  box-shadow: 0 0 0 3px rgba(112, 145, 243, 0.18);
 }
 .admin-courses-create-trigger {
   min-width: 180px;

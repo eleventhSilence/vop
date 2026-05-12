@@ -236,10 +236,10 @@ export const AdminUsersPage = () => {
         </div>
       </div>
       <div className="admin-users-toolbar">
-        <div className="admin-list-filters">
+        <div className="card admin-list-filters admin-list-filters--panel">
           <Input
             id="admin-users-search"
-            label=""
+            label="Поиск"
             placeholder="Поиск по пользователям"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
