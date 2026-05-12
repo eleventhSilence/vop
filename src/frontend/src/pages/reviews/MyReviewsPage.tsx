@@ -63,7 +63,7 @@ export const MyReviewsPage = () => {
                 {coursesWithoutReview.map((course) => (
                   <div key={course.course_id} className="course-item">
                     <span className="course-title">{course.title}</span>
-                    <Link to={`/account/courses/${course.course_id}/learn#review`} className="review-btn">
+                    <Link to={`/account/courses/${course.course_id}`} className="review-btn">
                       Оставить отзыв
                     </Link>
                   </div>
