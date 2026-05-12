@@ -189,3 +189,13 @@ class ReviewMySerializer(serializers.ModelSerializer):
         if not obj.course_id:
             return False
         return obj.course.status == CourseStatus.AVAILABLE
+
+
+class ReviewAvailableCourseSerializer(serializers.ModelSerializer):
+    course_id = serializers.UUIDField(read_only=True)
+    title = serializers.CharField(source="course.title", read_only=True)
+    short_description = serializers.CharField(source="course.short_description", read_only=True)
+
+    class Meta:
+        model = CourseEnrollment
+        fields = ("course_id", "title", "short_description", "enrolled_at")

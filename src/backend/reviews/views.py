@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.db.models import Case, IntegerField, Q, Value, When
+from rest_framework.pagination import PageNumberPagination
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -9,12 +10,14 @@ from reviews.models import Review, ReviewStatus
 from reviews.permissions import IsAdminUserRole
 from reviews.serializers import (
     AdminReviewListSerializer,
+    ReviewAvailableCourseSerializer,
     AdminReviewStatusUpdateSerializer,
     ReviewCreateSerializer,
     ReviewMySerializer,
     ReviewPublicSerializer,
     ReviewUpdateSerializer,
 )
+from courses.models import CourseEnrollment, CourseStatus
 
 
 class ReviewCreateView(generics.CreateAPIView):
@@ -67,9 +70,38 @@ class CourseApprovedReviewListView(generics.ListAPIView):
 class MyReviewListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ReviewMySerializer
+    pagination_class = None
+
+    class Pagination(PageNumberPagination):
+        page_size = 5
+        page_size_query_param = "page_size"
+        max_page_size = 5
+
+    pagination_class = Pagination
 
     def get_queryset(self):
         return Review.objects.filter(user=self.request.user).select_related("course").order_by("-created_at", "id")
+
+
+class AvailableCoursesForReviewListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ReviewAvailableCourseSerializer
+
+    class Pagination(PageNumberPagination):
+        page_size = 5
+        page_size_query_param = "page_size"
+        max_page_size = 5
+
+    pagination_class = Pagination
+
+    def get_queryset(self):
+        reviewed_course_ids = Review.objects.filter(user=self.request.user).values("course_id")
+        return (
+            CourseEnrollment.objects.filter(user=self.request.user, course__status=CourseStatus.AVAILABLE)
+            .exclude(course_id__in=reviewed_course_ids)
+            .select_related("course")
+            .order_by("-enrolled_at", "id")
+        )
 
 
 class AdminReviewListView(generics.ListAPIView):

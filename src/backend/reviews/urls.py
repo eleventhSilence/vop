@@ -1,6 +1,6 @@
 from django.urls import path
 
-from reviews.views import CourseApprovedReviewListView, MyReviewListView, ReviewCreateView, ReviewUpdateView
+from reviews.views import AvailableCoursesForReviewListView, CourseApprovedReviewListView, MyReviewListView, ReviewCreateView, ReviewUpdateView
 
 
 urlpatterns = [
@@ -8,4 +8,5 @@ urlpatterns = [
     path("<uuid:pk>/", ReviewUpdateView.as_view(), name="review-update"),
     path("course/<uuid:course_id>/", CourseApprovedReviewListView.as_view(), name="review-course-list"),
     path("my/", MyReviewListView.as_view(), name="review-my-list"),
+    path("available-courses/", AvailableCoursesForReviewListView.as_view(), name="review-available-courses"),
 ]
