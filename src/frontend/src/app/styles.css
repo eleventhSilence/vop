@@ -264,14 +264,18 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   z-index: 15;
   display: flex;
   justify-content: center;
-  width: 100%;
-  padding: 0.625rem 0 0.875rem;
-  margin-bottom: 1.125rem;
-  background: rgba(252, 248, 239, 0.97);
+  width: calc(100% - 56px);
+  max-width: none;
+  margin: 0 auto 1.125rem;
+  padding: 0.625rem 0 0.75rem;
+  background: rgba(255, 252, 246, 0.97);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(230, 222, 206, 0.72);
-  box-shadow: 0 14px 26px rgba(31, 42, 68, 0.05);
+  border: 1px solid #e7dfd1;
+  border-radius: 0 0 18px 18px;
+  box-shadow:
+    0 10px 24px rgba(31, 42, 68, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .admin-page-content {
@@ -288,7 +292,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   border: 1px solid #e6dece;
   border-radius: 1.125rem;
   background: rgba(255, 252, 246, 0.94);
-  box-shadow: 0 12px 28px rgba(31, 42, 68, 0.06);
+  box-shadow: 0 8px 18px rgba(31, 42, 68, 0.05);
 }
 
 .admin-tabs {
@@ -1676,6 +1680,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 @media (max-width: 768px) {
   .admin-tabs-sticky {
     top: calc(var(--header-height, 112px) + 12px);
+    width: calc(100% - 28px);
   }
   .admin-tabs-shell {
     width: 100%;
