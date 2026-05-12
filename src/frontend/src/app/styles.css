@@ -1333,6 +1333,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .admin-user-panel__value-block {
   padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
   border: 1px solid var(--surface-border);
   border-radius: 0.9rem;
   background: var(--surface-main-solid);
