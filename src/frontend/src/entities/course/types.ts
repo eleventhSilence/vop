@@ -74,6 +74,8 @@ export type CourseCatalogQueryParams = {
 export type MyCoursesProgressFilter = 'all' | '25' | '50' | '75' | '100';
 
 export type MyCoursesQueryParams = {
+  page?: number;
+  page_size?: number;
   search?: string;
   progress?: MyCoursesProgressFilter;
 };
