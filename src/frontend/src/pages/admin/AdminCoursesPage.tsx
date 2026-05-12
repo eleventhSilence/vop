@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminCourseCreatePayload, AdminCourseStatus } from '@/entities/admin/types';
 import { extractApiError } from '@/shared/api/client';
+import { formatDateTime } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
 import type { CourseMedia } from '@/entities/course/types';
@@ -22,6 +23,16 @@ type CreateCourseFormValues = {
 type ValidationErrors = Partial<Record<keyof CreateCourseFormValues, string>>;
 
 const SHORT_DESCRIPTION_MIN_LENGTH = 10;
+const getPageFromUrl = (url: string | null) => {
+  if (!url) return null;
+  try {
+    const parsedUrl = new URL(url, 'http://localhost');
+    const page = parsedUrl.searchParams.get('page');
+    return page ? Number(page) : null;
+  } catch {
+    return null;
+  }
+};
 
 const defaultFormValues: CreateCourseFormValues = {
   title: '',
@@ -95,17 +106,36 @@ export const AdminCoursesPage = () => {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | AdminCourseStatus>('all');
+  const [page, setPage] = useState(1);
+  const [knownPageSize, setKnownPageSize] = useState<number | null>(null);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setSearch(searchInput.trim()), 400);
     return () => window.clearTimeout(timeoutId);
   }, [searchInput]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
   const coursesQuery = useQuery({
-    queryKey: ['admin', 'courses', search, statusFilter],
-    queryFn: () => adminApi.courses({ search, status: statusFilter }),
+    queryKey: ['admin', 'courses', page, search, statusFilter],
+    queryFn: () => adminApi.courses({ page, search: search || undefined, status: statusFilter }),
   });
-  const courses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
+  const paginatedCourses = coursesQuery.data ? ensurePaginated(coursesQuery.data) : { count: 0, next: null, previous: null, results: [] };
+  const courses = paginatedCourses.results;
+  const hasNextPage = Boolean(paginatedCourses.next);
+  const hasPreviousPage = Boolean(paginatedCourses.previous);
+  const nextPage = getPageFromUrl(paginatedCourses.next) ?? (hasNextPage ? page + 1 : null);
+  const previousPage = getPageFromUrl(paginatedCourses.previous) ?? (hasPreviousPage ? Math.max(1, page - 1) : null);
+  const pageSize = knownPageSize ?? (courses.length || 1);
+  const totalPages = Math.max(1, Math.ceil(paginatedCourses.count / pageSize));
+
+  useEffect(() => {
+    if (courses.length && (!knownPageSize || courses.length > knownPageSize)) {
+      setKnownPageSize(courses.length);
+    }
+  }, [courses.length, knownPageSize]);
 
   const createCourseMutation = useMutation({
     mutationFn: (payload: AdminCourseCreatePayload) => adminApi.createCourse(payload),
@@ -280,7 +310,7 @@ export const AdminCoursesPage = () => {
     setEditFormValues(defaultFormValues);
   };
 
-  const handleCourseCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, courseId: string) => {
+  const handleCourseRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, courseId: string) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return;
     }
@@ -504,30 +534,53 @@ export const AdminCoursesPage = () => {
         </div>
       ) : null}
       {coursesQuery.isLoading ? <LoadingState /> : null}
-      <div className="stack-list admin-courses-list">
+      <div className="table-card admin-courses-table-panel">
+        <div className="table-card__header">
+          <div>
+            <strong>Всего курсов: {paginatedCourses.count}</strong>
+            <p className="muted">Страница {page} из {totalPages}. Сейчас показано {courses.length} записей.</p>
+          </div>
+          <div className="pagination-controls" aria-label="Пагинация курсов">
+            <Button variant="ghost" onClick={() => previousPage !== null && setPage(previousPage)} disabled={!hasPreviousPage || coursesQuery.isLoading}>Назад</Button>
+            <span className="pagination-controls__status">Страница {page}</span>
+            <Button variant="ghost" onClick={() => nextPage !== null && setPage(nextPage)} disabled={!hasNextPage || coursesQuery.isLoading}>Вперёд</Button>
+          </div>
+        </div>
         {!coursesQuery.isLoading && !coursesQuery.isError && !courses.length ? (
           <EmptyState message={search || statusFilter !== 'all' ? 'Курсы не найдены.' : 'Курсы пока не созданы.'} />
         ) : null}
-        {courses.map((course) => (
-          <div
-            className={`card admin-course-card admin-course-card--${course.status} admin-interactive-card`}
-            key={course.course_id}
-            role="button"
-            tabIndex={0}
-            aria-label={`Открыть карточку курса «${course.title}»`}
-            onClick={() => openEditForm(course.course_id)}
-            onKeyDown={(event) => handleCourseCardKeyDown(event, course.course_id)}
-          >
-            <div className="card__row admin-course-card__header">
-              <h3 className="admin-course-card__title">{course.title}</h3>
-              <StatusBadge
-                status={course.status}
-                tone={course.status === 'available' ? 'success' : 'danger'}
-              />
-            </div>
-            <p className="admin-course-card__description">{course.short_description}</p>
+        {courses.length ? (
+          <div className="admin-courses-table-wrap">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Статус</th>
+                  <th>Дата создания</th>
+                  <th>Дата обновления</th>
+                </tr>
+              </thead>
+              <tbody>
+                {courses.map((course) => (
+                  <tr
+                    key={course.course_id}
+                    className="users-table__row"
+                    onClick={() => openEditForm(course.course_id)}
+                    onKeyDown={(event) => handleCourseRowKeyDown(event, course.course_id)}
+                    tabIndex={0}
+                    role="button"
+                    title={`Открыть карточку курса «${course.title}»`}
+                  >
+                    <td className="admin-courses-table__title"><strong>{course.title}</strong></td>
+                    <td><StatusBadge status={course.status} tone={course.status === 'available' ? 'success' : 'danger'} /></td>
+                    <td>{formatDateTime(course.created_at)}</td>
+                    <td>{course.updated_at ? formatDateTime(course.updated_at) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
+        ) : null}
       </div>
       {toast ? <Toast key={toast.message} type={toast.type} message={toast.message} /> : null}
     </PageSection>
