@@ -73,9 +73,9 @@ export const CourseDetailPage = () => {
     setReviewsItems((current) => [...current, ...data.results]);
   }, [reviewsPage, reviewsQuery.data]);
 
-  const myCoursesQuery = useQuery({
+  const myCoursesQuery = useQuery<PaginatedResponse<EnrolledCourse>>({
     queryKey: ['courses', 'my'],
-    queryFn: coursesApi.myCourses,
+    queryFn: () => coursesApi.myCourses(),
     enabled: isAuthenticated,
   });
 
@@ -124,7 +124,9 @@ export const CourseDetailPage = () => {
   });
 
   const hasNextReviewsPage = Boolean(reviewsNext);
-  const myCourses = myCoursesQuery.data ? ensurePaginated(myCoursesQuery.data).results : [];
+  const myCourses: EnrolledCourse[] = myCoursesQuery.data
+    ? ensurePaginated<EnrolledCourse>(myCoursesQuery.data).results
+    : [];
   const enrolledCourse = myCourses.find((course) => course.course_id === courseId);
   const isCourseAvailable = courseQuery.data?.status === 'available';
   const isEnrolled = Boolean(enrolledCourse || enrollMutation.isSuccess);
