@@ -17,6 +17,7 @@ const adminNavItems = [
 
 const MIN_SCROLL_DELTA = 6;
 const TOGGLE_DISTANCE = 42;
+const TOP_REVEAL_THRESHOLD = 8;
 const ADMIN_TABS_TOP_GAP = 12;
 
 export const AdminLayout = () => {
@@ -27,12 +28,8 @@ export const AdminLayout = () => {
   const animationFrameRef = useRef<number | null>(null);
   const isTabsStickyActiveRef = useRef(false);
 
-  const [isTabsStickyActive, setIsTabsStickyActive] = useState(false);
   const [isTabsCollapsed, setIsTabsCollapsed] = useState(false);
 
-  useEffect(() => {
-    isTabsStickyActiveRef.current = isTabsStickyActive;
-  }, [isTabsStickyActive]);
 
   useEffect(() => {
     const getStickyTopOffset = () => {
@@ -48,10 +45,8 @@ export const AdminLayout = () => {
         const stickyActive = !entry.isIntersecting;
 
         isTabsStickyActiveRef.current = stickyActive;
-        setIsTabsStickyActive(stickyActive);
 
         if (!stickyActive) {
-          setIsTabsCollapsed(false);
           scrollAccumulatorRef.current = 0;
         }
       },
@@ -77,6 +72,15 @@ export const AdminLayout = () => {
       const currentScrollY = window.scrollY;
       const deltaY = currentScrollY - lastScrollYRef.current;
 
+      const isAtPageTop = currentScrollY <= TOP_REVEAL_THRESHOLD;
+
+      if (isAtPageTop) {
+        setIsTabsCollapsed(false);
+        lastScrollYRef.current = currentScrollY;
+        scrollAccumulatorRef.current = 0;
+        return;
+      }
+
       if (!isTabsStickyActiveRef.current) {
         lastScrollYRef.current = currentScrollY;
         scrollAccumulatorRef.current = 0;
@@ -96,9 +100,6 @@ export const AdminLayout = () => {
 
       if (scrollAccumulatorRef.current >= TOGGLE_DISTANCE) {
         setIsTabsCollapsed(true);
-        scrollAccumulatorRef.current = 0;
-      } else if (Math.abs(scrollAccumulatorRef.current) >= TOGGLE_DISTANCE && scrollAccumulatorRef.current < 0) {
-        setIsTabsCollapsed(false);
         scrollAccumulatorRef.current = 0;
       }
 
@@ -161,16 +162,14 @@ export const AdminLayout = () => {
               </nav>
             ) : null}
 
-            {isTabsStickyActive ? (
-              <button
-                type="button"
-                className="admin-tabs-toggle"
-                aria-label={toggleLabel}
-                onClick={() => setIsTabsCollapsed((prev) => !prev)}
-              >
-                <span aria-hidden="true">{toggleSymbol}</span>
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="admin-tabs-toggle"
+              aria-label={toggleLabel}
+              onClick={() => setIsTabsCollapsed((prev) => !prev)}
+            >
+              <span aria-hidden="true">{toggleSymbol}</span>
+            </button>
           </div>
 
           <div className="admin-page-content">
