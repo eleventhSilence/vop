@@ -1305,7 +1305,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   overflow-x: auto;
 }
 .users-table {
-  min-width: 980px;
+  min-width: 860px;
 }
 .admin-user-panel,
 .admin-user-panel__section,
@@ -1365,16 +1365,22 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .users-table__row {
   transition: background-color 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
 }
 .users-table__row:hover td,
 .users-table__row:focus-visible td {
-  background: #f7faff;
+  background: #f8fbff;
 }
 .users-table__row:focus-visible {
-  outline: 0;
+  outline: 2px solid #d7e8ff;
+  outline-offset: -2px;
 }
 .users-table__row td:first-child {
   border-left: 3px solid transparent;
+}
+.users-table__row:hover td:first-child,
+.users-table__row:focus-visible td:first-child {
+  border-left-color: #d7e8ff;
 }
 .inline-edit,
 .users-actions,
