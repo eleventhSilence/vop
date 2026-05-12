@@ -232,10 +232,6 @@ export const AdminUsersPage = () => {
                   <strong>{formatDateTime(editingUser.registered_at)}</strong>
                 </div>
                 <div className="admin-user-panel__value-block">
-                  <p className="muted">ID пользователя</p>
-                  <strong>{editingUser.user_id}</strong>
-                </div>
-                <div className="admin-user-panel__value-block">
                   <p className="muted">Последний вход</p>
                   <strong>{editingUser.last_login_at ? formatDateTime(editingUser.last_login_at) : 'Нет данных'}</strong>
                 </div>

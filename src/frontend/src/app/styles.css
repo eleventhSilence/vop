@@ -1339,6 +1339,7 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
 }
 .admin-user-panel__meta {
   grid-template-columns: 1fr;
+  gap: 0.65rem;
 }
 .table-card__header {
   display: flex;
