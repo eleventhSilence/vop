@@ -48,7 +48,7 @@ export const AdminReviewsPage = () => {
           <h2>Администрирование отзывов</h2>
         </div>
       </div>
-      <div className="admin-users-toolbar">
+      <div className="admin-page-controls admin-users-toolbar">
         <div className="card admin-list-filters admin-list-filters--panel">
           <Input
             id="admin-review-search"

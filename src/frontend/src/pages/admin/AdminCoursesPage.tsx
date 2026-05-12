@@ -309,8 +309,14 @@ export const AdminCoursesPage = () => {
 
   return (
     <PageSection>
-      <h2>Администрирование курсов</h2>
-      <div className="admin-courses-toolbar">
+      <div className="section-header">
+        <div>
+          <p className="eyebrow">Администрирование</p>
+          <h2>Администрирование курсов</h2>
+          <p className="muted">Управляйте списком курсов, статусами и содержанием без изменения текущей логики API.</p>
+        </div>
+      </div>
+      <div className="admin-page-controls admin-courses-toolbar">
         <div className="card admin-list-filters admin-list-filters--panel">
           <Input id="admin-courses-search" label="Поиск" placeholder="Поиск по курсам" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
           <label className="field" htmlFor="admin-courses-status-filter">
