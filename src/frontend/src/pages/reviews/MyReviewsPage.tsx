@@ -58,7 +58,7 @@ export const MyReviewsPage = () => {
           {!coursesQuery.isLoading && !coursesQuery.isError && coursesWithoutReview.length > 0 ? (
             <>
               <p className="muted">Вы ещё не оставили отзыв по следующим курсам:</p>
-              <div className="stack-list">
+              <div className="stack-list courses-without-review-list">
                 {coursesWithoutReview.map((course) => (
                   <div key={course.course_id} className="course-item">
                     <span className="course-title">{course.title}</span>
