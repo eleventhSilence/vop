@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
@@ -36,6 +36,19 @@ export const AdminQuestionOptionsPage = () => {
   const [editValues, setEditValues] = useState<OptionFormValues>(DEFAULT_VALUES);
   const [editErrors, setEditErrors] = useState<ValidationErrors>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [page, setPage] = useState(1);
+  const [knownPageSize, setKnownPageSize] = useState<number | null>(null);
+
+  const getPageFromUrl = (url: string | null) => {
+    if (!url) return null;
+    try {
+      const parsedUrl = new URL(url, 'http://localhost');
+      const nextPage = parsedUrl.searchParams.get('page');
+      return nextPage ? Number(nextPage) : null;
+    } catch {
+      return null;
+    }
+  };
 
   const questionQuery = useQuery({
     queryKey: ['admin', 'question-detail', questionId],
@@ -44,20 +57,19 @@ export const AdminQuestionOptionsPage = () => {
   });
 
   const optionsQuery = useQuery({
-    queryKey: ['admin', 'question-options', questionId],
-    queryFn: () => adminApi.answerOptions({ question_id: questionId! }),
+    queryKey: ['admin', 'question-options', questionId, page],
+    queryFn: () => adminApi.answerOptions({ question_id: questionId!, page }),
     enabled: Boolean(questionId),
   });
 
-  const options = useMemo(() => {
-    if (!questionId || !optionsQuery.data) {
-      return [];
-    }
-
-    return ensurePaginated(optionsQuery.data).results
-      .filter((option) => option.question_id === questionId)
-      .sort((first, second) => first.order - second.order || first.created_at.localeCompare(second.created_at));
-  }, [optionsQuery.data, questionId]);
+  const paginatedOptions = optionsQuery.data ? ensurePaginated(optionsQuery.data) : { count: 0, next: null, previous: null, results: [] };
+  const options = [...paginatedOptions.results].sort((first, second) => first.order - second.order || first.created_at.localeCompare(second.created_at));
+  const hasNextPage = Boolean(paginatedOptions.next);
+  const hasPreviousPage = Boolean(paginatedOptions.previous);
+  const nextPage = getPageFromUrl(paginatedOptions.next) ?? (hasNextPage ? page + 1 : null);
+  const previousPage = getPageFromUrl(paginatedOptions.previous) ?? (hasPreviousPage ? Math.max(1, page - 1) : null);
+  const pageSize = knownPageSize ?? (options.length || 1);
+  const totalPages = Math.max(1, Math.ceil(paginatedOptions.count / pageSize));
 
   const closeCreate = () => {
     setCreateOpen(false);
@@ -200,7 +212,7 @@ export const AdminQuestionOptionsPage = () => {
     deleteOptionMutation.mutate(optionId);
   };
 
-  const handleOptionCardKeyDown = (event: KeyboardEvent<HTMLElement>, optionId: string, values: OptionFormValues) => {
+  const handleOptionRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, optionId: string, values: OptionFormValues) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return;
     }
@@ -208,6 +220,17 @@ export const AdminQuestionOptionsPage = () => {
     event.preventDefault();
     startEdit(optionId, values);
   };
+
+
+  useEffect(() => {
+    setPage(1);
+  }, [questionId]);
+
+  useEffect(() => {
+    if (options.length && (!knownPageSize || options.length > knownPageSize)) {
+      setKnownPageSize(options.length);
+    }
+  }, [knownPageSize, options.length]);
 
   const editingOption = options.find((option) => option.option_id === editingOptionId) ?? null;
 
@@ -311,45 +334,69 @@ export const AdminQuestionOptionsPage = () => {
       ) : null}
 
       {!optionsQuery.isLoading && !optionsQuery.isError && questionId ? (
-        <div className="stack-list admin-questions-list admin-options-list">
-          {options.length === 0 ? <EmptyState message="Для этого вопроса пока нет вариантов ответа." /> : null}
-          {options.map((option) => {
-            return (
-              <article
-                className={`card admin-test-card admin-interactive-card admin-option-card ${option.is_correct ? 'admin-option-card--correct' : ''}`}
-                key={option.option_id}
-                role="button"
-                tabIndex={0}
-                aria-label={`Открыть редактирование варианта «${option.text}»`}
-                onClick={() =>
-                  startEdit(option.option_id, {
-                    text: option.text,
-                    is_correct: option.is_correct,
-                    order: String(option.order),
-                  })
-                }
-                onKeyDown={(event) =>
-                  handleOptionCardKeyDown(event, option.option_id, {
-                    text: option.text,
-                    is_correct: option.is_correct,
-                    order: String(option.order),
-                  })
-                }
-              >
-                <div className="card__row admin-option-card__header">
-                  <h3 className="admin-test-card__title">{option.text}</h3>
-                  <StatusBadge
-                    status={option.is_correct ? 'correct' : 'incorrect'}
-                    label={option.is_correct ? 'Правильный' : 'Неправильный'}
-                    tone={option.is_correct ? 'success' : 'neutral'}
-                  />
-                </div>
-                <div className="admin-test-card__meta">
-                  <span className="badge badge--neutral">Порядок: {option.order}</span>
-                </div>
-              </article>
-            );
-          })}
+        <div className="details-layout admin-users-layout">
+          <div className="table-card admin-users-table-panel">
+            <div className="table-card__header">
+              <div>
+                <strong>Всего вариантов: {paginatedOptions.count}</strong>
+                <p className="muted">Страница {page} из {totalPages}. Сейчас показано {options.length} записей.</p>
+              </div>
+              <div className="pagination-controls" aria-label="Пагинация вариантов ответа">
+                <Button variant="ghost" onClick={() => previousPage !== null && setPage(previousPage)} disabled={!hasPreviousPage || optionsQuery.isLoading}>Назад</Button>
+                <span className="pagination-controls__status">Страница {page}</span>
+                <Button variant="ghost" onClick={() => nextPage !== null && setPage(nextPage)} disabled={!hasNextPage || optionsQuery.isLoading}>Вперёд</Button>
+              </div>
+            </div>
+            {options.length === 0 ? <EmptyState message="Для этого вопроса пока нет вариантов ответа." /> : null}
+            {options.length > 0 ? (
+              <div className="admin-tests-table-wrap">
+                <table className="users-table">
+                  <thead>
+                    <tr>
+                      <th>Порядок</th>
+                      <th>Текст варианта ответа</th>
+                      <th>Корректность</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {options.map((option) => (
+                      <tr
+                        key={option.option_id}
+                        className="users-table__row"
+                        onClick={() =>
+                          startEdit(option.option_id, {
+                            text: option.text,
+                            is_correct: option.is_correct,
+                            order: String(option.order),
+                          })
+                        }
+                        onKeyDown={(event) =>
+                          handleOptionRowKeyDown(event, option.option_id, {
+                            text: option.text,
+                            is_correct: option.is_correct,
+                            order: String(option.order),
+                          })
+                        }
+                        tabIndex={0}
+                        role="button"
+                        title="Открыть редактирование варианта ответа"
+                      >
+                        <td><strong>{option.order}</strong></td>
+                        <td className="admin-options-table__text">{option.text}</td>
+                        <td>
+                          <StatusBadge
+                            status={option.is_correct ? 'correct' : 'incorrect'}
+                            label={option.is_correct ? 'Правильный' : 'Неправильный'}
+                            tone={option.is_correct ? 'success' : 'neutral'}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

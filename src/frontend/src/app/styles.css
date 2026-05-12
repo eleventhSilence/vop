@@ -1529,6 +1529,12 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   white-space: normal;
   word-break: break-word;
 }
+.admin-options-table__text {
+  min-width: 320px;
+  max-width: 760px;
+  white-space: normal;
+  word-break: break-word;
+}
 .admin-interactive-card {
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
