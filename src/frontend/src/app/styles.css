@@ -1418,20 +1418,53 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   flex-wrap: wrap;
   gap: 0.5rem;
 }
-.admin-courses-toolbar,
-.admin-tests-toolbar,
-.admin-users-toolbar {
+.admin-page-controls {
   display: flex;
   justify-content: space-between;
   align-items: end;
   gap: 0.8rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-bottom: 1rem;
 }
 .admin-list-filters {
-  display: grid;
-  grid-template-columns: minmax(220px, 320px) minmax(180px, 220px) minmax(180px, 220px);
+  display: flex;
+  flex-wrap: nowrap;
   gap: 0.75rem;
+  align-items: end;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+}
+.admin-list-filters > :first-child {
+  flex: 1 1 340px;
+  min-width: 320px;
+}
+.admin-list-filters > :not(:first-child) {
+  flex: 0 0 210px;
+  min-width: 180px;
+}
+.admin-list-filters--panel {
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(202, 193, 170, 0.62);
+  background: linear-gradient(180deg, #fbfaf7 0%, #f7f4ee 100%);
+  box-shadow: 0 8px 20px rgba(35, 34, 29, 0.045);
+}
+.admin-list-filters--panel .field {
+  margin-bottom: 0;
+}
+.admin-list-filters--panel .field__label,
+.admin-list-filters--panel .field > span {
+  color: #3f5378;
+  font-weight: 600;
+}
+.admin-list-filters--panel .field__control {
+  min-height: 42px;
+  border-color: rgba(186, 179, 158, 0.65);
+  background: #fffdf9;
+}
+.admin-list-filters--panel .field__control:focus {
+  border-color: #8ea7f5;
+  box-shadow: 0 0 0 3px rgba(112, 145, 243, 0.18);
 }
 .admin-courses-create-trigger {
   min-width: 180px;
@@ -1780,12 +1813,26 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   }
   .admin-courses-toolbar {
     justify-content: stretch;
+    flex-wrap: wrap;
   }
   .admin-tests-toolbar {
     justify-content: stretch;
+    flex-wrap: wrap;
+  }
+  .admin-users-toolbar {
+    flex-wrap: wrap;
+  }
+  .admin-page-controls {
+    align-items: stretch;
   }
   .admin-list-filters {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    width: 100%;
+  }
+  .admin-list-filters > :first-child,
+  .admin-list-filters > :not(:first-child) {
+    flex: 1 1 auto;
+    min-width: 0;
     width: 100%;
   }
   .admin-courses-create-trigger {

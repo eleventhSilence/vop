@@ -306,10 +306,16 @@ export const AdminTestsPage = () => {
 
   return (
     <PageSection>
-      <h2>Администрирование тестов</h2>
-      <div className="admin-tests-toolbar">
-        <div className="admin-list-filters">
-          <Input id="admin-tests-search" label="" placeholder="Поиск по тестам" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+      <div className="section-header">
+        <div>
+          <p className="eyebrow">Администрирование</p>
+          <h2>Администрирование тестов</h2>
+          <p className="muted">Контролируйте тесты и их доступность, сохраняя текущее поведение поиска и фильтрации.</p>
+        </div>
+      </div>
+      <div className="admin-page-controls admin-tests-toolbar">
+        <div className="card admin-list-filters admin-list-filters--panel">
+          <Input id="admin-tests-search" label="Поиск" placeholder="Поиск по тестам" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
           <label className="field" htmlFor="admin-tests-status-filter">
             <span className="field__label">Статус</span>
             <select id="admin-tests-status-filter" className="field__control" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | AdminCourseStatus)}>
