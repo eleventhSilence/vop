@@ -27,6 +27,7 @@ export const AdminLayout = () => {
   const scrollAccumulatorRef = useRef(0);
   const animationFrameRef = useRef<number | null>(null);
   const isTabsStickyActiveRef = useRef(false);
+  const preventAutoCollapseUntilNextDownScrollRef = useRef(false);
 
   const [isTabsCollapsed, setIsTabsCollapsed] = useState(false);
 
@@ -87,6 +88,19 @@ export const AdminLayout = () => {
         return;
       }
 
+      if (preventAutoCollapseUntilNextDownScrollRef.current) {
+        if (deltaY > MIN_SCROLL_DELTA) {
+          preventAutoCollapseUntilNextDownScrollRef.current = false;
+          lastScrollYRef.current = currentScrollY;
+          scrollAccumulatorRef.current = 0;
+          return;
+        }
+
+        lastScrollYRef.current = currentScrollY;
+        scrollAccumulatorRef.current = 0;
+        return;
+      }
+
       if (Math.abs(deltaY) < MIN_SCROLL_DELTA) {
         lastScrollYRef.current = currentScrollY;
         return;
@@ -130,8 +144,22 @@ export const AdminLayout = () => {
     };
   }, []);
 
+  const handleTabsToggle = () => {
+    if (!isTabsCollapsed) {
+      setIsTabsCollapsed(true);
+      return;
+    }
+
+    setIsTabsCollapsed(false);
+    preventAutoCollapseUntilNextDownScrollRef.current = true;
+
+    const currentScrollY = window.scrollY;
+    lastScrollYRef.current = currentScrollY;
+    scrollAccumulatorRef.current = 0;
+  };
+
   const showTabsShell = !isTabsCollapsed;
-  const toggleSymbol = showTabsShell ? '⌃' : '⌄';
+  const toggleSymbol = showTabsShell ? '↿↾' : '⇃⇂';
   const toggleLabel = showTabsShell ? 'Свернуть административную навигацию' : 'Показать административную навигацию';
 
   return (
@@ -166,7 +194,7 @@ export const AdminLayout = () => {
               type="button"
               className="admin-tabs-toggle"
               aria-label={toggleLabel}
-              onClick={() => setIsTabsCollapsed((prev) => !prev)}
+              onClick={handleTabsToggle}
             >
               <span aria-hidden="true">{toggleSymbol}</span>
             </button>
