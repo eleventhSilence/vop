@@ -82,9 +82,6 @@ export const adminApi = {
       })
       .then((response) => mapAdminCourseFromApi(response.data));
   },
-  deleteCourse(courseId: string) {
-    return http.delete(`/admin/courses/${courseId}/`);
-  },
   courseMedia(courseId: string) {
     return http
       .get<CourseMedia[] | PaginatedResponse<CourseMedia>>(`/admin/courses/${courseId}/media/`)

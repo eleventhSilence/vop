@@ -90,11 +90,12 @@ export const AdminCourseDetailPage = () => {
     },
   });
 
-  const deleteCourseMutation = useMutation({
-    mutationFn: () => adminApi.deleteCourse(courseId!),
+  const changeAvailabilityMutation = useMutation({
+    mutationFn: (status: AdminCourseStatus) => adminApi.updateCourse(courseId!, { status }),
     onSuccess: async () => {
+      setSuccessMessage('Статус курса успешно обновлён.');
       await queryClient.invalidateQueries({ queryKey: ['admin', 'courses'] });
-      navigate('/admin/courses');
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'course-detail', courseId], exact: true });
     },
   });
 
@@ -106,7 +107,7 @@ export const AdminCourseDetailPage = () => {
     return 'Проверьте корректность заполнения формы.';
   }, [validationErrors]);
 
-  const mutationsArePending = updateCourseMutation.isPending || deleteCourseMutation.isPending;
+  const mutationsArePending = updateCourseMutation.isPending || changeAvailabilityMutation.isPending;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -140,14 +141,19 @@ export const AdminCourseDetailPage = () => {
     });
   };
 
-  const handleDelete = () => {
+  const handleToggleAvailability = () => {
     setSuccessMessage(null);
+    const targetStatus: AdminCourseStatus = formValues.status === 'available' ? 'unavailable' : 'available';
+    const confirmMessage =
+      targetStatus === 'unavailable'
+        ? 'Скрыть курс из общего доступа?'
+        : 'Сделать курс доступным для общего доступа?';
 
-    if (!window.confirm('Удалить курс? Действие нельзя отменить.')) {
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
-    deleteCourseMutation.mutate();
+    changeAvailabilityMutation.mutate(targetStatus);
   };
 
   if (!courseId) {
@@ -175,7 +181,7 @@ export const AdminCourseDetailPage = () => {
       {courseQuery.isSuccess && !courseQuery.data ? <EmptyState message="Курс не найден." /> : null}
       {formErrorMessage ? <ErrorState message={formErrorMessage} /> : null}
       {updateCourseMutation.isError ? <ErrorState message={extractApiError(updateCourseMutation.error)} /> : null}
-      {deleteCourseMutation.isError ? <ErrorState message={extractApiError(deleteCourseMutation.error)} /> : null}
+      {changeAvailabilityMutation.isError ? <ErrorState message={extractApiError(changeAvailabilityMutation.error)} /> : null}
       {successMessage ? <SuccessState message={successMessage} /> : null}
       {courseQuery.isSuccess && courseQuery.data ? (
         <form className="card stack-list" onSubmit={handleSubmit}>
@@ -229,8 +235,14 @@ export const AdminCourseDetailPage = () => {
             <Button type="button" variant="secondary" onClick={() => navigate('/admin/courses')} disabled={mutationsArePending}>
               Назад к курсам
             </Button>
-            <Button type="button" variant="ghost" onClick={handleDelete} disabled={mutationsArePending}>
-              {deleteCourseMutation.isPending ? 'Удаление...' : 'Удалить курс'}
+            <Button type="button" variant="ghost" onClick={handleToggleAvailability} disabled={mutationsArePending}>
+              {changeAvailabilityMutation.isPending
+                ? formValues.status === 'available'
+                  ? 'Скрытие...'
+                  : 'Публикация...'
+                : formValues.status === 'available'
+                  ? 'Скрыть курс'
+                  : 'Сделать курс доступным'}
             </Button>
           </div>
         </form>
