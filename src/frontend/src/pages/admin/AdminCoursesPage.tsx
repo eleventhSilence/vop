@@ -1,5 +1,6 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, MouseEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminCourseCreatePayload, AdminCourseStatus } from '@/entities/admin/types';
 import { extractApiError } from '@/shared/api/client';
@@ -558,6 +559,7 @@ export const AdminCoursesPage = () => {
                   <th>Статус</th>
                   <th>Дата создания</th>
                   <th>Дата обновления</th>
+                  <th>Участники</th>
                 </tr>
               </thead>
               <tbody>
@@ -575,6 +577,15 @@ export const AdminCoursesPage = () => {
                     <td><StatusBadge status={course.status} tone={course.status === 'available' ? 'success' : 'danger'} /></td>
                     <td>{formatDateTime(course.created_at)}</td>
                     <td>{course.updated_at ? formatDateTime(course.updated_at) : '—'}</td>
+                    <td>
+                      <Link
+                        to={`/admin/courses/${course.course_id}/participants`}
+                        className="admin-test-card__questions-chip"
+                        onClick={(event: MouseEvent<HTMLAnchorElement>) => event.stopPropagation()}
+                      >
+                        Открыть →
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

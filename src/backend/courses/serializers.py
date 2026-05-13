@@ -98,6 +98,39 @@ class AdminCourseWriteSerializer(AdminCourseBaseSerializer):
         read_only_fields = ("course_id", "created_at", "updated_at", "media")
 
 
+class AdminCourseParticipantSerializer(serializers.ModelSerializer):
+    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    progress_percent = serializers.SerializerMethodField()
+    progress_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CourseEnrollment
+        fields = (
+            "user_id",
+            "first_name",
+            "last_name",
+            "email",
+            "enrolled_at",
+            "progress_percent",
+            "progress_status",
+        )
+        read_only_fields = fields
+
+    def _progress_payload(self, obj):
+        if not hasattr(obj, "_admin_participant_progress_payload"):
+            obj._admin_participant_progress_payload = build_progress_payload(enrollment=obj)
+        return obj._admin_participant_progress_payload
+
+    def get_progress_percent(self, obj):
+        return self._progress_payload(obj)["progress_percent"]
+
+    def get_progress_status(self, obj):
+        return self._progress_payload(obj)["progress_status"]
+
+
 class CourseEnrollmentSerializer(serializers.ModelSerializer):
     user_id = serializers.UUIDField(source="user.id", read_only=True)
     course_id = serializers.UUIDField(source="course.id", read_only=True)

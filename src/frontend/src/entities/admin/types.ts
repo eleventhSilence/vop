@@ -143,3 +143,13 @@ export type AdminTestListParams = {
   search?: string;
   status?: 'all' | AdminCourseStatus | 'active' | 'inactive';
 };
+
+export type AdminCourseParticipant = {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  enrolled_at: string;
+  progress_percent: number;
+  progress_status: 'enrolled' | 'theory_completed' | 'testing_in_progress' | 'completed';
+};

@@ -5,6 +5,7 @@ import type {
   AdminAnswerOptionCreatePayload,
   AdminAnswerOptionUpdatePayload,
   AdminCourse,
+  AdminCourseParticipant,
   AdminCourseCreatePayload,
   AdminCourseListParams,
   AdminCourseUpdatePayload,
@@ -95,6 +96,11 @@ export const adminApi = {
         }
         return [];
       });
+  },
+  courseParticipants(courseId: string, params?: { page?: number; page_size?: number; search?: string }) {
+    return http
+      .get<PaginatedResponse<AdminCourseParticipant>>(`/admin/courses/${courseId}/participants/`, { params })
+      .then((response) => response.data);
   },
   uploadCourseMedia(courseId: string, payload: { file: File; title?: string }) {
     const formData = new FormData();
