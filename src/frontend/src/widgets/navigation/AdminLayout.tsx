@@ -159,7 +159,7 @@ export const AdminLayout = () => {
   };
 
   const showTabsShell = !isTabsCollapsed;
-  const toggleSymbol = showTabsShell ? '⌃' : '⌄';
+  const toggleSymbol = showTabsShell ? '↿↾' : '⇃⇂';
   const toggleLabel = showTabsShell ? 'Свернуть административную навигацию' : 'Показать административную навигацию';
 
   return (
