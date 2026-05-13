@@ -78,7 +78,6 @@ export const AdminCourseParticipantsPage = () => {
     }
   }, [participants.length, knownPageSize]);
 
-  const courseStatusLabel = courseQuery.data?.status === 'available' ? 'Курс доступен' : 'Курс недоступен';
 
   return (
     <PageSection>
@@ -87,15 +86,6 @@ export const AdminCourseParticipantsPage = () => {
           <div className="admin-question-context-card__content">
             <p className="eyebrow">АДМИНИСТРИРОВАНИЕ</p>
             <h2 className="admin-question-context-card__heading">Участники курса · «{courseQuery.data?.title ?? 'Курс'}»</h2>
-            {courseQuery.data ? (
-              <div className="admin-question-context-card__meta">
-                <div className="admin-test-card__meta">
-                  <span className={`badge ${courseQuery.data.status === 'available' ? 'badge--success' : 'badge--warning'}`}>
-                    {courseStatusLabel}
-                  </span>
-                </div>
-              </div>
-            ) : null}
           </div>
           <div className="admin-question-context-card__actions">
             <Link className="admin-question-page__back-chip" to="/admin/courses">← К списку курсов</Link>
@@ -103,24 +93,25 @@ export const AdminCourseParticipantsPage = () => {
         </div>
       </div>
 
-      <div className="card admin-filters">
-        <label className="field" htmlFor="admin-course-participants-search">
-          <span className="field__label">Поиск</span>
-          <input
-            id="admin-course-participants-search"
-            className="field__control"
-            placeholder="Поиск по имени или фамилии"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-          />
-        </label>
-      </div>
+      <div className="stack-list">
+        <div className="card admin-filters">
+          <label className="field" htmlFor="admin-course-participants-search">
+            <span className="field__label">Поиск</span>
+            <input
+              id="admin-course-participants-search"
+              className="field__control"
+              placeholder="Поиск по имени или фамилии"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+            />
+          </label>
+        </div>
 
-      {participantsQuery.isLoading ? <LoadingState /> : null}
-      {participantsQuery.isError ? <ErrorState message={extractApiError(participantsQuery.error)} /> : null}
+        {participantsQuery.isLoading ? <LoadingState /> : null}
+        {participantsQuery.isError ? <ErrorState message={extractApiError(participantsQuery.error)} /> : null}
 
-      {!participantsQuery.isLoading && !participantsQuery.isError ? (
-        <div className="table-card admin-users-table-panel">
+        {!participantsQuery.isLoading && !participantsQuery.isError ? (
+          <div className="table-card admin-users-table-panel">
           <div className="table-card__header">
             <div>
               <strong>Всего участников: {paginatedParticipants.count}</strong>
@@ -163,8 +154,9 @@ export const AdminCourseParticipantsPage = () => {
               </table>
             </div>
           ) : null}
-        </div>
-      ) : null}
+          </div>
+        ) : null}
+      </div>
     </PageSection>
   );
 };
