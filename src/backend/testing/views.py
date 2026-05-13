@@ -14,6 +14,7 @@ from testing.serializers import (
     AdminCourseTestListSerializer,
     AdminCourseTestWriteSerializer,
     AdminTestAttemptListSerializer,
+    AdminTestAttemptDetailSerializer,
     AdminAnswerOptionDetailSerializer,
     AdminAnswerOptionListSerializer,
     AdminAnswerOptionWriteSerializer,
@@ -252,6 +253,13 @@ class AdminTestAttemptListView(generics.ListAPIView):
                 Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search)
             )
         return queryset.order_by("-started_at", "-created_at", "-id")
+
+
+class AdminTestAttemptRetrieveDestroyView(generics.RetrieveDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    serializer_class = AdminTestAttemptDetailSerializer
+    queryset = TestAttempt.objects.select_related("user", "test", "test__course").prefetch_related("answers")
+    http_method_names = ["get", "delete", "head", "options"]
 
 
 class AdminTestQuestionListCreateView(generics.ListCreateAPIView):

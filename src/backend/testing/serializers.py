@@ -102,6 +102,109 @@ class AdminTestAttemptListSerializer(serializers.ModelSerializer):
         )
 
 
+class AdminAttemptOptionSerializer(serializers.ModelSerializer):
+    option_id = serializers.UUIDField(source="id", read_only=True)
+    is_selected = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AnswerOption
+        fields = ("option_id", "text", "is_correct", "is_selected")
+
+    def get_is_selected(self, obj):
+        selected_option_ids = self.context.get("selected_option_ids", set())
+        return obj.id in selected_option_ids
+
+
+class AdminAttemptQuestionSerializer(serializers.ModelSerializer):
+    question_id = serializers.UUIDField(source="id", read_only=True)
+    is_correct = serializers.SerializerMethodField()
+    options = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestQuestion
+        fields = ("question_id", "order", "text", "question_type", "is_correct", "options")
+
+    def get_is_correct(self, obj):
+        correct_option_ids_by_question = self.context["correct_option_ids_by_question"]
+        selected_option_ids_by_question = self.context["selected_option_ids_by_question"]
+        return selected_option_ids_by_question.get(obj.id, set()) == correct_option_ids_by_question.get(obj.id, set())
+
+    def get_options(self, obj):
+        selected_option_ids_by_question = self.context["selected_option_ids_by_question"]
+        serializer = AdminAttemptOptionSerializer(
+            obj.answer_options.all(),
+            many=True,
+            context={"selected_option_ids": selected_option_ids_by_question.get(obj.id, set())},
+        )
+        return serializer.data
+
+
+class AdminTestAttemptDetailSerializer(serializers.ModelSerializer):
+    attempt_id = serializers.UUIDField(source="id", read_only=True)
+    result = serializers.SerializerMethodField()
+    max_score = serializers.IntegerField(source="test.questions.count", read_only=True)
+    user = serializers.SerializerMethodField()
+    test = serializers.SerializerMethodField()
+    course = serializers.SerializerMethodField()
+    questions = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestAttempt
+        fields = (
+            "attempt_id",
+            "attempt_number",
+            "status",
+            "result",
+            "score",
+            "max_score",
+            "started_at",
+            "completed_at",
+            "user",
+            "test",
+            "course",
+            "questions",
+        )
+
+    def get_result(self, obj):
+        if obj.status == TestAttempt.AttemptStatus.IN_PROGRESS:
+            return None
+        return "passed" if obj.is_passed else "failed"
+
+    def get_user(self, obj):
+        full_name = f"{obj.user.first_name} {obj.user.last_name}".strip()
+        return {
+            "user_id": obj.user_id,
+            "first_name": obj.user.first_name,
+            "last_name": obj.user.last_name,
+            "full_name": full_name,
+            "email": obj.user.email,
+        }
+
+    def get_test(self, obj):
+        return {"test_id": obj.test_id, "title": obj.test.title}
+
+    def get_course(self, obj):
+        return {"course_id": obj.test.course_id, "title": obj.test.course.title}
+
+    def get_questions(self, obj):
+        questions = list(obj.test.questions.prefetch_related("answer_options").order_by("order", "created_at", "id"))
+        selected_option_ids_by_question = {}
+        for answer in obj.answers.select_related("question", "selected_option"):
+            selected_option_ids_by_question.setdefault(answer.question_id, set()).add(answer.selected_option_id)
+        correct_option_ids_by_question = {
+            question.id: set(question.answer_options.filter(is_correct=True).values_list("id", flat=True))
+            for question in questions
+        }
+        serializer = AdminAttemptQuestionSerializer(
+            questions,
+            many=True,
+            context={
+                "selected_option_ids_by_question": selected_option_ids_by_question,
+                "correct_option_ids_by_question": correct_option_ids_by_question,
+            },
+        )
+        return serializer.data
+
 class AdminCourseTestWriteSerializer(serializers.ModelSerializer):
     test_id = serializers.UUIDField(source="id", read_only=True)
     course_id = serializers.PrimaryKeyRelatedField(source="course", queryset=Course.objects.all())

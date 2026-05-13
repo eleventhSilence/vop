@@ -12,6 +12,7 @@ import type {
   AdminDashboard,
   AdminTest,
   AdminTestAttempt,
+  AdminTestAttemptDetail,
   AdminTestCreatePayload,
   AdminTestListParams,
   AdminTestQuestion,
@@ -107,6 +108,12 @@ export const adminApi = {
     return http
       .get<PaginatedResponse<AdminTestAttempt>>(`/admin/tests/${testId}/attempts/`, { params })
       .then((response) => response.data);
+  },
+  attemptDetails(attemptId: string) {
+    return http.get<AdminTestAttemptDetail>(`/admin/testing/attempts/${attemptId}/`).then((response) => response.data);
+  },
+  deleteAttempt(attemptId: string) {
+    return http.delete(`/admin/testing/attempts/${attemptId}/`);
   },
   uploadCourseMedia(courseId: string, payload: { file: File; title?: string }) {
     const formData = new FormData();
