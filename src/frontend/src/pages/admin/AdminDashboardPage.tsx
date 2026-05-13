@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
@@ -43,6 +43,12 @@ export const AdminDashboardPage = () => {
   const [editDraft, setEditDraft] = useState<EditableUser | null>(null);
   const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timeoutId = window.setTimeout(() => setToast(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
 
   const dashboardQuery = useQuery({ queryKey: ['admin', 'dashboard'], queryFn: adminApi.dashboard });
 
