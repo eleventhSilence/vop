@@ -13,6 +13,7 @@ from testing.serializers import (
     AdminCourseTestDetailSerializer,
     AdminCourseTestListSerializer,
     AdminCourseTestWriteSerializer,
+    AdminTestAttemptListSerializer,
     AdminAnswerOptionDetailSerializer,
     AdminAnswerOptionListSerializer,
     AdminAnswerOptionWriteSerializer,
@@ -236,6 +237,21 @@ class AdminCourseTestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPI
 
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminTestAttemptListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    serializer_class = AdminTestAttemptListSerializer
+
+    def get_queryset(self):
+        test = get_object_or_404(CourseTest.objects.select_related("course"), id=self.kwargs["test_id"])
+        queryset = TestAttempt.objects.filter(test=test).select_related("user", "test")
+        search = (self.request.query_params.get("search") or "").strip()
+        if search:
+            queryset = queryset.filter(
+                Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search)
+            )
+        return queryset.order_by("-started_at", "-created_at", "-id")
 
 
 class AdminTestQuestionListCreateView(generics.ListCreateAPIView):
