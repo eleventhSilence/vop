@@ -302,6 +302,11 @@ export const AdminTestsPage = () => {
     navigate(`/admin/tests/${testId}/questions`);
   };
 
+  const openTestAttempts = (event: MouseEvent<HTMLElement>, testId: string) => {
+    event.stopPropagation();
+    navigate(`/admin/tests/${testId}/attempts`);
+  };
+
   const handleTestCardKeyDown = (event: KeyboardEvent<HTMLElement>, testId: string) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return;
@@ -580,7 +585,7 @@ export const AdminTestsPage = () => {
           {tests.length ? (
             <div className="admin-tests-table-wrap">
               <table className="users-table">
-                <thead><tr><th>Название теста</th><th>Название курса</th><th>Статус</th><th>Дата обновления</th><th>Вопросы</th></tr></thead>
+                <thead><tr><th>Название теста</th><th>Название курса</th><th>Статус</th><th>Дата обновления</th><th>Вопросы</th><th>Попытки</th></tr></thead>
                 <tbody>
                   {tests.map((test) => (
                     <tr
@@ -602,6 +607,15 @@ export const AdminTestsPage = () => {
                           className="admin-test-card__questions-chip"
                           to={`/admin/tests/${test.test_id}/questions`}
                           onClick={(event) => openTestQuestions(event, test.test_id)}
+                        >
+                          Открыть →
+                        </Link>
+                      </td>
+                      <td>
+                        <Link
+                          className="admin-test-card__questions-chip"
+                          to={`/admin/tests/${test.test_id}/attempts`}
+                          onClick={(event) => openTestAttempts(event, test.test_id)}
                         >
                           Открыть →
                         </Link>

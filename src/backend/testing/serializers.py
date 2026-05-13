@@ -76,6 +76,32 @@ class AdminCourseTestDetailSerializer(AdminCourseTestBaseSerializer):
     pass
 
 
+class AdminTestAttemptListSerializer(serializers.ModelSerializer):
+    attempt_id = serializers.UUIDField(source="id", read_only=True)
+    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    first_name = serializers.CharField(source="user.first_name", read_only=True)
+    last_name = serializers.CharField(source="user.last_name", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    max_score = serializers.IntegerField(source="test.passing_score", read_only=True)
+
+    class Meta:
+        model = TestAttempt
+        fields = (
+            "attempt_id",
+            "user_id",
+            "first_name",
+            "last_name",
+            "email",
+            "attempt_number",
+            "status",
+            "is_passed",
+            "score",
+            "max_score",
+            "started_at",
+            "completed_at",
+        )
+
+
 class AdminCourseTestWriteSerializer(serializers.ModelSerializer):
     test_id = serializers.UUIDField(source="id", read_only=True)
     course_id = serializers.PrimaryKeyRelatedField(source="course", queryset=Course.objects.all())

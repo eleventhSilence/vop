@@ -4,6 +4,7 @@ from testing.views import (
     AdminAnswerOptionListCreateView,
     AdminAnswerOptionRetrieveUpdateDestroyView,
     AdminCourseTestListCreateView,
+    AdminTestAttemptListView,
     AdminCourseTestRetrieveUpdateDestroyView,
     AdminTestQuestionListCreateView,
     AdminTestQuestionRetrieveUpdateDestroyView,
@@ -13,6 +14,7 @@ from testing.views import (
 urlpatterns = [
     path("tests/", AdminCourseTestListCreateView.as_view(), name="admin-test-list-create"),
     path("tests/<uuid:pk>/", AdminCourseTestRetrieveUpdateDestroyView.as_view(), name="admin-test-detail"),
+    path("tests/<uuid:test_id>/attempts/", AdminTestAttemptListView.as_view(), name="admin-test-attempt-list"),
     path("questions/", AdminTestQuestionListCreateView.as_view(), name="admin-question-list-create"),
     path("questions/<uuid:pk>/", AdminTestQuestionRetrieveUpdateDestroyView.as_view(), name="admin-question-detail"),
     path("answer-options/", AdminAnswerOptionListCreateView.as_view(), name="admin-answer-option-list-create"),

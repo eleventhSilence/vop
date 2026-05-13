@@ -11,6 +11,7 @@ import type {
   AdminCourseUpdatePayload,
   AdminDashboard,
   AdminTest,
+  AdminTestAttempt,
   AdminTestCreatePayload,
   AdminTestListParams,
   AdminTestQuestion,
@@ -100,6 +101,11 @@ export const adminApi = {
   courseParticipants(courseId: string, params?: { page?: number; page_size?: number; search?: string }) {
     return http
       .get<PaginatedResponse<AdminCourseParticipant>>(`/admin/courses/${courseId}/participants/`, { params })
+      .then((response) => response.data);
+  },
+  testAttempts(testId: string, params?: { page?: number; page_size?: number; search?: string }) {
+    return http
+      .get<PaginatedResponse<AdminTestAttempt>>(`/admin/tests/${testId}/attempts/`, { params })
       .then((response) => response.data);
   },
   uploadCourseMedia(courseId: string, payload: { file: File; title?: string }) {

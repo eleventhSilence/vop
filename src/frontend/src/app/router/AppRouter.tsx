@@ -14,6 +14,7 @@ import { AdminQuestionDetailPage } from '@/pages/admin/AdminQuestionDetailPage';
 import { AdminQuestionOptionsPage } from '@/pages/admin/AdminQuestionOptionsPage';
 import { AdminReviewsPage } from '@/pages/admin/AdminReviewsPage';
 import { AdminTestDetailPage } from '@/pages/admin/AdminTestDetailPage';
+import { AdminTestAttemptsPage } from '@/pages/admin/AdminTestAttemptsPage';
 import { AdminTestQuestionsPage } from '@/pages/admin/AdminTestQuestionsPage';
 import { AdminTestsPage } from '@/pages/admin/AdminTestsPage';
 import { AdminUsersPage } from '@/pages/admin/AdminUsersPage';
@@ -69,6 +70,7 @@ export const AppRouter = () => {
             <Route path="tests" element={<AdminTestsPage />} />
             <Route path="tests/:testId" element={<AdminTestDetailPage />} />
             <Route path="tests/:testId/questions" element={<AdminTestQuestionsPage />} />
+            <Route path="tests/:testId/attempts" element={<AdminTestAttemptsPage />} />
             <Route path="questions/:questionId" element={<AdminQuestionDetailPage />} />
             <Route path="questions/:questionId/options" element={<AdminQuestionOptionsPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />

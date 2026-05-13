@@ -153,3 +153,18 @@ export type AdminCourseParticipant = {
   progress_percent: number;
   progress_status: 'enrolled' | 'theory_completed' | 'testing_in_progress' | 'completed';
 };
+
+export type AdminTestAttempt = {
+  attempt_id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  attempt_number: number;
+  status: 'in_progress' | 'completed' | 'interrupted';
+  is_passed: boolean;
+  score: number;
+  max_score: number;
+  started_at: string;
+  completed_at: string | null;
+};
