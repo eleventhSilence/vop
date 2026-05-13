@@ -662,6 +662,11 @@ code { background: #edf2ff; padding: 0.15rem 0.35rem; border-radius: 0.35rem; }
   background: #f6fffa;
   color: #1f7a3f;
 }
+.attempt-option--correct-missed {
+  border-color: #e8b9c1;
+  background: #f6fffa;
+  color: #1f7a3f;
+}
 .attempt-option--error {
   border-color: #f0c3c3;
   background: #fff7f7;

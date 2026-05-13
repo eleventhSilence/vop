@@ -220,7 +220,13 @@ export const AdminTestAttemptsPage = () => {
                 <div className="card__row"><strong>{question.order}. {question.text}</strong><StatusBadge status={question.is_correct ? 'Ответ верный' : 'Ответ неверный'} label={question.is_correct ? 'Ответ верный' : 'Ответ неверный'} tone={question.is_correct ? 'success' : 'danger'} /></div>
                 <p className="muted">{question.question_type === 'single_choice' ? 'Один вариант' : 'Несколько вариантов'}</p>
                 <div className="stack-list">{question.options.map((option) => {
-                  const className = option.is_correct ? 'attempt-option attempt-option--success' : option.is_selected ? 'attempt-option attempt-option--error' : 'attempt-option';
+                  const className = option.is_correct
+                    ? option.is_selected
+                      ? 'attempt-option attempt-option--success'
+                      : 'attempt-option attempt-option--correct-missed'
+                    : option.is_selected
+                      ? 'attempt-option attempt-option--error'
+                      : 'attempt-option';
                   const label = option.is_correct && option.is_selected ? 'Выбран пользователем · Правильный вариант' : option.is_correct ? 'Правильный вариант, но не выбран' : option.is_selected ? 'Выбран пользователем · Неверный вариант' : '';
                   return <div key={option.option_id} className={className}><div>{option.text}</div>{label ? <small className="muted">{label}</small> : null}</div>;
                 })}</div>
