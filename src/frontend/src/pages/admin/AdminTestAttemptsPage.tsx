@@ -30,7 +30,7 @@ const getUserName = (attempt: AdminTestAttempt) => {
 
 const getAttemptResult = (attempt: AdminTestAttempt) => {
   if (attempt.status === 'in_progress') {
-    return { label: 'В процессе', tone: 'info' as const };
+    return { label: 'В процессе', tone: 'accent' as const };
   }
 
   if (attempt.is_passed) {
@@ -232,13 +232,13 @@ export const AdminTestAttemptsPage = () => {
                 })}</div>
               </section>)}
               <div className="users-actions__buttons">
-                <Button variant="danger" onClick={() => setConfirmDelete(true)} disabled={deleteAttemptMutation.isPending}>Удалить попытку</Button>
+                <Button variant="ghost" className="danger-btn" onClick={() => setConfirmDelete(true)} disabled={deleteAttemptMutation.isPending}>Удалить попытку</Button>
               </div>
             </div> : null}
           </div>
         </div>
       ) : null}
-      {confirmDelete ? <div className="overlay" role="presentation" onClick={() => setConfirmDelete(false)}><div className="overlay__backdrop" /><div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}><h3>Удалить попытку?</h3><p>Попытка будет удалена без возможности восстановления. Это может вернуть пользователю возможность пройти тест ещё раз.</p><div className="users-actions__buttons"><Button variant="ghost" onClick={() => setConfirmDelete(false)}>Отмена</Button><Button variant="danger" onClick={() => selectedAttemptId && deleteAttemptMutation.mutate(selectedAttemptId)} disabled={deleteAttemptMutation.isPending}>Удалить</Button></div></div></div> : null}
+      {confirmDelete ? <div className="overlay" role="presentation" onClick={() => setConfirmDelete(false)}><div className="overlay__backdrop" /><div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}><h3>Удалить попытку?</h3><p>Попытка будет удалена без возможности восстановления. Это может вернуть пользователю возможность пройти тест ещё раз.</p><div className="users-actions__buttons"><Button variant="ghost" onClick={() => setConfirmDelete(false)}>Отмена</Button><Button variant="ghost" className="danger-btn" onClick={() => selectedAttemptId && deleteAttemptMutation.mutate(selectedAttemptId)} disabled={deleteAttemptMutation.isPending}>Удалить</Button></div></div></div> : null}
       {toast ? <Toast type={toast.type} message={toast.message} /> : null}
     </PageSection>
   );
