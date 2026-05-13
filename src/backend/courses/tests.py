@@ -276,6 +276,9 @@ class AdminCoursesApiTests(APITestCase):
     def get_admin_detail_url(self, course):
         return reverse("admin-course-detail", kwargs={"pk": course.id})
 
+    def get_admin_participants_url(self, course):
+        return reverse("admin-course-participants-list", kwargs={"course_id": course.id})
+
     def test_admin_can_get_course_list(self):
         self.client.force_authenticate(user=self.admin_user)
 
@@ -506,6 +509,35 @@ class AdminCoursesApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.headers["Allow"], "GET, PATCH, HEAD, OPTIONS")
+
+    def test_admin_can_get_course_participants_with_name_search(self):
+        enrolled_user = Account.objects.create_user(
+            email="lev@example.com",
+            password="StrongPass123",
+            first_name="Лев",
+            last_name="Громов",
+        )
+        second_enrolled_user = Account.objects.create_user(
+            email="anna@example.com",
+            password="StrongPass123",
+            first_name="Анна",
+            last_name="Иванова",
+        )
+        other_course = Course.objects.create(title="Other", short_description="Other course desc", content="content")
+        CourseEnrollment.objects.create(user=enrolled_user, course=self.course)
+        CourseEnrollment.objects.create(user=second_enrolled_user, course=self.course)
+        CourseEnrollment.objects.create(user=self.regular_user, course=other_course)
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get(self.get_admin_participants_url(self.course), {"search": "гром"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["email"], "lev@example.com")
+        self.assertEqual(response.data["results"][0]["first_name"], "Лев")
+        self.assertEqual(response.data["results"][0]["last_name"], "Громов")
+        self.assertIn("progress_percent", response.data["results"][0])
+        self.assertIn("progress_status", response.data["results"][0])
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 import tempfile

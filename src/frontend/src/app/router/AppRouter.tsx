@@ -7,6 +7,7 @@ import { MyCoursesPage } from '@/pages/account/MyCoursesPage';
 import { ProfilePage } from '@/pages/account/ProfilePage';
 import { ReviewEditPage } from '@/pages/account/ReviewEditPage';
 import { AdminCourseDetailPage } from '@/pages/admin/AdminCourseDetailPage';
+import { AdminCourseParticipantsPage } from '@/pages/admin/AdminCourseParticipantsPage';
 import { AdminCoursesPage } from '@/pages/admin/AdminCoursesPage';
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage';
 import { AdminQuestionDetailPage } from '@/pages/admin/AdminQuestionDetailPage';
@@ -64,6 +65,7 @@ export const AppRouter = () => {
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="courses" element={<AdminCoursesPage />} />
             <Route path="courses/:courseId" element={<AdminCourseDetailPage />} />
+            <Route path="courses/:courseId/participants" element={<AdminCourseParticipantsPage />} />
             <Route path="tests" element={<AdminTestsPage />} />
             <Route path="tests/:testId" element={<AdminTestDetailPage />} />
             <Route path="tests/:testId/questions" element={<AdminTestQuestionsPage />} />

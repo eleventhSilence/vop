@@ -13,6 +13,7 @@ from drf_yasg.utils import swagger_auto_schema
 
 from courses.models import Course, CourseEnrollment, CourseMedia, CourseMediaType, CourseStatus
 from courses.serializers import (
+    AdminCourseParticipantSerializer,
     AdminCourseDetailSerializer,
     AdminCourseListSerializer,
     AdminCourseWriteSerializer,
@@ -259,3 +260,16 @@ class AdminCourseMediaDestroyView(generics.DestroyAPIView):
 
     def get_queryset(self):
         return CourseMedia.objects.filter(course_id=self.kwargs["course_id"])
+
+
+class AdminCourseParticipantsListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
+    serializer_class = AdminCourseParticipantSerializer
+
+    def get_queryset(self):
+        course = get_object_or_404(Course, id=self.kwargs["course_id"])
+        queryset = CourseEnrollment.objects.filter(course=course).select_related("user")
+        search = (self.request.query_params.get("search") or "").strip()
+        if search:
+            queryset = queryset.filter(Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search))
+        return queryset.order_by("-enrolled_at", "id")
