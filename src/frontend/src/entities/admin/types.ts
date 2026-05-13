@@ -168,3 +168,46 @@ export type AdminTestAttempt = {
   started_at: string;
   completed_at: string | null;
 };
+
+export type AdminAttemptQuestionOption = {
+  option_id: string;
+  text: string;
+  is_correct: boolean;
+  is_selected: boolean;
+};
+
+export type AdminAttemptQuestion = {
+  question_id: string;
+  order: number;
+  text: string;
+  question_type: AdminQuestionType;
+  is_correct: boolean;
+  options: AdminAttemptQuestionOption[];
+};
+
+export type AdminTestAttemptDetail = {
+  attempt_id: string;
+  attempt_number: number;
+  status: 'in_progress' | 'completed' | 'interrupted';
+  result: 'passed' | 'failed' | null;
+  score: number;
+  max_score: number;
+  started_at: string;
+  completed_at: string | null;
+  user: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+    email: string;
+  };
+  test: {
+    test_id: string;
+    title: string;
+  };
+  course: {
+    course_id: string;
+    title: string;
+  };
+  questions: AdminAttemptQuestion[];
+};
