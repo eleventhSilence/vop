@@ -7,6 +7,7 @@ import { extractApiError } from '@/shared/api/client';
 import { formatDateTime, formatRole, formatStatus } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
 import { Button } from '@/shared/ui/Button';
+import { AdminUserOverlay } from '@/pages/admin/components/AdminUserOverlay';
 import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { Input } from '@/shared/ui/Input';
 import { PageSection } from '@/shared/ui/PageSection';
@@ -195,55 +196,19 @@ export const AdminUsersPage = () => {
       </div>
 
       {editingUser && editDraft ? (
-        <div className="overlay" role="presentation" onClick={closeEditOverlay}>
-          <div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="card__row">
-              <div>
-                <h3>Редактирование пользователя</h3>
-                <p className="muted">{[editingUser.first_name, editingUser.last_name].filter(Boolean).join(' ') || 'Без имени'}</p>
-              </div>
-            </div>
-            <section className="admin-user-panel__section">
-              <div className="admin-user-panel__section-head">
-                <div>
-                  <p className="eyebrow">Редактируемые данные</p>
-                </div>
-              </div>
-            <div className="grid-2">
-              <label className="field"><span>Имя</span><input className="field__control" value={editDraft.first_name} onChange={(e) => setEditDraft((c) => (c ? { ...c, first_name: e.target.value } : c))} /></label>
-              <label className="field"><span>Фамилия</span><input className="field__control" value={editDraft.last_name} onChange={(e) => setEditDraft((c) => (c ? { ...c, last_name: e.target.value } : c))} /></label>
-              <label className="field"><span>Роль</span><select className="field__control" value={editDraft.role} onChange={(e) => setEditDraft((c) => (c ? { ...c, role: e.target.value as AdminUser['role'] } : c))} disabled={getSelfLocked(editingUser.user_id)}>{ROLE_OPTIONS.map((role) => <option key={role} value={role}>{formatRole(role)}</option>)}</select></label>
-              <label className="field"><span>Статус</span><select className="field__control" value={editDraft.status} onChange={(e) => setEditDraft((c) => (c ? { ...c, status: e.target.value as AdminUser['status'] } : c))} disabled={getSelfLocked(editingUser.user_id)}>{STATUS_OPTIONS.map((status) => <option key={status} value={status}>{formatStatus(status)}</option>)}</select></label>
-            </div>
-            </section>
-            <section className="admin-user-panel__section">
-              <div className="admin-user-panel__section-head">
-                <div>
-                  <p className="eyebrow">Служебная информация</p>
-                </div>
-              </div>
-              <div className="admin-user-panel__meta grid-2">
-                <div className="admin-user-panel__value-block">
-                  <p className="muted">Email</p>
-                  <strong>{editingUser.email}</strong>
-                </div>
-                <div className="admin-user-panel__value-block">
-                  <p className="muted">Дата регистрации</p>
-                  <strong>{formatDateTime(editingUser.registered_at)}</strong>
-                </div>
-                <div className="admin-user-panel__value-block">
-                  <p className="muted">Последний вход</p>
-                  <strong>{editingUser.last_login_at ? formatDateTime(editingUser.last_login_at) : 'Нет данных'}</strong>
-                </div>
-              </div>
-            </section>
-            <div className="users-actions__buttons">
-              <Button variant="secondary" onClick={handleSaveUser} disabled={pendingUserId === editingUser.user_id}>Сохранить</Button>
-              <Button variant="ghost" onClick={closeEditOverlay} disabled={pendingUserId === editingUser.user_id}>Отмена</Button>
-            </div>
-          </div>
-        </div>
+        <AdminUserOverlay
+          user={editingUser}
+          draft={editDraft}
+          roleOptions={ROLE_OPTIONS}
+          statusOptions={STATUS_OPTIONS}
+          pending={pendingUserId === editingUser.user_id}
+          selfLocked={getSelfLocked(editingUser.user_id)}
+          onClose={closeEditOverlay}
+          onChangeDraft={(payload) => setEditDraft((current) => (current ? { ...current, ...payload } : current))}
+          onSave={handleSaveUser}
+        />
       ) : null}
     </PageSection>
+
   );
 };

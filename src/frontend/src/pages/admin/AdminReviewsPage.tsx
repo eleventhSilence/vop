@@ -12,6 +12,7 @@ import { PageSection } from '@/shared/ui/PageSection';
 import { RatingStars } from '@/shared/ui/RatingStars';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
 import { Toast } from '@/shared/ui/Toast';
+import { AdminReviewOverlay } from '@/pages/admin/components/AdminReviewOverlay';
 
 const getPageFromUrl = (url: string | null) => {
   if (!url) return null;
@@ -186,42 +187,14 @@ export const AdminReviewsPage = () => {
       </div>
 
       {selectedReview ? (
-        <div className="overlay" role="presentation" onClick={() => setSelectedReview(null)}>
-          <div className="overlay__panel card stack-list" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="card__row"><h3>Модерация отзыва</h3></div>
-            <section className="admin-user-panel__section">
-              <div className="grid-2">
-                <div><p className="muted">Курс</p><strong>{selectedReview.course_title}</strong></div>
-                <div><p className="muted">Автор</p><strong>{getReviewAuthorLabel(selectedReview)}</strong></div>
-                <div><p className="muted">Email автора</p><strong>{selectedReview.user_email}</strong></div>
-                <div><p className="muted">Оценка</p><strong><RatingStars rating={selectedReview.rating} ariaLabel="Оценка в модерации" /></strong></div>
-                <div><p className="muted">Статус</p><StatusBadge status={selectedReview.status} label={formatStatus(selectedReview.status)} tone={getReviewStatusTone(selectedReview.status)} /></div>
-              </div>
-              <div>
-                <p className="muted">Текст отзыва</p>
-                <p>{selectedReview.comment}</p>
-              </div>
-            </section>
-            <section className="admin-user-panel__section">
-              <div className="admin-user-panel__section-head"><p className="eyebrow">Служебная информация</p></div>
-              <div className="admin-user-panel__meta grid-2">
-                <div className="admin-user-panel__value-block"><p className="muted">Дата создания</p><strong>{formatDateTime(selectedReview.created_at)}</strong></div>
-                <div className="admin-user-panel__value-block"><p className="muted">Дата обновления</p><strong>{formatDateTime(selectedReview.updated_at)}</strong></div>
-              </div>
-            </section>
-            <div className="users-actions__buttons">
-              {selectedReview.status === 'pending' ? (
-                <>
-                  <Button variant="secondary" onClick={() => handleOverlayStatusChange('approved')} disabled={moderateMutation.isPending}>Одобрить</Button>
-                  <Button variant="ghost" onClick={() => handleOverlayStatusChange('rejected')} disabled={moderateMutation.isPending}>Отклонить</Button>
-                </>
-              ) : (
-                <Button variant="secondary" onClick={() => handleOverlayStatusChange('pending')} disabled={moderateMutation.isPending}>Изменить решение</Button>
-              )}
-              <Button variant="ghost" onClick={() => setSelectedReview(null)} disabled={moderateMutation.isPending}>Закрыть</Button>
-            </div>
-          </div>
-        </div>
+        <AdminReviewOverlay
+          review={selectedReview}
+          pending={moderateMutation.isPending}
+          onClose={() => setSelectedReview(null)}
+          onChangeStatus={handleOverlayStatusChange}
+          getStatusTone={getReviewStatusTone}
+          getAuthorLabel={getReviewAuthorLabel}
+        />
       ) : null}
       {toast ? <Toast type={toast.type} message={toast.message} /> : null}
     </PageSection>
