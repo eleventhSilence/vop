@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
-import type { AdminUser } from '@/entities/admin/types';
+import type { AdminUser, AdminUserUpdatePayload } from '@/entities/admin/types';
+import { useAuth } from '@/features/auth/model/useAuth';
 import { reviewsApi } from '@/entities/review/api';
 import type { AdminReview, ReviewStatus } from '@/entities/review/types';
 import { AdminReviewOverlay } from '@/pages/admin/components/AdminReviewOverlay';
@@ -16,6 +17,13 @@ import { Toast } from '@/shared/ui/Toast';
 const ROLE_OPTIONS: Array<AdminUser['role']> = ['USER', 'ADMIN'];
 const STATUS_OPTIONS: Array<AdminUser['status']> = ['ACTIVE', 'BLOCKED'];
 
+type EditableUser = {
+  first_name: string;
+  last_name: string;
+  role: AdminUser['role'];
+  status: AdminUser['status'];
+};
+
 const getReviewStatusTone = (status: ReviewStatus) => {
   if (status === 'approved') return 'success';
   if (status === 'rejected') return 'danger';
@@ -28,22 +36,55 @@ const getReviewAuthorLabel = (review: AdminReview) => {
 };
 
 export const AdminDashboardPage = () => {
+  const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [editDraft, setEditDraft] = useState<EditableUser | null>(null);
   const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const dashboardQuery = useQuery({ queryKey: ['admin', 'dashboard'], queryFn: adminApi.dashboard });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ userId, payload }: { userId: string; payload: Partial<AdminUser> }) => adminApi.updateUser(userId, payload),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    mutationFn: ({ userId, payload }: { userId: string; payload: AdminUserUpdatePayload }) => adminApi.updateUser(userId, payload),
+    onSuccess: async (_, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'user-detail', variables.userId], exact: true }),
+      ]);
       setEditingUser(null);
+      setEditDraft(null);
+      setToast({ type: 'success', message: 'Пользователь успешно обновлён.' });
     },
+    onError: (error) => setToast({ type: 'error', message: extractApiError(error) }),
   });
+
+  const getSelfLocked = (userId: string) => currentUser?.user_id === userId;
+
+  const startEditingUser = (user: AdminUser) => {
+    setEditingUser(user);
+    setEditDraft({ first_name: user.first_name, last_name: user.last_name, role: user.role, status: user.status });
+  };
+
+  const closeUserOverlay = () => {
+    setEditingUser(null);
+    setEditDraft(null);
+  };
+
+  const handleSaveUser = () => {
+    if (!editingUser || !editDraft) return;
+    updateUserMutation.mutate({
+      userId: editingUser.user_id,
+      payload: {
+        first_name: editDraft.first_name.trim(),
+        last_name: editDraft.last_name.trim(),
+        role: editDraft.role,
+        status: editDraft.status,
+      },
+    });
+  };
 
   const moderateMutation = useMutation({
     mutationFn: ({ reviewId, status }: { reviewId: string; status: ReviewStatus }) => reviewsApi.adminModerate(reviewId, status),
@@ -78,7 +119,7 @@ export const AdminDashboardPage = () => {
               <h3>Последние пользователи</h3>
               <div className="stack-list">
                 {dashboardQuery.data.recent_users.length ? dashboardQuery.data.recent_users.map((user) => (
-                  <button type="button" className="list-item list-item--clickable" key={user.user_id} onClick={() => setEditingUser(user as AdminUser)}>
+                  <button type="button" className="list-item list-item--clickable" key={user.user_id} onClick={() => startEditingUser(user as AdminUser)}>
                     <strong>{[user.first_name, user.last_name].filter(Boolean).join(' ') || 'Без имени'}</strong>
                     <p>{user.email}</p>
                     <p>{formatRole(user.role)} · {formatStatus(user.status)}</p>
@@ -105,7 +146,19 @@ export const AdminDashboardPage = () => {
           </div>
         </>
       ) : null}
-      {editingUser ? <AdminUserOverlay user={editingUser} draft={editingUser} roleOptions={ROLE_OPTIONS} statusOptions={STATUS_OPTIONS} pending={updateUserMutation.isPending} selfLocked={false} onClose={() => setEditingUser(null)} onChangeDraft={(payload) => setEditingUser((current) => (current ? { ...current, ...payload } : current))} onSave={() => editingUser && updateUserMutation.mutate({ userId: editingUser.user_id, payload: editingUser })} /> : null}
+      {editingUser && editDraft ? (
+        <AdminUserOverlay
+          user={editingUser}
+          draft={editDraft}
+          roleOptions={ROLE_OPTIONS}
+          statusOptions={STATUS_OPTIONS}
+          pending={updateUserMutation.isPending}
+          selfLocked={getSelfLocked(editingUser.user_id)}
+          onClose={closeUserOverlay}
+          onChangeDraft={(payload) => setEditDraft((current) => (current ? { ...current, ...payload } : current))}
+          onSave={handleSaveUser}
+        />
+      ) : null}
       {selectedReview ? <AdminReviewOverlay review={selectedReview} pending={moderateMutation.isPending} onClose={() => setSelectedReview(null)} onChangeStatus={(status) => moderateMutation.mutate({ reviewId: selectedReview.review_id, status })} getStatusTone={getReviewStatusTone} getAuthorLabel={getReviewAuthorLabel} /> : null}
       {toast ? <Toast type={toast.type} message={toast.message} /> : null}
     </PageSection>
