@@ -78,14 +78,29 @@ export const AdminCourseParticipantsPage = () => {
     }
   }, [participants.length, knownPageSize]);
 
+  const courseStatusLabel = courseQuery.data?.status === 'available' ? 'Курс доступен' : 'Курс недоступен';
+
   return (
     <PageSection>
-      <div className="section-header">
-        <div>
-          <p className="eyebrow">АДМИНИСТРИРОВАНИЕ</p>
-          <h2>Участники курса · «{courseQuery.data?.title ?? 'Курс'}»</h2>
+      <div className="card stack-list admin-question-context-card">
+        <div className="admin-question-context-card__top">
+          <div className="admin-question-context-card__content">
+            <p className="eyebrow">АДМИНИСТРИРОВАНИЕ</p>
+            <h2 className="admin-question-context-card__heading">Участники курса · «{courseQuery.data?.title ?? 'Курс'}»</h2>
+            {courseQuery.data ? (
+              <div className="admin-question-context-card__meta">
+                <div className="admin-test-card__meta">
+                  <span className={`badge ${courseQuery.data.status === 'available' ? 'badge--success' : 'badge--warning'}`}>
+                    {courseStatusLabel}
+                  </span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <div className="admin-question-context-card__actions">
+            <Link className="admin-question-page__back-chip" to="/admin/courses">← К списку курсов</Link>
+          </div>
         </div>
-        <Link className="button button--ghost" to="/admin/courses">← К списку курсов</Link>
       </div>
 
       <div className="card admin-filters">
