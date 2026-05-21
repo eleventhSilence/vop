@@ -9,7 +9,21 @@ import { EmptyState, ErrorState, LoadingState } from '@/shared/ui/DataState';
 import { PageSection } from '@/shared/ui/PageSection';
 import { Toast } from '@/shared/ui/Toast';
 
-const getAttemptStatusLabel = (status?: string) => status === 'in_progress' ? 'Активна' : status === 'completed' ? 'Завершена' : status === 'interrupted' ? 'Прервана' : 'Неизвестный статус';
+const getAttemptStatusLabel = (status?: string, isPassed?: boolean) => {
+  if (status === 'in_progress') {
+    return 'Активная';
+  }
+
+  if (status === 'interrupted') {
+    return 'Прервана';
+  }
+
+  if (status === 'completed') {
+    return isPassed ? 'Успешно пройдена' : 'Не пройдена';
+  }
+
+  return 'Неизвестный статус';
+};
 
 
 type AttemptAnswerPayload =
@@ -119,14 +133,14 @@ export const TestPage = () => {
       {!attemptsQuery.isLoading && !attempts.length ? <EmptyState message="Вы ещё не отправляли попытки по этому тесту." /> : null}
       <div className="stack-list">{attempts.map((attempt) => {
         const isDetailsDisabled = hasActiveAttempt || attempt.status === 'in_progress';
-        return <div key={attempt.attempt_id} className="list-item"><strong>Попытка #{attempt.attempt_number}</strong><p>Статус: {getAttemptStatusLabel(attempt.status)}</p><p>Результат: {attempt.status === 'in_progress' ? 'ещё не рассчитан' : `${attempt.score} из ${testQuery.data.questions.length}`}</p>{attempt.status !== 'in_progress' ? <Button type="button" variant="secondary" disabled={isDetailsDisabled} title={isDetailsDisabled ? 'Подробности доступны после завершения активной попытки.' : undefined} onClick={() => setSelectedAttemptId(attempt.attempt_id)}>Подробнее</Button> : null}</div>;
+        return <div key={attempt.attempt_id} className="list-item"><strong>Попытка #{attempt.attempt_number}</strong><p>Статус: {getAttemptStatusLabel(attempt.status, attempt.is_passed)}</p><p>Результат: {attempt.status === 'in_progress' ? 'ещё не рассчитан' : `${attempt.score} из ${testQuery.data.questions.length}`}</p>{attempt.status !== 'in_progress' ? <Button type="button" variant="secondary" disabled={isDetailsDisabled} title={isDetailsDisabled ? 'Подробности доступны после завершения активной попытки.' : undefined} onClick={() => setSelectedAttemptId(attempt.attempt_id)}>Подробнее</Button> : null}</div>;
       })}</div>
     </aside></div></div></> : null}
 
     {selectedAttemptId ? <div className="overlay" role="dialog" aria-modal="true"><div className="overlay__backdrop" onClick={() => setSelectedAttemptId(null)} /><div className="overlay__panel card"><div className="card__row"><h3>Детали попытки</h3><Button type="button" variant="ghost" onClick={() => setSelectedAttemptId(null)}>Закрыть</Button></div>
       {attemptDetailQuery.isLoading ? <LoadingState message="Загружаем детали..." /> : null}
       {attemptDetailQuery.isError ? <ErrorState message={extractApiError(attemptDetailQuery.error)} /> : null}
-      {attemptDetailQuery.data ? <div className="form-stack"><p>Попытка #{attemptDetailQuery.data.attempt_number} · {new Date(attemptDetailQuery.data.created_at).toLocaleString()} · Статус: {getAttemptStatusLabel((attemptDetailQuery.data as { status?: string }).status)} · Баллы: {attemptDetailQuery.data.score} · {attemptDetailQuery.data.percent}%</p>{attemptDetailQuery.data.questions.map((q) => <div key={q.question_id} className="question-block"><strong>{q.order}. {q.text}</strong><p>{q.result === 'unanswered' ? 'Без ответа (0 баллов)' : q.result === 'success' ? 'Ответ верный' : 'Ответ содержит ошибки (0 баллов)'}</p>{q.selected_options.length === 0 ? <p className="muted">Без ответа</p> : q.selected_options.map((o) => <div key={o.option_id} className={`attempt-option attempt-option--${o.status}`}>{o.text}</div>)}</div>)}</div> : null}
+      {attemptDetailQuery.data ? <div className="form-stack"><p>Попытка #{attemptDetailQuery.data.attempt_number} · {new Date(attemptDetailQuery.data.created_at).toLocaleString()} · Статус: {getAttemptStatusLabel(attemptDetailQuery.data.status, attemptDetailQuery.data.is_passed)} · Баллы: {attemptDetailQuery.data.score} · {attemptDetailQuery.data.percent}%</p>{attemptDetailQuery.data.questions.map((q) => <div key={q.question_id} className="question-block"><strong>{q.order}. {q.text}</strong><p>{q.result === 'unanswered' ? 'Без ответа (0 баллов)' : q.result === 'success' ? 'Ответ верный' : 'Ответ содержит ошибки (0 баллов)'}</p>{q.selected_options.length === 0 ? <p className="muted">Без ответа</p> : q.selected_options.map((o) => <div key={o.option_id} className={`attempt-option attempt-option--${o.status}`}>{o.text}</div>)}</div>)}</div> : null}
     </div></div> : null}
   </PageSection>;
 };
