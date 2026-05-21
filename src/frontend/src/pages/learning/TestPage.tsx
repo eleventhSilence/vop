@@ -67,18 +67,18 @@ export const TestPage = () => {
   const returnTo = locationState?.returnTo ?? sourceReturnTo;
   const backTarget = returnTo;
   const backLabel = locationState?.from === 'course-learning' ? '← К теории' : '← Мои курсы';
-  const finalizedAttempts = attempts.filter((a) => a.status === "completed" || a.status === "interrupted");
-  const attemptsUsed = finalizedAttempts.length;
+  const finalizedAttempts = attempts.filter((a) => a.status === 'completed' || a.status === 'interrupted');
+  const activeAttemptFromHistory = attempts.some((attempt) => attempt.status === 'in_progress');
+  const hasActiveAttempt = Boolean(activeAttemptId) || activeAttemptFromHistory;
+  const attemptsUsed = finalizedAttempts.length + (hasActiveAttempt ? 1 : 0);
   const attemptsMax = testQuery.data?.max_attempts ?? 0;
-  const attemptsLeft = Math.max(attemptsMax - attemptsUsed, 0);
   const passedAttempt = attempts.find((attempt) => attempt.status === 'completed' && attempt.is_passed);
   const testPassed = Boolean(passedAttempt);
-  const attemptsLimitReached = attemptsLeft === 0;
-  const canStartAttempt = !activeAttemptId && !testPassed && !attemptsLimitReached;
+  const attemptsLimitReached = attemptsMax > 0 && attemptsUsed >= attemptsMax;
+  const canStartAttempt = !activeAttemptId && !attemptsLimitReached;
   const showTopBackButton = !isTestVisible && !activeAttemptId;
-  const hasActiveAttempt = Boolean(activeAttemptId) || attempts.some((attempt) => attempt.status === 'in_progress');
   const isTakingTest = Boolean(activeAttemptId && isTestVisible);
-  const testState = activeAttemptId ? 'active' : testPassed ? 'passed' : attemptsLimitReached ? 'attempts-limit' : 'available';
+  const testState = activeAttemptId ? 'active' : attemptsLimitReached ? 'attempts-limit' : testPassed ? 'passed' : 'available';
 
   useEffect(() => {
     if (!toast) {
@@ -98,9 +98,12 @@ export const TestPage = () => {
         {showTopBackButton ? <div className="test-back-row"><Link to={backTarget} className="button button--ghost public-course-details-back-link">{backLabel}</Link></div> : null}
         <div className="details-layout"><form className="card card--wide form-stack" onSubmit={(e: FormEvent) => { e.preventDefault(); submitMutation.mutate(submitPayload); }}>
       <h2>{testQuery.data.title}</h2>{!isTakingTest ? <p>{testQuery.data.description}</p> : null}
+      {!isTakingTest && attemptsMax > 0 ? <p><strong>Попытки:</strong> {attemptsUsed}/{attemptsMax}</p> : null}
       {!isTestVisible && testState === 'available' ? <div className="form-stack"><p>После начала тестирования будет создана активная попытка. Пока попытка активна, доступ к теории и подробностям прошлых попыток будет временно ограничен. Если вы покинете тест через элементы интерфейса, попытка будет завершена с текущими ответами, а вопросы без ответа будут оценены в 0 баллов.</p><Button type="button" onClick={() => startMutation.mutate()} disabled={startMutation.isPending || !canStartAttempt}>Начать тестирование</Button></div> : null}
-      {!isTestVisible && testState === 'attempts-limit' ? <ErrorState message={`Лимит попыток исчерпан. Вы использовали ${attemptsUsed} из ${attemptsMax} попыток. Повторное прохождение недоступно. Обратитесь к администратору или ответственному за обучение для получения дополнительной попытки.`} /> : null}
-      {!isTestVisible && testState === 'passed' ? <div className="form-stack"><p>Тест успешно пройден. Результат сохранён в истории попыток, курс считается завершённым.</p><p>Ваш результат: {passedAttempt?.score ?? 0} из {testQuery.data.questions.length}.</p></div> : null}
+      {!isTestVisible && testState === 'attempts-limit' ? <ErrorState message={testPassed
+        ? 'Лимит попыток исчерпан. Тест уже успешно пройден, курс завершён.'
+        : 'Лимит попыток исчерпан. Для получения дополнительной попытки обратитесь к администратору платформы.'} /> : null}
+      {!isTestVisible && testState === 'passed' ? <div className="form-stack"><p>Тест успешно пройден. Результат сохранён в истории попыток, курс считается завершённым.</p><p>Ваш результат: {passedAttempt?.score ?? 0} из {testQuery.data.questions.length}.</p><Button type="button" onClick={() => startMutation.mutate()} disabled={startMutation.isPending || !canStartAttempt}>Пройти тест ещё раз</Button></div> : null}
       {!isTestVisible && testState === 'active' ? <div className="form-stack"><p>У вас есть незавершённая попытка. Продолжите тестирование или завершите её перед возвратом к теории.</p><Button type="button" onClick={() => { setAttemptId(activeAttemptId); setIsTestVisible(true); }}>Продолжить тестирование</Button></div> : null}
       {isTestVisible ? <>
         {testQuery.data.questions.map((question) => <fieldset key={question.question_id} className="question-block"><legend>{question.order}. {question.text}</legend><p className="question-type-hint">{question.question_type === 'single_choice' ? 'Выберите один вариант ответа.' : 'Отметьте все подходящие варианты ответа.'}</p>{question.options.map((option) => {
