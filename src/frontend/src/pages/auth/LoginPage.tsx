@@ -56,9 +56,8 @@ export const LoginPage = () => {
     <PageSection>
       <div className="auth-card">
         <div>
-          <p className="eyebrow">Auth flow</p>
+          <p className="eyebrow">Авторизация</p>
           <h2>Вход в систему</h2>
-          <p>Используется backend endpoint <code>/api/auth/login/</code> и существующая модель JWT.</p>
         </div>
 
         <form className="form-stack" onSubmit={onSubmit}>
