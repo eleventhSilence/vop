@@ -122,7 +122,7 @@ export const AdminQuestionOptionsPage = () => {
     onSuccess: async () => {
       setToast({ type: 'success', message: 'Вариант ответа создан.' });
       closeCreate();
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'question-options', questionId], exact: true });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'question-options', questionId] });
     },
     onError: (error) => {
       setToast({ type: 'error', message: extractApiError(error) });
@@ -140,7 +140,7 @@ export const AdminQuestionOptionsPage = () => {
     onSuccess: async () => {
       setToast({ type: 'success', message: 'Вариант ответа обновлён.' });
       closeEdit();
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'question-options', questionId], exact: true });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'question-options', questionId] });
     },
     onError: (error) => {
       setToast({ type: 'error', message: extractApiError(error) });
@@ -151,7 +151,7 @@ export const AdminQuestionOptionsPage = () => {
     mutationFn: (optionId: string) => adminApi.deleteAnswerOption(optionId),
     onSuccess: async () => {
       setToast({ type: 'success', message: 'Вариант ответа удалён.' });
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'question-options', questionId], exact: true });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'question-options', questionId] });
     },
     onError: (error) => {
       setToast({ type: 'error', message: extractApiError(error) });

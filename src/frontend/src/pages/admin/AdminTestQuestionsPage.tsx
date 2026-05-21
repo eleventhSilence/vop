@@ -86,7 +86,7 @@ export const AdminTestQuestionsPage = () => {
     onSuccess: async () => {
       setToast({ type: 'success', message: 'Вопрос успешно создан.' });
       closeCreate();
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'questions', testId], exact: true });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'questions', testId] });
     },
     onError: (error) => {
       setToast({ type: 'error', message: extractApiError(error) });
@@ -99,7 +99,7 @@ export const AdminTestQuestionsPage = () => {
     onSuccess: async () => {
       setToast({ type: 'success', message: 'Вопрос успешно обновлён.' });
       closeEdit();
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'questions', testId], exact: true });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'questions', testId] });
     },
     onError: (error) => {
       setToast({ type: 'error', message: extractApiError(error) });
@@ -111,7 +111,7 @@ export const AdminTestQuestionsPage = () => {
     onSuccess: async () => {
       setToast({ type: 'success', message: 'Вопрос успешно удалён.' });
       closeEdit();
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'questions', testId], exact: true });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'questions', testId] });
     },
     onError: (error) => {
       setToast({ type: 'error', message: extractApiError(error) });
