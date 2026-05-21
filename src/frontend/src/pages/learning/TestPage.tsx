@@ -11,15 +11,15 @@ import { Toast } from '@/shared/ui/Toast';
 
 const getAttemptStatusLabel = (status?: string, isPassed?: boolean) => {
   if (status === 'in_progress') {
-    return 'Активная';
+    return 'Активно';
   }
 
   if (status === 'interrupted') {
-    return 'Прервана';
+    return 'Прервано';
   }
 
   if (status === 'completed') {
-    return isPassed ? 'Успешно пройдена' : 'Не пройдена';
+    return isPassed ? 'Успешно пройдено' : 'Не пройдено';
   }
 
   return 'Неизвестный статус';
