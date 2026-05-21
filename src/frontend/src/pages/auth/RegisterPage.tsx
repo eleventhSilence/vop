@@ -39,7 +39,6 @@ export const RegisterPage = () => {
         <div>
           <p className="eyebrow">Регистрация</p>
           <h2>Создание аккаунта</h2>
-          <p>После регистрации frontend сохраняет токены и восстанавливает профиль через <code>/api/account/me/</code>.</p>
         </div>
 
         <form className="form-stack" onSubmit={onSubmit}>
