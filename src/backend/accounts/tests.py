@@ -8,6 +8,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Account, AccountRole, AccountStatus
+from accounts.serializers import PublicUserProfileSerializer
 from courses.models import Course, CourseEnrollment, CourseStatus
 from reviews.models import Review, ReviewStatus
 from testing.models import AnswerOption, CourseTest, TestAttempt, TestQuestion
@@ -1080,3 +1081,84 @@ class AdminDashboardApiTests(APITestCase):
         self.assertNotIn(str(self.rejected_review.id), {item["review_id"] for item in response.data["pending_reviews"]})
         self.assertEqual(response.data["pending_reviews"][0]["status"], ReviewStatus.PENDING)
         self.assertEqual(response.data["pending_reviews"][0]["comment"], latest.text)
+
+
+class PublicUserProfileCompletedCoursesCountTests(APITestCase):
+    def setUp(self):
+        self.user = Account.objects.create_user(
+            email="public-profile@example.com",
+            password="StrongPass123",
+            first_name="Public",
+            last_name="User",
+        )
+
+    def _create_enrollment_with_test(self, *, suffix: str) -> tuple[CourseEnrollment, CourseTest]:
+        course = Course.objects.create(
+            title=f"Public course {suffix}",
+            short_description="desc",
+            content="content",
+            status=CourseStatus.AVAILABLE,
+        )
+        enrollment = CourseEnrollment.objects.create(user=self.user, course=course, is_theory_completed=True)
+        test = CourseTest.objects.create(
+            course=course,
+            title=f"Public test {suffix}",
+            description="desc",
+            passing_score=1,
+            max_attempts=3,
+            is_active=True,
+        )
+        return enrollment, test
+
+    def _serialize_completed_courses_count(self) -> int:
+        return PublicUserProfileSerializer(instance=self.user).data["completed_courses_count"]
+
+    def test_returns_zero_when_user_has_no_enrollments(self):
+        self.assertEqual(self._serialize_completed_courses_count(), 0)
+
+    def test_returns_zero_when_user_has_enrollments_without_attempts(self):
+        self._create_enrollment_with_test(suffix="no-attempts")
+        self.assertEqual(self._serialize_completed_courses_count(), 0)
+
+    def test_returns_zero_when_attempts_are_not_passed(self):
+        _, test = self._create_enrollment_with_test(suffix="failed")
+        TestAttempt.objects.create(user=self.user, test=test, score=0, is_passed=False, attempt_number=1)
+        self.assertEqual(self._serialize_completed_courses_count(), 0)
+
+    def test_returns_one_when_single_course_has_passed_attempt(self):
+        _, test = self._create_enrollment_with_test(suffix="passed")
+        TestAttempt.objects.create(user=self.user, test=test, score=1, is_passed=True, attempt_number=1)
+        self.assertEqual(self._serialize_completed_courses_count(), 1)
+
+    def test_returns_correct_count_for_multiple_passed_courses(self):
+        _, test_1 = self._create_enrollment_with_test(suffix="multi-1")
+        _, test_2 = self._create_enrollment_with_test(suffix="multi-2")
+        _, test_3 = self._create_enrollment_with_test(suffix="multi-3")
+        TestAttempt.objects.create(user=self.user, test=test_1, score=1, is_passed=True, attempt_number=1)
+        TestAttempt.objects.create(user=self.user, test=test_2, score=0, is_passed=False, attempt_number=1)
+        TestAttempt.objects.create(user=self.user, test=test_2, score=1, is_passed=True, attempt_number=2)
+        TestAttempt.objects.create(user=self.user, test=test_3, score=0, is_passed=False, attempt_number=1)
+        self.assertEqual(self._serialize_completed_courses_count(), 2)
+
+    def test_interrupted_and_failed_attempts_do_not_increase_counter(self):
+        _, test = self._create_enrollment_with_test(suffix="interrupted")
+        TestAttempt.objects.create(
+            user=self.user,
+            test=test,
+            score=0,
+            is_passed=False,
+            attempt_number=1,
+            status=TestAttempt.AttemptStatus.INTERRUPTED,
+        )
+        self.assertEqual(self._serialize_completed_courses_count(), 0)
+
+    def test_completed_courses_count_is_fetched_without_n_plus_one_queries(self):
+        _, test_1 = self._create_enrollment_with_test(suffix="queries-1")
+        _, test_2 = self._create_enrollment_with_test(suffix="queries-2")
+        TestAttempt.objects.create(user=self.user, test=test_1, score=1, is_passed=True, attempt_number=1)
+        TestAttempt.objects.create(user=self.user, test=test_2, score=1, is_passed=True, attempt_number=1)
+
+        with self.assertNumQueries(1):
+            count = self._serialize_completed_courses_count()
+
+        self.assertEqual(count, 2)
