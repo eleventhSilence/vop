@@ -33,6 +33,21 @@ const defaultFormValues: CreateTestFormValues = {
   is_active: true,
 };
 
+const fetchAllTestsForCreate = async () => {
+  const collectedCourseIds = new Set<string>();
+  let currentPage = 1;
+  let hasNext = true;
+
+  while (hasNext) {
+    const response = ensurePaginated(await adminApi.tests({ page: currentPage, page_size: 100 }));
+    response.results.forEach((test) => collectedCourseIds.add(test.course_id));
+    hasNext = Boolean(response.next);
+    currentPage += 1;
+  }
+
+  return collectedCourseIds;
+};
+
 export const AdminTestsPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -51,6 +66,8 @@ export const AdminTestsPage = () => {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | AdminCourseStatus>('all');
   const [knownPageSize, setKnownPageSize] = useState<number | null>(null);
+  const [isCreateCourseMenuOpen, setCreateCourseMenuOpen] = useState(false);
+  const createCourseMenuRef = useRef<HTMLDivElement | null>(null);
 
   const getPageFromUrl = (url: string | null) => {
     if (!url) return null;
@@ -72,11 +89,29 @@ export const AdminTestsPage = () => {
     setPage(1);
   }, [search, statusFilter]);
 
+  useEffect(() => {
+    if (!isCreateCourseMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!createCourseMenuRef.current?.contains(event.target as Node)) {
+        setCreateCourseMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [isCreateCourseMenuOpen]);
+
   const testsQuery = useQuery({
     queryKey: ['admin', 'tests', page, search, statusFilter],
     queryFn: () => adminApi.tests({ page, search, status: statusFilter }),
   });
   const coursesQuery = useQuery({ queryKey: ['admin', 'courses', 'for-test-create'], queryFn: () => adminApi.courses({ page_size: 100 }) });
+  const existingTestCourseIdsQuery = useQuery({
+    queryKey: ['admin', 'tests', 'course-ids-for-create'],
+    queryFn: fetchAllTestsForCreate,
+    enabled: isCreateOpen,
+  });
 
   const paginatedTests = testsQuery.data ? ensurePaginated(testsQuery.data) : { count: 0, next: null, previous: null, results: [] };
   const tests = paginatedTests.results;
@@ -87,6 +122,10 @@ export const AdminTestsPage = () => {
   const pageSize = knownPageSize ?? (tests.length || 1);
   const totalPages = Math.max(1, Math.ceil(paginatedTests.count / pageSize));
   const createCourses = coursesQuery.data ? ensurePaginated(coursesQuery.data).results : [];
+  const availableCreateCourses = useMemo(() => {
+    if (!existingTestCourseIdsQuery.data) return createCourses;
+    return createCourses.filter((course) => !existingTestCourseIdsQuery.data?.has(course.course_id));
+  }, [createCourses, existingTestCourseIdsQuery.data]);
   useEffect(() => {
     if (tests.length && (!knownPageSize || tests.length > knownPageSize)) {
       setKnownPageSize(tests.length);
@@ -141,6 +180,7 @@ export const AdminTestsPage = () => {
 
   const closeCreate = () => {
     setCreateOpen(false);
+    setCreateCourseMenuOpen(false);
     setValidationErrors({});
     setFormValues(defaultFormValues);
   };
@@ -378,20 +418,41 @@ export const AdminTestsPage = () => {
             <form className="stack-list" onSubmit={handleCreate}>
               <label className="field" htmlFor="admin-test-create-course-id">
                 <span className="field__label">Курс *</span>
-                <select
-                  id="admin-test-create-course-id"
-                  className="field__control"
-                  value={formValues.course_id}
-                  onChange={(event) => setFormValues((current) => ({ ...current, course_id: event.target.value }))}
-                  required
-                >
-                  <option value="">Выберите курс</option>
-                  {createCourses.map((course) => (
-                    <option key={course.course_id} value={course.course_id}>
-                      {course.title}
-                    </option>
-                  ))}
-                </select>
+                <div className="admin-select" ref={createCourseMenuRef}>
+                  <input id="admin-test-create-course-id" name="course_id" value={formValues.course_id} required hidden readOnly />
+                  <button
+                    type="button"
+                    className="field__control admin-select__trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded={isCreateCourseMenuOpen}
+                    onClick={() => availableCreateCourses.length && setCreateCourseMenuOpen((current) => !current)}
+                    disabled={!availableCreateCourses.length || existingTestCourseIdsQuery.isLoading}
+                  >
+                    {formValues.course_id
+                      ? availableCreateCourses.find((course) => course.course_id === formValues.course_id)?.title ?? 'Выберите курс'
+                      : 'Выберите курс'}
+                  </button>
+                  {isCreateCourseMenuOpen ? (
+                    <div className="admin-select__menu" role="listbox" aria-labelledby="admin-test-create-course-id">
+                      {availableCreateCourses.map((course) => (
+                        <button
+                          key={course.course_id}
+                          type="button"
+                          className={`admin-select__option${formValues.course_id === course.course_id ? ' admin-select__option--active' : ''}`}
+                          onClick={() => {
+                            setFormValues((current) => ({ ...current, course_id: course.course_id }));
+                            setCreateCourseMenuOpen(false);
+                          }}
+                        >
+                          {course.title}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                {!coursesQuery.isLoading && !existingTestCourseIdsQuery.isLoading && availableCreateCourses.length === 0 ? (
+                  <span className="field__error">Для всех курсов уже созданы тесты.</span>
+                ) : null}
                 {validationErrors.course_id ? <span className="field__error">{validationErrors.course_id}</span> : null}
               </label>
               <Input
@@ -447,7 +508,7 @@ export const AdminTestsPage = () => {
                 <Button variant="ghost" type="button" onClick={closeCreate}>
                   Отмена
                 </Button>
-                <Button type="submit" disabled={createTestMutation.isPending || coursesQuery.isLoading}>
+                <Button type="submit" disabled={createTestMutation.isPending || coursesQuery.isLoading || existingTestCourseIdsQuery.isLoading || availableCreateCourses.length === 0}>
                   {createTestMutation.isPending ? 'Создание...' : 'Создать'}
                 </Button>
               </div>
