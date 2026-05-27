@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminCourseStatus, AdminCourseUpdatePayload } from '@/entities/admin/types';
+import { COURSE_STATUS_OPTIONS } from '@/entities/course/status';
 import { extractApiError } from '@/shared/api/client';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, ErrorState, LoadingState, SuccessState } from '@/shared/ui/DataState';
@@ -224,8 +225,9 @@ export const AdminCourseDetailPage = () => {
               value={formValues.status}
               onChange={(event) => setFormValues((current) => ({ ...current, status: event.target.value as AdminCourseStatus }))}
             >
-              <option value="unavailable">unavailable</option>
-              <option value="available">available</option>
+              {COURSE_STATUS_OPTIONS.map((statusOption) => (
+                <option key={statusOption.value} value={statusOption.value}>{statusOption.label}</option>
+              ))}
             </select>
           </label>
           <div className="actions-row">

@@ -1,8 +1,9 @@
+import { COURSE_STATUS_LABELS } from '@/entities/course/status';
+
 const statusLabels: Record<string, string> = {
   ACTIVE: 'Активен',
   BLOCKED: 'Заблокирован',
-  available: 'Доступен',
-  unavailable: 'Скрыт',
+  ...COURSE_STATUS_LABELS,
   pending: 'На модерации',
   approved: 'Одобрен',
   rejected: 'Отклонён',
