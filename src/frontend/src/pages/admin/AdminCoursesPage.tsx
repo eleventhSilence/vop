@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { adminApi } from '@/entities/admin/api';
 import type { AdminCourseCreatePayload, AdminCourseStatus } from '@/entities/admin/types';
+import { COURSE_STATUS_OPTIONS } from '@/entities/course/status';
 import { extractApiError } from '@/shared/api/client';
 import { formatDateTime } from '@/shared/lib/format';
 import { ensurePaginated } from '@/shared/lib/pagination';
@@ -354,8 +355,9 @@ export const AdminCoursesPage = () => {
             <span className="field__label">Статус</span>
             <select id="admin-courses-status-filter" className="field__control" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'all' | AdminCourseStatus)}>
               <option value="all">Все статусы</option>
-              <option value="available">Доступен</option>
-              <option value="unavailable">Недоступен</option>
+              {COURSE_STATUS_OPTIONS.map((statusOption) => (
+                <option key={statusOption.value} value={statusOption.value}>{statusOption.label}</option>
+              ))}
             </select>
           </label>
         </div>
@@ -414,8 +416,9 @@ export const AdminCoursesPage = () => {
                   value={formValues.status}
                   onChange={(event) => setFormValues((current) => ({ ...current, status: event.target.value as AdminCourseStatus }))}
                 >
-                  <option value="unavailable">unavailable</option>
-                  <option value="available">available</option>
+                  {COURSE_STATUS_OPTIONS.map((statusOption) => (
+                    <option key={statusOption.value} value={statusOption.value}>{statusOption.label}</option>
+                  ))}
                 </select>
               </label>
               <div className="actions-row">
@@ -518,8 +521,9 @@ export const AdminCoursesPage = () => {
                   value={editFormValues.status}
                   onChange={(event) => setEditFormValues((current) => ({ ...current, status: event.target.value as AdminCourseStatus }))}
                 >
-                  <option value="unavailable">unavailable</option>
-                  <option value="available">available</option>
+                  {COURSE_STATUS_OPTIONS.map((statusOption) => (
+                    <option key={statusOption.value} value={statusOption.value}>{statusOption.label}</option>
+                  ))}
                 </select>
               </label>
               <div className="actions-row">
