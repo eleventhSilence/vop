@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from django.contrib.auth.password_validation import validate_password
+from django.db.models import Exists, OuterRef
 from rest_framework import serializers
 
 from accounts.models import Account
 from courses.models import CourseEnrollment
+from progress.utils import build_progress_payload
 from reviews.models import Review
 from reviews.serializers import AdminReviewListSerializer
-from progress.utils import build_progress_payload
+from testing.models import TestAttempt
 
 
 class AccountMeSerializer(serializers.ModelSerializer):
@@ -314,12 +316,14 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_completed_courses_count(self, obj: Account) -> int:
-        enrollments = obj.course_enrollments.select_related("course")
-        completed_count = 0
-
-        for enrollment in enrollments:
-            progress_payload = build_progress_payload(enrollment=enrollment)
-            if progress_payload["progress_status"] == "completed":
-                completed_count += 1
-
-        return completed_count
+        passed_attempts = TestAttempt.objects.filter(
+            user=obj,
+            test__course=OuterRef("course_id"),
+            is_passed=True,
+        )
+        return (
+            CourseEnrollment.objects.filter(user=obj)
+            .annotate(has_passed_attempt=Exists(passed_attempts))
+            .filter(has_passed_attempt=True)
+            .count()
+        )
