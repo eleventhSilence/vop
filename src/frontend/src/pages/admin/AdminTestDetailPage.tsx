@@ -33,8 +33,8 @@ export const AdminTestDetailPage = () => {
     course_id: '',
     title: '',
     description: '',
-    passing_score: '',
-    max_attempts: '',
+    passing_score: isCreateMode ? '5' : '',
+    max_attempts: isCreateMode ? '3' : '',
     is_active: false,
   });
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -80,11 +80,11 @@ export const AdminTestDetailPage = () => {
     }
 
     if (!Number.isFinite(passingScore) || passingScore <= 0) {
-      nextErrors.passing_score = 'Passing score должен быть числом больше 0.';
+      nextErrors.passing_score = 'Проходной балл должен быть числом больше 0.';
     }
 
     if (!Number.isFinite(maxAttempts) || maxAttempts <= 0) {
-      nextErrors.max_attempts = 'Max attempts должен быть числом больше 0.';
+      nextErrors.max_attempts = 'Количество попыток должно быть числом больше 0.';
     }
 
     if (isCreateMode && !formValues.course_id.trim()) {
@@ -261,7 +261,7 @@ export const AdminTestDetailPage = () => {
           <div className="admin-test-detail-metrics">
             <Input
               id="test-passing-score"
-              label="Passing score *"
+              label="Проходной балл *"
               type="number"
               min={1}
               step={1}
@@ -272,7 +272,7 @@ export const AdminTestDetailPage = () => {
             />
             <Input
               id="test-max-attempts"
-              label="Max attempts *"
+              label="Количество попыток *"
               type="number"
               min={1}
               step={1}

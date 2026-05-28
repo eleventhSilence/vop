@@ -28,8 +28,8 @@ const defaultFormValues: CreateTestFormValues = {
   course_id: '',
   title: '',
   description: '',
-  passing_score: '70',
-  max_attempts: '1',
+  passing_score: '5',
+  max_attempts: '3',
   is_active: true,
 };
 
@@ -208,11 +208,11 @@ export const AdminTestsPage = () => {
     }
 
     if (!Number.isFinite(passingScore) || passingScore <= 0) {
-      nextErrors.passing_score = 'Passing score должен быть числом больше 0.';
+      nextErrors.passing_score = 'Проходной балл должен быть числом больше 0.';
     }
 
     if (!Number.isFinite(maxAttempts) || maxAttempts <= 0) {
-      nextErrors.max_attempts = 'Max attempts должен быть числом больше 0.';
+      nextErrors.max_attempts = 'Количество попыток должно быть числом больше 0.';
     }
 
     setValidationErrors(nextErrors);
@@ -268,11 +268,11 @@ export const AdminTestsPage = () => {
     }
 
     if (!Number.isFinite(passingScore) || passingScore <= 0) {
-      nextErrors.passing_score = 'Passing score должен быть числом больше 0.';
+      nextErrors.passing_score = 'Проходной балл должен быть числом больше 0.';
     }
 
     if (!Number.isFinite(maxAttempts) || maxAttempts <= 0) {
-      nextErrors.max_attempts = 'Max attempts должен быть числом больше 0.';
+      nextErrors.max_attempts = 'Количество попыток должно быть числом больше 0.';
     }
 
     setEditValidationErrors(nextErrors);
@@ -475,7 +475,7 @@ export const AdminTestsPage = () => {
               </label>
               <Input
                 id="admin-test-create-passing-score"
-                label="Passing score *"
+                label="Проходной балл *"
                 type="number"
                 min={1}
                 step={1}
@@ -486,7 +486,7 @@ export const AdminTestsPage = () => {
               />
               <Input
                 id="admin-test-create-max-attempts"
-                label="Max attempts *"
+                label="Количество попыток *"
                 type="number"
                 min={1}
                 step={1}
@@ -558,7 +558,7 @@ export const AdminTestsPage = () => {
               </label>
               <Input
                 id="admin-test-edit-passing-score"
-                label="Passing score *"
+                label="Проходной балл *"
                 type="number"
                 min={1}
                 step={1}
@@ -569,7 +569,7 @@ export const AdminTestsPage = () => {
               />
               <Input
                 id="admin-test-edit-max-attempts"
-                label="Max attempts *"
+                label="Количество попыток *"
                 type="number"
                 min={1}
                 step={1}
