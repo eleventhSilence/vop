@@ -305,8 +305,8 @@ export const AdminTestQuestionsPage = () => {
                   }
                   required
                 >
-                  <option value="single_choice">single_choice</option>
-                  <option value="multiple_choice">multiple_choice</option>
+                  <option value="single_choice">Один вариант</option>
+                  <option value="multiple_choice">Несколько вариантов</option>
                 </select>
               </label>
               <Input
