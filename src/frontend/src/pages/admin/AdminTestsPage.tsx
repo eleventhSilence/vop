@@ -385,7 +385,6 @@ export const AdminTestsPage = () => {
         <div>
           <p className="eyebrow">Администрирование</p>
           <h2>Администрирование тестов</h2>
-          <p className="muted">Контролируйте тесты и их доступность, сохраняя текущее поведение поиска и фильтрации.</p>
         </div>
       </div>
       <div className="admin-page-controls admin-tests-toolbar">

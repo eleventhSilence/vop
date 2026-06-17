@@ -345,7 +345,6 @@ export const AdminCoursesPage = () => {
         <div>
           <p className="eyebrow">Администрирование</p>
           <h2>Администрирование курсов</h2>
-          <p className="muted">Управляйте списком курсов, статусами и содержанием без изменения текущей логики API.</p>
         </div>
       </div>
       <div className="admin-page-controls admin-courses-toolbar">

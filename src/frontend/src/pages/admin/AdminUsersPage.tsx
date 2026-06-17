@@ -126,7 +126,6 @@ export const AdminUsersPage = () => {
         <div>
           <p className="eyebrow">Администрирование</p>
           <h2>Администрирование пользователей</h2>
-          <p className="muted">Управляйте ролями, статусами и именами через существующий admin API без перезагрузки страницы.</p>
         </div>
       </div>
       <div className="admin-page-controls admin-users-toolbar">
